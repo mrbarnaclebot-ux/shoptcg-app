@@ -36,6 +36,13 @@
       "when": 1794114747777,
       "tag": "0004_catalog_review",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794115600929,
+      "tag": "0005_inventory",
+      "breakpoints": true
     }
   ]
 }

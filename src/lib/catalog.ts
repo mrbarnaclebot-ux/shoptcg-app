@@ -1,4 +1,4 @@
-import { and, count, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, count, eq, gt, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { catalogItem, searchMiss, type CatalogItem } from "@/db/schema";
 import { SearchError } from "@/lib/pricing/errors";
@@ -61,7 +61,6 @@ export async function upsertHits(db: Db, hits: CatalogHit[]) {
         number: sql`excluded.number`,
         imageUrl: sql`excluded.image_url`,
         updatedAt: sql`now()`,
-        lastSeenAt: sql`now()`,
       },
     })
     .returning();
@@ -111,33 +110,24 @@ export async function chargeMiss(db: Db, userId: string) {
   await db.insert(searchMiss).values({ userId });
 }
 
-async function touch(db: Db, rows: CatalogItem[]) {
-  const ids = rows.map((r) => r.id);
-  await db
-    .update(catalogItem)
-    .set({ lastSeenAt: sql`now()` })
-    .where(inArray(catalogItem.id, ids));
-}
-
 /**
  * Local cache first, then the provider, upserting what it returns.
  * `beforeMiss` runs only when the provider is about to be called (e.g. chargeMiss).
- * ponytail: any local hit wins, so a partly cached name returns only what was
- * cached; add a "search more" path that forces the provider in Phase 3.
+ * Any local hit wins, so a partly cached name returns only what was cached;
+ * `force` skips the cache for the add flow's "Search more".
  */
 export async function searchCatalog(
   db: Db,
   text: string,
-  opts: { kind: Kind; language: Language },
+  opts: { kind: Kind; language: Language; force?: boolean },
   provider: PriceProvider = defaultProvider(),
   beforeMiss: () => Promise<void> = async () => {},
 ): Promise<CatalogItem[]> {
   const q = parseQuery(text);
   if (!q.name && !q.number) return [];
-  const local = await searchLocal(db, provider.name, q, opts);
-  if (local.length) {
-    await touch(db, local);
-    return local;
+  if (!opts.force) {
+    const local = await searchLocal(db, provider.name, q, opts);
+    if (local.length) return local;
   }
   const key = [provider.name, opts.kind, opts.language, q.text.toLowerCase()]
     .join("|")
@@ -146,7 +136,12 @@ export async function searchCatalog(
   await beforeMiss();
   const rows = await upsertHits(
     db,
-    await provider.search({ ...q, ...opts, limit: LIMIT }),
+    await provider.search({
+      ...q,
+      kind: opts.kind,
+      language: opts.language,
+      limit: LIMIT,
+    }),
   );
   if (!rows.length) {
     if (emptyUntil.size > 10_000) emptyUntil.clear();

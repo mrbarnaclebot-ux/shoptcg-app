@@ -59,3 +59,60 @@ export async function createStore(
     throw err;
   }
 }
+
+const checkbox = z.preprocess((v) => v === "on" || v === true, z.boolean());
+
+export const settingsSchema = z
+  .object({
+    priceRulePct: z.coerce
+      .number({ error: "Enter a whole number" })
+      .int("Enter a whole number")
+      .min(-90, "Between -90 and 500")
+      .max(500, "Between -90 and 500"),
+    rounding: z.enum(["0", "0.5", "1"]),
+    secondCurrency: z.preprocess(
+      (v) => (typeof v === "string" ? v.trim().toUpperCase() || null : v),
+      z
+        .string()
+        .regex(/^[A-Z]{3}$/, "Use a 3-letter code like AUD")
+        .refine((c) => c !== "USD", "Prices are already in USD")
+        .nullable(),
+    ),
+    fxRate: z.preprocess(
+      (v) => (typeof v === "string" && !v.trim() ? null : v),
+      z.coerce
+        .number({ error: "Enter a rate like 1.52" })
+        .positive("Rate must be more than 0")
+        .max(1_000_000)
+        .nullable(),
+    ),
+    nfcEnabled: checkbox,
+    isOpen: checkbox,
+  })
+  .superRefine((v, ctx) => {
+    if (v.secondCurrency && v.fxRate === null)
+      ctx.addIssue({
+        code: "custom",
+        path: ["fxRate"],
+        message: "Enter your rate for 1 USD",
+      });
+  });
+
+/** Saves the owner's store settings; the owner id is the ownership check. */
+export async function updateSettings(
+  db: Db,
+  ownerUserId: string,
+  input: z.infer<typeof settingsSchema>,
+) {
+  const fx = input.secondCurrency ? input.fxRate : null;
+  const rows = await db
+    .update(store)
+    .set({
+      ...input,
+      secondCurrency: fx === null ? null : input.secondCurrency,
+      fxRate: fx === null ? null : String(fx),
+    })
+    .where(eq(store.ownerUserId, ownerUserId))
+    .returning({ id: store.id });
+  return rows.length > 0;
+}

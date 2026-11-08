@@ -13,89 +13,9 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import { user } from "./auth-schema";
 
-// Auth tables follow the Better Auth core schema; column names must match it.
-export const user = pgTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").notNull().default(false),
-  image: text("image"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
-
-export const session = pgTable(
-  "session",
-  {
-    id: text("id").primaryKey(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    token: text("token").notNull().unique(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    ipAddress: text("ip_address"),
-    userAgent: text("user_agent"),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-  },
-  (t) => [index("session_user_id_idx").on(t.userId)],
-);
-
-export const account = pgTable(
-  "account",
-  {
-    id: text("id").primaryKey(),
-    accountId: text("account_id").notNull(),
-    providerId: text("provider_id").notNull(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    accessToken: text("access_token"),
-    refreshToken: text("refresh_token"),
-    idToken: text("id_token"),
-    accessTokenExpiresAt: timestamp("access_token_expires_at", {
-      withTimezone: true,
-    }),
-    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
-      withTimezone: true,
-    }),
-    scope: text("scope"),
-    password: text("password"),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [index("account_user_id_idx").on(t.userId)],
-);
-
-export const verification = pgTable(
-  "verification",
-  {
-    id: text("id").primaryKey(),
-    identifier: text("identifier").notNull(),
-    value: text("value").notNull(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (t) => [index("verification_identifier_idx").on(t.identifier)],
-);
+export * from "./auth-schema";
 
 export const store = pgTable(
   "store",
@@ -113,6 +33,8 @@ export const store = pgTable(
     rounding: numeric("rounding").notNull().default("0"),
     secondCurrency: text("second_currency"),
     fxRate: numeric("fx_rate"),
+    // Shows "Or tap your phone here" on the table sign when the vendor has an NFC tag.
+    nfcEnabled: boolean("nfc_enabled").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -123,7 +45,13 @@ export const store = pgTable(
       sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$' and char_length(${t.slug}) between 3 and 40`,
     ),
     check("store_name_length", sql`char_length(${t.name}) between 1 and 80`),
-    check("store_rounding_nonneg", sql`${t.rounding} >= 0`),
+    check("store_rounding_step", sql`${t.rounding} in (0, 0.5, 1)`),
+    check("store_price_rule_range", sql`${t.priceRulePct} between -90 and 500`),
+    // A second currency is useless without the vendor rate, and vice versa.
+    check(
+      "store_fx_pair",
+      sql`(${t.secondCurrency} is null) = (${t.fxRate} is null)`,
+    ),
     check("store_fx_rate_positive", sql`${t.fxRate} > 0`),
     check(
       "store_second_currency_code",
@@ -151,10 +79,6 @@ export const catalogItem = pgTable(
     grader: text("grader", { enum: ["PSA", "BGS", "CGC", "SGC"] }),
     grade: text("grade"),
     updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    // Bumped whenever a search returns the row; the nightly sync prices only recent ones.
-    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
@@ -225,3 +149,64 @@ export const searchMiss = pgTable(
 
 export type CatalogItem = typeof catalogItem.$inferSelect;
 export type NewCatalogItem = typeof catalogItem.$inferInsert;
+
+// One stock line in a store: a catalog item, or a custom item (CN cards, odd
+// slabs) described by the vendor. kind and language are copied from the
+// catalog item so filters and the condition rule work the same for both.
+export const listing = pgTable(
+  "listing",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => store.id, { onDelete: "cascade" }),
+    catalogItemId: uuid("catalog_item_id").references(() => catalogItem.id),
+    kind: text("kind", { enum: ["raw", "graded", "sealed"] }).notNull(),
+    language: text("language", { enum: ["en", "ja", "zh"] }).notNull(),
+    name: text("name"),
+    setName: text("set_name"),
+    number: text("number"),
+    grader: text("grader"),
+    grade: text("grade"),
+    imageUrl: text("image_url"),
+    condition: text("condition", { enum: ["NM", "LP", "MP", "HP", "DMG"] }),
+    qty: integer("qty").notNull().default(1),
+    overridePrice: numeric("override_price", { precision: 12, scale: 2 }),
+    active: boolean("active").notNull().default(true),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("listing_store_idx").on(t.storeId, t.createdAt),
+    index("listing_catalog_item_idx").on(t.catalogItemId),
+    check("listing_kind", sql`${t.kind} in ('raw', 'graded', 'sealed')`),
+    check("listing_language", sql`${t.language} in ('en', 'ja', 'zh')`),
+    check(
+      "listing_item_source",
+      sql`${t.catalogItemId} is not null or char_length(trim(${t.name})) > 0`,
+    ),
+    check(
+      "listing_condition",
+      sql`${t.condition} in ('NM', 'LP', 'MP', 'HP', 'DMG')`,
+    ),
+    // Condition describes raw cards only; slabs carry a grade, sealed is sealed.
+    check(
+      "listing_condition_kind",
+      sql`(${t.kind} = 'raw') = (${t.condition} is not null)`,
+    ),
+    check(
+      "listing_custom_graded",
+      sql`${t.catalogItemId} is not null or ${t.kind} <> 'graded' or (${t.grader} is not null and ${t.grade} is not null)`,
+    ),
+    check("listing_qty_nonneg", sql`${t.qty} >= 0`),
+    check("listing_override_positive", sql`${t.overridePrice} > 0`),
+  ],
+);
+
+export type Listing = typeof listing.$inferSelect;
+export type NewListing = typeof listing.$inferInsert;

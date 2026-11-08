@@ -35,7 +35,7 @@ Runs lint, typecheck, Vitest, build and the Playwright smoke test, the same as C
 
 - Search: `searchCatalog()` in `src/lib/catalog.ts` reads the local `catalog_item` cache first, then the provider. With `PPT_API_KEY` set the provider is PokemonPriceTracker; without it, TCGdex (no key, raw EN/JA cards only).
 - TCGdex prices are stored under source `tcgdex` for cross-checking only. Their licence is unclear, so they are not for display.
-- `pnpm sync:prices` writes today's `price_point` for catalog items searched in the last `SYNC_SEEN_DAYS` (default 30), at most `SYNC_MAX_CALLS` (default 5000) per run. Rerunning the same day overwrites today's rows. It exits non-zero when any item failed to price. PPT allows 60 calls/min per key: the sync runs at 45/min and app search at 15/min (failing fast when busy), so together they stay under the limit. Retries back off on 429, honouring Retry-After up to 60s.
+- `pnpm sync:prices` writes today's `price_point` for every catalog item referenced by an active listing, least recently priced first, at most `SYNC_MAX_CALLS` (default 5000) per run. Rerunning the same day overwrites today's rows. It exits non-zero when any item failed to price. PPT allows 60 calls/min per key: the sync runs at 45/min and app search at 15/min (failing fast when busy), so together they stay under the limit. Retries back off on 429, honouring Retry-After up to 60s.
 - Each signed-in user may cause 30 provider calls (cache misses) per hour; cache hits and recently empty queries are free.
 - Card images are not licensed by any provider. Fine for a hobby project; revisit before a public launch.
 

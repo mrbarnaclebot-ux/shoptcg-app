@@ -1,6 +1,11 @@
-import { desc, gt, sql } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
-import { catalogItem, pricePoint, type CatalogItem } from "@/db/schema";
+import {
+  catalogItem,
+  listing,
+  pricePoint,
+  type CatalogItem,
+} from "@/db/schema";
 import { PartialPricesError } from "@/lib/pricing/errors";
 import {
   providerByName,
@@ -16,17 +21,12 @@ const MAX_FAILED_CHUNKS = 3;
 export interface SyncLimits {
   /** Items priced per run; each costs at most one provider call. */
   maxCalls: number;
-  /** Only items a search returned within this many days. */
-  seenDays: number;
 }
 
 function envLimits(): SyncLimits {
   const int = (v: string | undefined, d: number) =>
     Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : d;
-  return {
-    maxCalls: int(process.env.SYNC_MAX_CALLS, 5000),
-    seenDays: int(process.env.SYNC_SEEN_DAYS, 30),
-  };
+  return { maxCalls: int(process.env.SYNC_MAX_CALLS, 5000) };
 }
 
 export interface SyncResult {
@@ -108,20 +108,27 @@ async function syncProvider(
   }
 }
 
-/** Writes today's price_point for recently searched items whose provider is configured. */
+/** Writes today's price_point for every catalog item an active listing references. */
 export async function syncPrices(
   db: Db,
   date = new Date().toISOString().slice(0, 10),
   pick: (name: string) => PriceProvider | null = providerByName,
   limits: SyncLimits = envLimits(),
 ): Promise<SyncResult> {
-  // ponytail: prices recently searched items, newest first, up to maxCalls; switch to items referenced by a listing in Phase 3.
-  const since = new Date(Date.now() - limits.seenDays * 86_400_000);
+  // ponytail: least recently refreshed first, so a run that hits maxCalls rotates
+  // through the rest tomorrow; per-store fairness if one store hogs the budget.
+  const listed = db
+    .select({ id: listing.catalogItemId })
+    .from(listing)
+    .where(eq(listing.active, true));
   const items = await db
     .select()
     .from(catalogItem)
-    .where(gt(catalogItem.lastSeenAt, since))
-    .orderBy(desc(catalogItem.lastSeenAt))
+    .where(inArray(catalogItem.id, listed))
+    .orderBy(
+      sql`(select max(${pricePoint.date}) from ${pricePoint} where ${pricePoint.catalogItemId} = ${catalogItem.id}) asc nulls first`,
+      asc(catalogItem.id),
+    )
     .limit(limits.maxCalls);
   const result: SyncResult = {
     items: items.length,
