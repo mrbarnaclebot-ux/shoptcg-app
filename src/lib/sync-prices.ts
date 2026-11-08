@@ -1,4 +1,4 @@
-import { asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import {
   catalogItem,
@@ -108,7 +108,7 @@ async function syncProvider(
   }
 }
 
-/** Writes today's price_point for every catalog item an active listing references. */
+/** Writes today's price_point for every catalog item an active, in-stock listing references. */
 export async function syncPrices(
   db: Db,
   date = new Date().toISOString().slice(0, 10),
@@ -120,7 +120,8 @@ export async function syncPrices(
   const listed = db
     .select({ id: listing.catalogItemId })
     .from(listing)
-    .where(eq(listing.active, true));
+    // Sold-out stock shows no price to buyers, so it costs no provider call.
+    .where(and(eq(listing.active, true), gt(listing.qty, 0)));
   const items = await db
     .select()
     .from(catalogItem)

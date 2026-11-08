@@ -16,7 +16,7 @@ beforeAll(async () => {
 });
 
 /** Upserts the hits and lists each one in the store. */
-async function list(hits: CatalogHit[], active = true) {
+async function list(hits: CatalogHit[], active = true, qty = 1) {
   const rows = await upsertHits(db, hits);
   await db.insert(schema.listing).values(
     rows.map((r) => ({
@@ -26,6 +26,7 @@ async function list(hits: CatalogHit[], active = true) {
       language: r.language,
       condition: r.kind === "raw" ? ("NM" as const) : null,
       active,
+      qty,
     })),
   );
   return rows;
@@ -37,9 +38,10 @@ const only =
     n === name ? fakeProvider([], price) : null;
 
 describe("syncPrices", () => {
-  it("prices only catalog items behind an active listing", async () => {
+  it("prices only catalog items behind an active, in-stock listing", async () => {
     await list([hit({ provider: "sel", providerId: "on" })]);
     await list([hit({ provider: "sel", providerId: "off" })], false);
+    await list([hit({ provider: "sel", providerId: "sold" })], true, 0);
     await upsertHits(db, [hit({ provider: "sel", providerId: "unlisted" })]);
     const res = await syncPrices(db, "2026-11-01", only("sel"));
     expect(res).toMatchObject({ items: 1, written: 1 });
