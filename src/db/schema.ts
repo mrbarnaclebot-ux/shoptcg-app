@@ -153,11 +153,16 @@ export const catalogItem = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    // Bumped whenever a search returns the row; the nightly sync prices only recent ones.
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [
     // NULLS NOT DISTINCT so raw and sealed rows (null grader) cannot duplicate.
+    // Language is part of the key: one provider id may exist per language.
     unique("catalog_item_provider_key")
-      .on(t.provider, t.providerId, t.grader, t.grade)
+      .on(t.provider, t.providerId, t.language, t.grader, t.grade)
       .nullsNotDistinct(),
     check("catalog_item_kind", sql`${t.kind} in ('raw', 'graded', 'sealed')`),
     check("catalog_item_language", sql`${t.language} in ('en', 'ja', 'zh')`),
@@ -188,9 +193,9 @@ export const pricePoint = pgTable(
       .notNull()
       .references(() => catalogItem.id, { onDelete: "cascade" }),
     date: date("date", { mode: "string" }).notNull(),
-    marketUsd: numeric("market_usd").notNull(),
-    lowUsd: numeric("low_usd"),
-    highUsd: numeric("high_usd"),
+    marketUsd: numeric("market_usd", { precision: 12, scale: 2 }).notNull(),
+    lowUsd: numeric("low_usd", { precision: 12, scale: 2 }),
+    highUsd: numeric("high_usd", { precision: 12, scale: 2 }),
     sampleSize: integer("sample_size"),
     source: text("source").notNull(),
   },
@@ -199,11 +204,23 @@ export const pricePoint = pgTable(
       name: "price_point_pk",
       columns: [t.catalogItemId, t.date, t.source],
     }),
-    check("price_point_market_nonneg", sql`${t.marketUsd} >= 0`),
+    check("price_point_market_positive", sql`${t.marketUsd} > 0`),
     check("price_point_low_nonneg", sql`${t.lowUsd} >= 0`),
     check("price_point_high_nonneg", sql`${t.highUsd} >= 0`),
     check("price_point_sample_nonneg", sql`${t.sampleSize} >= 0`),
   ],
+);
+
+// One row per catalog search that had to call the paid provider, for the per-user hourly limit.
+export const searchMiss = pgTable(
+  "search_miss",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("search_miss_user_at_idx").on(t.userId, t.at)],
 );
 
 export type CatalogItem = typeof catalogItem.$inferSelect;

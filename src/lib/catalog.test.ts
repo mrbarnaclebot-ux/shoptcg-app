@@ -5,13 +5,20 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/db/open";
 import * as schema from "@/db/schema";
-import { parseQuery, searchCatalog, upsertHits } from "@/lib/catalog";
+import {
+  chargeMiss,
+  MISSES_PER_HOUR,
+  parseQuery,
+  searchCatalog,
+  upsertHits,
+} from "@/lib/catalog";
+import { SearchError } from "@/lib/pricing/errors";
 import type {
   CatalogHit,
   PriceProvider,
   PriceRef,
 } from "@/lib/pricing/provider";
-import { syncPrices, totalFailure } from "@/lib/sync-prices";
+import { syncPrices } from "@/lib/sync-prices";
 
 let db: Db;
 
@@ -87,13 +94,66 @@ describe("searchCatalog", () => {
     expect(provider.search).toHaveBeenCalledTimes(1);
   });
 
-  it("always asks the provider when a set total is given", async () => {
+  it("serves number/total queries like 199/165 from the cache", async () => {
     const provider = fakeProvider([hit()]);
+    const beforeMiss = vi.fn(async () => {});
     const opts = { kind: "raw", language: "en" } as const;
-    await searchCatalog(db, "199/165", opts, provider);
-    expect(provider.search).toHaveBeenCalledWith(
-      expect.objectContaining({ number: "199", setTotal: "165", limit: 10 }),
+    const rows = await searchCatalog(
+      db,
+      "199/0165",
+      opts,
+      provider,
+      beforeMiss,
     );
+    expect(rows.map((r) => r.number)).toEqual(["199/165"]);
+    // A different set total is not the same card, so it asks the provider.
+    await searchCatalog(db, "charizard 199/999", opts, provider, beforeMiss);
+    expect(provider.search).toHaveBeenCalledTimes(1);
+    expect(provider.search).toHaveBeenCalledWith(
+      expect.objectContaining({ number: "199", setTotal: "999", limit: 10 }),
+    );
+    expect(beforeMiss).toHaveBeenCalledTimes(1);
+  });
+
+  it("caches empty provider results for the same query", async () => {
+    const provider = fakeProvider([]);
+    const opts = { kind: "raw", language: "en" } as const;
+    expect(await searchCatalog(db, "Nothing  404", opts, provider)).toEqual([]);
+    expect(await searchCatalog(db, "nothing 404", opts, provider)).toEqual([]);
+    expect(provider.search).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops hits missing id, name or set and unsafe image URLs", async () => {
+    const other = (over: Partial<CatalogHit>) =>
+      hit({ provider: "other", ...over });
+    const rows = await upsertHits(db, [
+      other({ providerId: "" }),
+      other({ providerId: "a", name: "" }),
+      other({ providerId: "b", setName: "" }),
+      other({ providerId: "c", imageUrl: "http://assets.tcgdex.net/x.webp" }),
+      other({ providerId: "d", imageUrl: "https://evil.example/x.webp" }),
+    ]);
+    expect(rows.map((r) => [r.providerId, r.imageUrl])).toEqual([
+      ["c", null],
+      ["d", null],
+    ]);
+  });
+
+  it("limits provider calls per user per hour", async () => {
+    await db.insert(schema.user).values({ id: "u1", name: "U", email: "u@x" });
+    for (let i = 0; i < MISSES_PER_HOUR; i++) await chargeMiss(db, "u1");
+    await expect(chargeMiss(db, "u1")).rejects.toBeInstanceOf(SearchError);
+    // Cache hits never charge.
+    const beforeMiss = () => chargeMiss(db, "u1");
+    const opts = { kind: "raw", language: "en" } as const;
+    const rows = await searchCatalog(
+      db,
+      "charizard",
+      opts,
+      fakeProvider([]),
+      beforeMiss,
+    );
+    expect(rows.length).toBeGreaterThan(0);
   });
 
   it("keeps one row per grade and rejects inconsistent graded rows", async () => {
@@ -125,11 +185,12 @@ describe("syncPrices", () => {
     const first = await syncPrices(db, "2026-11-08", pick(10));
     const second = await syncPrices(db, "2026-11-08", pick(12.5));
     expect(second).toEqual(first);
-    expect(first).toMatchObject({ written: 4, skipped: 1, failed: 0 });
+    // Skipped: the "nokey" row and the two valid "other" rows above.
+    expect(first).toMatchObject({ written: 4, skipped: 3, failed: 0 });
     const points = await db.select().from(schema.pricePoint);
     expect(points).toHaveLength(4);
     expect(
-      points.every((p) => p.marketUsd === "12.5" && p.source === "fake"),
+      points.every((p) => p.marketUsd === "12.50" && p.source === "fake"),
     ).toBe(true);
   });
 
@@ -143,7 +204,6 @@ describe("syncPrices", () => {
       n === "fake" ? broken : null,
     );
     expect(res).toMatchObject({ written: 0, failed: 4 });
-    expect(totalFailure(res)).toBe(true);
   });
 
   it("stops calling a provider after 3 failed chunks in a row", async () => {
@@ -163,5 +223,19 @@ describe("syncPrices", () => {
     );
     expect(calls).toBe(3);
     expect(res).toMatchObject({ written: 0, failed: 80 });
+  });
+
+  it("prices only items searched recently, up to maxCalls", async () => {
+    await db
+      .update(schema.catalogItem)
+      .set({ lastSeenAt: new Date("2020-01-01") });
+    await upsertHits(db, [hit({ providerId: "fresh" }), hit()]);
+    const res = await syncPrices(
+      db,
+      "2026-11-11",
+      (n) => (n === "fake" ? fakeProvider([], 1) : null),
+      { maxCalls: 1, seenDays: 30 },
+    );
+    expect(res).toMatchObject({ items: 1, written: 1, failed: 0 });
   });
 });

@@ -1,15 +1,15 @@
 import type { NextConfig } from "next";
+import { IMAGE_HOSTS } from "./src/lib/pricing/images";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,
-  // Card art hosts: TCGdex (default dev catalog) and the TCGplayer CDN that PPT returns.
   images: {
-    remotePatterns: [
-      { protocol: "https", hostname: "assets.tcgdex.net" },
-      { protocol: "https", hostname: "tcgplayer-cdn.tcgplayer.com" },
-    ],
+    remotePatterns: IMAGE_HOSTS.map((hostname) => ({
+      protocol: "https" as const,
+      hostname,
+    })),
   },
   // PGlite loads its WASM and data files relative to its own package path.
   serverExternalPackages: ["@electric-sql/pglite"],

@@ -1,6 +1,6 @@
 // Nightly price sync. Railway cron runs `pnpm sync:prices` at 06:00 UTC.
 import { openDb } from "@/db/open";
-import { syncPrices, totalFailure } from "@/lib/sync-prices";
+import { syncPrices } from "@/lib/sync-prices";
 
 async function main() {
   // Local runs read .env like Next does; deployed env vars take precedence.
@@ -11,7 +11,12 @@ async function main() {
   const result = await syncPrices(openDb());
   const seconds = Math.round((Date.now() - started) / 1000);
   console.log(`[sync] done in ${seconds}s`, result);
-  return totalFailure(result) ? 1 : 0;
+  if (!result.failed) return 0;
+  // Any failure (including a tripped breaker) fails the cron run so it gets noticed.
+  console.error(
+    `[sync] FAILED: ${result.failed} of ${result.items} items could not be priced; exiting 1`,
+  );
+  return 1;
 }
 
 // Explicit exit: an open Postgres pool would otherwise keep the cron container alive.

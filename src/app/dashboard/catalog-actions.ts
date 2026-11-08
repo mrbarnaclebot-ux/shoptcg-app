@@ -2,7 +2,9 @@
 
 import { z } from "zod";
 import { getDb } from "@/db";
-import { searchCatalog } from "@/lib/catalog";
+import { chargeMiss, searchCatalog } from "@/lib/catalog";
+import { SearchError } from "@/lib/pricing/errors";
+import { defaultProvider } from "@/lib/pricing/provider";
 import { requireUser } from "@/lib/session";
 
 const searchInput = z.object({
@@ -11,9 +13,24 @@ const searchInput = z.object({
   language: z.enum(["en", "ja", "zh"]),
 });
 
-// Vendors only: every cache miss spends PPT credits.
+// Any signed-in user may search (signup is open), so every cache miss is
+// charged against that user's hourly limit; cache hits are free.
 export async function searchCatalogAction(input: unknown) {
-  await requireUser();
+  const user = await requireUser();
   const { query, kind, language } = searchInput.parse(input);
-  return searchCatalog(getDb(), query, { kind, language });
+  const db = getDb();
+  try {
+    const items = await searchCatalog(
+      db,
+      query,
+      { kind, language },
+      defaultProvider(),
+      () => chargeMiss(db, user.id),
+    );
+    return { items };
+  } catch (err) {
+    // Next hides thrown messages in production, so return the friendly ones.
+    if (err instanceof SearchError) return { items: [], error: err.message };
+    throw err;
+  }
 }
