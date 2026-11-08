@@ -1,31 +1,14 @@
 import "server-only";
-import { mkdirSync } from "node:fs";
-import { PGlite } from "@electric-sql/pglite";
-import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
-import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
-import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-import * as schema from "./schema";
-import { databaseUrl } from "./url";
+import { openDb, type Db } from "./open";
 
-export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
+export type { Db };
 
 // Next bundles route handlers and server actions separately, so a module-level
 // singleton would give each its own PGlite copy with diverging data.
 const g = globalThis as { shoptcgDb?: Db };
 
-function openPglite(): Db {
-  // PGlite creates only the leaf directory, not its parents.
-  mkdirSync(".data", { recursive: true });
-  return drizzlePglite(new PGlite(".data/pglite"), { schema });
-}
-
 // Lazy so `next build` workers never open the PGlite directory concurrently.
 export function getDb(): Db {
-  const url = databaseUrl();
-  // ponytail: PGlite fallback is single-process and dev-only; databaseUrl() refuses it when deployed.
-  g.shoptcgDb ??= url
-    ? drizzlePostgres(postgres(url), { schema })
-    : openPglite();
+  g.shoptcgDb ??= openDb();
   return g.shoptcgDb;
 }
