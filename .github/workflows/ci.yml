@@ -1,15 +1,27 @@
 name: CI
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    # `pnpm start` runs in production mode, which refuses the PGlite fallback.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s
+          --health-retries 10
     env:
       CI: true
-      # Throwaway values: CI uses the PGlite fallback and never sends email.
+      # Throwaway values: the smoke tests never send email.
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
       BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else
       BETTER_AUTH_URL: http://localhost:3000
+      RESEND_API_KEY: ci-only-not-a-real-key
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
