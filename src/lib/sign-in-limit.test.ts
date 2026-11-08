@@ -25,9 +25,10 @@ it("allows 10 links per IP across emails, then refuses", async () => {
   expect(await allowMagicLink(db, "other@x.test", null)).toBe(true);
 });
 
-it("reads the first forwarded hop", () => {
-  const h = new Headers({ "x-forwarded-for": "1.2.3.4, 10.0.0.1" });
+it("ignores the spoofable first forwarded hop", () => {
+  const h = new Headers({ "x-forwarded-for": "6.6.6.6, 1.2.3.4" });
   expect(clientIp(h)).toBe("1.2.3.4");
-  expect(clientIp(new Headers({ "x-real-ip": "5.6.7.8" }))).toBe("5.6.7.8");
+  h.set("x-real-ip", "5.6.7.8");
+  expect(clientIp(h)).toBe("5.6.7.8");
   expect(clientIp(new Headers())).toBeNull();
 });

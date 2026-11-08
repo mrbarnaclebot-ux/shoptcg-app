@@ -37,8 +37,13 @@ export async function allowMagicLink(db: Db, email: string, ip: string | null) {
   return true;
 }
 
-/** First x-forwarded-for hop (set by Railway's proxy), else x-real-ip. */
+/**
+ * x-real-ip is set by Railway's proxy. The first x-forwarded-for hop is
+ * client-supplied and spoofable, so fall back to the last hop (added by the proxy).
+ */
 export function clientIp(h: Headers) {
-  const fwd = h.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return fwd || h.get("x-real-ip") || null;
+  const real = h.get("x-real-ip")?.trim();
+  if (real) return real;
+  const last = h.get("x-forwarded-for")?.split(",").at(-1)?.trim();
+  return last || null;
 }
