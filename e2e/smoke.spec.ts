@@ -3,7 +3,9 @@ import { expect, test } from "@playwright/test";
 test("home loads", async ({ page }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Your table, priced live." }),
+    page.getByRole("heading", {
+      name: "Priced to the cent. Raw, graded, sealed.",
+    }),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Vendor sign in" }),

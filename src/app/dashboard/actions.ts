@@ -5,9 +5,9 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { getAuth } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/session";
-import { createStore, type FieldErrors } from "@/lib/stores";
+import { createStore, SLUG_TAKEN, type FieldErrors } from "@/lib/stores";
 
-export type CreateStoreState = { errors?: FieldErrors };
+export type CreateStoreState = { errors?: FieldErrors; taken?: string };
 
 export async function createStoreAction(
   _prev: CreateStoreState,
@@ -19,8 +19,13 @@ export async function createStoreAction(
     name: form.get("name"),
     slug: form.get("slug"),
   });
-  if (!result.ok) return { errors: result.errors };
-  redirect("/dashboard");
+  if (!result.ok) {
+    const slug = String(form.get("slug"));
+    const taken = result.errors.slug === SLUG_TAKEN ? slug : undefined;
+    return { errors: result.errors, taken };
+  }
+  // The dashboard plays the store-created moment once, then drops the flag.
+  redirect("/dashboard?created=1");
 }
 
 export async function signOutAction() {

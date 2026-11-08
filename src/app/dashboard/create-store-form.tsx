@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { slugSchema } from "@/lib/slug";
+import { toast } from "@/lib/toast";
 import { createStoreAction, type CreateStoreState } from "./actions";
 
 // Nudges typed text toward a valid slug; the zod schema still has the final say.
@@ -28,6 +29,9 @@ export function CreateStoreForm() {
     {},
   );
   const [slug, setSlug] = useState("");
+  useEffect(() => {
+    if (state.taken) toast.slugTaken(state.taken);
+  }, [state]);
   const check = slug ? slugSchema.safeParse(slug) : null;
   const slugError =
     check?.success === false

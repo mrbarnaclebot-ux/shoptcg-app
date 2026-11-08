@@ -4,6 +4,8 @@ import type { Db } from "@/db";
 import { store, type Store } from "@/db/schema";
 import { createStoreSchema } from "@/lib/slug";
 
+export const SLUG_TAKEN = "That address is taken";
+
 export type FieldErrors = { name?: string; slug?: string; form?: string };
 
 export type CreateStoreResult =
@@ -53,7 +55,7 @@ export async function createStore(
     // The DB constraints are the source of truth for uniqueness, so races stay safe.
     const constraint = uniqueViolation(err);
     if (constraint === "store_slug_unique")
-      return { ok: false, errors: { slug: "That address is taken" } };
+      return { ok: false, errors: { slug: SLUG_TAKEN } };
     if (constraint === "store_owner_user_id_unique")
       return { ok: false, errors: { form: "You already have a store" } };
     throw err;

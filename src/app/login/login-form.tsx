@@ -1,31 +1,46 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/lib/toast";
 import { requestMagicLink, type LoginState } from "./actions";
+
+const EXPIRED = "That link expired or was already used. Request a new one.";
+
+// Expired links land on /login?link=expired (errorCallbackURL in actions.ts).
+// Read on the client so the login page stays static.
+function useExpiredLink() {
+  const expired = useSyncExternalStore(
+    () => () => {},
+    () => new URLSearchParams(location.search).get("link") === "expired",
+    () => false,
+  );
+  useEffect(() => {
+    const url = new URL(location.href);
+    // Checked again: dev Strict Mode runs this effect twice.
+    if (!expired || !url.searchParams.has("link")) return;
+    url.searchParams.delete("link");
+    history.replaceState(null, "", url);
+    toast.linkExpired();
+  }, [expired]);
+  return expired;
+}
 
 export function LoginForm() {
   const [state, action, pending] = useActionState<LoginState, FormData>(
     requestMagicLink,
     {},
   );
-  if (state.sent) {
-    return (
-      <div
-        role="status"
-        className="rounded-lg bg-surface p-5 shadow-1 ring-1 ring-border"
-      >
-        <p className="text-lg font-semibold">Check your email.</p>
-        <p className="mt-1 text-muted-foreground">
-          We sent a link to{" "}
-          <strong className="break-all text-foreground">{state.sent}</strong>.
-          It works for 5 minutes.
-        </p>
-      </div>
-    );
-  }
+  const expired = useExpiredLink();
+  useEffect(() => {
+    if (state.sent) toast.linkSent(state.sent);
+    else if (state.limited) toast.rateLimited();
+    else if (state.failed && state.error) toast.sendFailed(state.error);
+  }, [state]);
+  if (state.sent) return <Sent email={state.sent} />;
+  const error = state.error ?? (expired ? EXPIRED : undefined);
   return (
     <form action={action} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
@@ -37,12 +52,12 @@ export function LoginForm() {
           inputMode="email"
           autoComplete="email"
           required
-          aria-invalid={state.error ? true : undefined}
-          aria-describedby={state.error ? "email-error" : undefined}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? "email-error" : undefined}
         />
-        {state.error && (
+        {error && (
           <p id="email-error" className="text-sm text-danger">
-            {state.error}
+            {error}
           </p>
         )}
       </div>
@@ -50,5 +65,26 @@ export function LoginForm() {
         {pending ? "Sending link" : "Email me a link"}
       </Button>
     </form>
+  );
+}
+
+function Sent({ email }: { email: string }) {
+  return (
+    <div
+      role="status"
+      className="flex flex-col rounded-sm bg-surface ring-1 ring-border"
+    >
+      <div className="flex items-baseline justify-between gap-3 border-b border-border px-5 py-3">
+        <p className="text-lg font-bold wdth-112">Link sent.</p>
+        <p className="num text-xs text-subtle">VALID 5 MIN</p>
+      </div>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 px-5 py-4 text-sm">
+        <dt className="text-subtle">To</dt>
+        <dd className="text-right font-semibold break-all">{email}</dd>
+        <dt className="text-subtle">Use</dt>
+        <dd className="text-right font-semibold">Single, this device or any</dd>
+      </dl>
+      <div aria-hidden className="ruler mx-5 mb-4" />
+    </div>
   );
 }
