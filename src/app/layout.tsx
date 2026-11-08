@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo } from "next/font/google";
+import { ToastRoot } from "@/components/toast-root";
 import "./globals.css";
 
 // Variable Archivo; the width axis drives the expanded heading voice.
@@ -18,7 +19,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`dark ${archivo.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <ToastRoot>{children}</ToastRoot>
+      </body>
     </html>
   );
 }

@@ -32,3 +32,10 @@ export function gradeLabel(r: {
   if (r.kind === "sealed") return "Sealed";
   return r.condition ?? "";
 }
+
+/** "4417 0932": a stable cert-style number for a listing, derived from its id. */
+export function certNo(id: string) {
+  const n = parseInt(id.replace(/-/g, "").slice(0, 8), 16) % 1e8;
+  const s = String(n).padStart(8, "0");
+  return `${s.slice(0, 4)} ${s.slice(4)}`;
+}
