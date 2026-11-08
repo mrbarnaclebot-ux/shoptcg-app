@@ -31,6 +31,15 @@ Runs lint, typecheck, Vitest, build and the Playwright smoke test, the same as C
 - Schema: `src/db/schema.ts`. After changing it run `pnpm db:generate` and commit the new file in `drizzle/`.
 - `pnpm db:migrate` applies migrations to `DATABASE_URL`, or to PGlite when unset.
 
+## Catalog and prices
+
+- Search: `searchCatalog()` in `src/lib/catalog.ts` reads the local `catalog_item` cache first, then the provider. With `PPT_API_KEY` set the provider is PokemonPriceTracker; without it, TCGdex (no key, raw EN/JA cards only).
+- TCGdex prices are stored under source `tcgdex` for cross-checking only. Their licence is unclear, so they are not for display.
+- `pnpm sync:prices` writes today's `price_point` for every catalog item. Rerunning the same day overwrites today's rows. It exits non-zero only when every price call failed. PPT calls are throttled to under 60/min and retried with backoff on 429.
+- Card images are not licensed by any provider. Fine for a hobby project; revisit before a public launch.
+
 ## Deploy (Railway)
 
-`railway.json` builds with Railpack, runs `pnpm db:migrate` before each deploy and starts with `pnpm start`. Set `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `RESEND_API_KEY` and `EMAIL_FROM` on the service.
+`railway.json` builds with Railpack, runs `pnpm db:migrate` before each deploy and starts with `pnpm start`. Set `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `RESEND_API_KEY`, `EMAIL_FROM` and `PPT_API_KEY` on the service.
+
+Nightly price sync: add a second service from the same repo with start command `pnpm sync:prices`, cron schedule `0 6 * * *` (06:00 UTC) and restart policy "Never". Give it the same `DATABASE_URL` and `PPT_API_KEY`.
