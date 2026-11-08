@@ -1,0 +1,10 @@
+.next
+.data
+drizzle
+pnpm-lock.yaml
+next-env.d.ts
+test-results
+playwright-report
+.planning
+agent.md
+AGENTS.md
