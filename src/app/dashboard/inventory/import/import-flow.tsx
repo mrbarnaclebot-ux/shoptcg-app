@@ -39,7 +39,9 @@ export function ImportFlow() {
         if (res.error) fail(res.error);
         setRows(res.rows);
       } catch {
-        fail(FAILED);
+        // The file may be fine; the request never landed.
+        setError(FAILED);
+        toast.sendFailed(FAILED);
       }
     });
   const confirm = () =>

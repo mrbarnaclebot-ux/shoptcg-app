@@ -7,7 +7,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { toast } from "@/lib/toast";
 
 // Rendered once after createStoreAction redirects to ?created=1. The flag is
-// dropped from the URL so a reload or a shared link never replays the moment.
+// dropped from the URL so a reload never replays the moment.
+// ponytail: not a one-time flag; a shared or back-navigated ?created=1 replays the
+// toast. Harmless for the owner; add a server-side "celebrated" flag if it matters.
 export function StoreCreated({ slug }: { slug: string }) {
   useEffect(() => {
     const url = new URL(location.href);
