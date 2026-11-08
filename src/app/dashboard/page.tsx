@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Button } from "@/components/ui/button";
-import { Wordmark } from "@/components/wordmark";
+import { Inbox } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { getDb } from "@/db";
 import type { Store } from "@/db/schema";
 import { requireUser } from "@/lib/session";
 import { getStoreByOwner } from "@/lib/stores";
-import { signOutAction } from "./actions";
 import { CreateStoreForm } from "./create-store-form";
 
 export const metadata: Metadata = { title: "Dashboard - shoptcg" };
@@ -31,26 +30,16 @@ async function Dashboard() {
   const user = await requireUser();
   const store = await getStoreByOwner(getDb(), user.id);
   return (
-    <>
-      <header className="border-b border-border">
-        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-4 px-4 py-2 md:px-6 lg:px-8">
-          <Wordmark />
-          <div className="flex min-w-0 items-center gap-2">
-            <p className="hidden truncate text-sm text-subtle sm:block">
-              {user.email}
-            </p>
-            <form action={signOutAction}>
-              <Button type="submit" variant="ghost" size="lg">
-                Sign out
-              </Button>
-            </form>
-          </div>
-        </div>
-      </header>
-      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-8 px-4 pt-10 pb-16">
-        {store ? <StoreSummary store={store} /> : <NewStore />}
-      </main>
-    </>
+    <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-8 px-4 pt-8 pb-16">
+      {store ? (
+        <>
+          <StoreSummary store={store} />
+          <RequestsEmpty />
+        </>
+      ) : (
+        <NewStore />
+      )}
+    </main>
   );
 }
 
@@ -106,6 +95,31 @@ function StoreSummary({ store }: { store: Store }) {
           {origin}/{store.slug}
         </Link>
       </div>
+    </section>
+  );
+}
+
+// ponytail: static until the Phase 5 request queue exists.
+function RequestsEmpty() {
+  return (
+    <section
+      aria-labelledby="requests-h"
+      className="flex flex-col items-center gap-3 rounded-lg border border-border px-5 py-10 text-center"
+    >
+      <Inbox aria-hidden className="size-8 stroke-[1.75] text-subtle" />
+      <h2 id="requests-h" className="text-xl font-bold wdth-108">
+        No requests yet.
+      </h2>
+      <p className="max-w-[34ch] text-muted-foreground">
+        When a buyer scans your table sign and sends a list, it lands here.
+        While you wait, stock your shelf.
+      </p>
+      <Link
+        href="/dashboard/inventory"
+        className={buttonVariants({ size: "lg", variant: "secondary" })}
+      >
+        Go to inventory
+      </Link>
     </section>
   );
 }

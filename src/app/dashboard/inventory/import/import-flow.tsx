@@ -1,0 +1,87 @@
+"use client";
+
+import { CircleAlert, Download, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { Button } from "@/components/ui/button";
+import type { PreviewRow } from "@/lib/csv-import";
+import { importCsvAction, previewCsvAction } from "../actions";
+import { PreviewTable } from "./preview-table";
+
+export function ImportFlow() {
+  const router = useRouter();
+  const [rows, setRows] = useState<PreviewRow[]>();
+  const [error, setError] = useState<string>();
+  const [checking, startCheck] = useTransition();
+  const [importing, startImport] = useTransition();
+  const valid = rows?.flatMap((r) => (r.row ? [r.row] : [])) ?? [];
+
+  const choose = (file: File | undefined) =>
+    file &&
+    startCheck(async () => {
+      setRows(undefined);
+      const res = await previewCsvAction(await file.text());
+      setError(res.error);
+      setRows(res.rows);
+    });
+  const confirm = () =>
+    startImport(async () => {
+      const res = await importCsvAction(valid);
+      if (res.error) return setError(res.error);
+      router.push("/dashboard/inventory");
+    });
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="inline-flex h-12 cursor-pointer items-center gap-2 rounded-md bg-brand px-5 font-bold text-on-brand has-focus-visible:ring-2 has-focus-visible:ring-focus has-focus-visible:ring-offset-2">
+          <Upload aria-hidden className="size-5" />
+          {rows ? "Choose another file" : "Choose CSV file"}
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            className="sr-only"
+            disabled={checking || importing}
+            onChange={(e) => choose(e.target.files?.[0])}
+          />
+        </label>
+        <a
+          href="/inventory-template.csv"
+          download
+          className="inline-flex min-h-11 items-center gap-2 font-semibold text-brand-text"
+        >
+          <Download aria-hidden className="size-4" />
+          CSV template
+        </a>
+      </div>
+      {checking && (
+        <p role="status" className="text-muted-foreground">
+          Checking your rows against the catalog. Big files take a minute.
+        </p>
+      )}
+      {error && (
+        <p
+          role="alert"
+          className="flex gap-2 rounded-md bg-danger-bg px-4 py-3 text-danger"
+        >
+          <CircleAlert aria-hidden className="mt-0.5 size-5 shrink-0" />
+          {error}
+        </p>
+      )}
+      {rows && <PreviewTable rows={rows} />}
+      {rows && (
+        <Button
+          size="lg"
+          className="self-start"
+          disabled={!valid.length || importing}
+          aria-busy={importing}
+          onClick={confirm}
+        >
+          {importing
+            ? "Importing"
+            : `Import ${valid.length} ${valid.length === 1 ? "item" : "items"}`}
+        </Button>
+      )}
+    </div>
+  );
+}

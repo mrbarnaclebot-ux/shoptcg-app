@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import type { CatalogItem } from "@/db/schema";
 import { parseCsv } from "@/lib/csv";
@@ -52,6 +53,12 @@ describe("readCsv", () => {
       line: 5,
       error: expect.stringMatching(/^name/),
     });
+  });
+
+  it("accepts every row of the downloadable template", () => {
+    const rows = readCsv(readFileSync("public/inventory-template.csv", "utf8"));
+    expect(rows.length).toBeGreaterThan(3);
+    expect(rows.filter((r) => !r.ok)).toEqual([]);
   });
 
   it("rejects files without a header or over the row limit", () => {
