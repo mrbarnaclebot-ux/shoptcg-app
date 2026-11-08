@@ -8,6 +8,11 @@ import type { PreviewRow } from "@/lib/csv-import";
 import { importCsvAction, previewCsvAction } from "../actions";
 import { PreviewTable } from "./preview-table";
 
+// Server actions reject bodies over 1 MB with an opaque error; stop short of it here.
+const MAX_FILE_BYTES = 900_000;
+const FAILED =
+  "Couldn't reach the server. Check your connection and try again.";
+
 export function ImportFlow() {
   const router = useRouter();
   const [rows, setRows] = useState<PreviewRow[]>();
@@ -20,14 +25,26 @@ export function ImportFlow() {
     file &&
     startCheck(async () => {
       setRows(undefined);
-      const res = await previewCsvAction(await file.text());
-      setError(res.error);
-      setRows(res.rows);
+      if (file.size > MAX_FILE_BYTES)
+        return setError(
+          "That file is too big. Keep it under 900 KB, or split it.",
+        );
+      try {
+        const res = await previewCsvAction(await file.text());
+        setError(res.error);
+        setRows(res.rows);
+      } catch {
+        setError(FAILED);
+      }
     });
   const confirm = () =>
     startImport(async () => {
-      const res = await importCsvAction(valid);
-      if (res.error) return setError(res.error);
+      try {
+        const res = await importCsvAction(valid);
+        if (res.error) return setError(res.error);
+      } catch {
+        return setError(FAILED);
+      }
       router.push("/dashboard/inventory");
     });
 
