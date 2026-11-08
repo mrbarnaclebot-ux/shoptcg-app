@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
@@ -69,9 +68,9 @@ function NewStore() {
   );
 }
 
-async function StoreSummary({ store }: { store: Store }) {
-  const h = await headers();
-  const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
+function StoreSummary({ store }: { store: Store }) {
+  // Request headers are client-controlled; the configured origin is not.
+  const origin = (process.env.BETTER_AUTH_URL ?? "").replace(/\/$/, "");
   const initials = store.name
     .split(/\s+/)
     .map((w) => w[0])
