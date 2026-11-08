@@ -24,9 +24,18 @@ beforeAll(async () => {
 });
 
 describe("slugSchema", () => {
-  it.each(["ab", "a".repeat(41), "Has-Caps", "under_score", "login", "terms"])(
-    "rejects %s",
-    (slug) => expect(slugSchema.safeParse(slug).success).toBe(false),
+  it.each([
+    "ab",
+    "a".repeat(41),
+    "Has-Caps",
+    "under_score",
+    "login",
+    "terms",
+    "-pika",
+    "pika-",
+    "pika--cards",
+  ])("rejects %s", (slug) =>
+    expect(slugSchema.safeParse(slug).success).toBe(false),
   );
   it.each(["abc", "pika-cards-99", "a".repeat(40)])("accepts %s", (slug) =>
     expect(slugSchema.safeParse(slug).success).toBe(true),
@@ -69,10 +78,29 @@ describe("createStore", () => {
     });
   });
 
+  it("maps a postgres-js duplicate slug error (constraint_name)", async () => {
+    // postgres-js names the field constraint_name; PGlite uses constraint.
+    const err = {
+      cause: { code: "23505", constraint_name: "store_slug_unique" },
+    };
+    const returning = () => Promise.reject(err);
+    const fake = { insert: () => ({ values: () => ({ returning }) }) };
+    const res = await createStore(fake as unknown as Db, "u3", {
+      name: "X",
+      slug: "taken",
+    });
+    expect(res).toEqual({
+      ok: false,
+      errors: { slug: "That address is taken" },
+    });
+  });
+
   it("enforces the slug format in the database itself", async () => {
-    const bad = db
-      .insert(schema.store)
-      .values({ ownerUserId: "u2", name: "Z", slug: "NO" });
-    await expect(bad).rejects.toThrow();
+    for (const slug of ["NO", "-abc", "abc-", "ab--cd"]) {
+      const bad = db
+        .insert(schema.store)
+        .values({ ownerUserId: "u2", name: "Z", slug });
+      await expect(bad).rejects.toThrow();
+    }
   });
 });

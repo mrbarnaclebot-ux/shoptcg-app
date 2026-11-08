@@ -95,7 +95,10 @@ export const store = pgTable(
       .defaultNow(),
   },
   (t) => [
-    check("store_slug_format", sql`${t.slug} ~ '^[a-z0-9-]{3,40}$'`),
+    check(
+      "store_slug_format",
+      sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$' and char_length(${t.slug}) between 3 and 40`,
+    ),
     check("store_name_length", sql`char_length(${t.name}) between 1 and 80`),
     check("store_rounding_nonneg", sql`${t.rounding} >= 0`),
     check("store_fx_rate_positive", sql`${t.fxRate} > 0`),

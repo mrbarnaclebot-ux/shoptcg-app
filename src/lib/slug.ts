@@ -30,7 +30,10 @@ export const slugSchema = z
   .string()
   .min(3, "At least 3 characters")
   .max(40, "At most 40 characters")
-  .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers and hyphens only")
+  .regex(
+    /^[a-z0-9]+(-[a-z0-9]+)*$/,
+    "Lowercase letters and numbers, single hyphens between them",
+  )
   .refine((s) => !RESERVED_SLUGS.has(s), "That address is reserved");
 
 export const createStoreSchema = z.object({
