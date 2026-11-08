@@ -136,7 +136,12 @@ function Added({ name, onAgain }: { name: string; onAgain: () => void }) {
 function ItemHeader({ item }: { item: CatalogItem }) {
   return (
     <div className="flex items-center gap-4">
-      <CardThumb src={item.imageUrl} kind={item.kind} className="w-20" />
+      <CardThumb
+        src={item.imageUrl}
+        kind={item.kind}
+        language={item.language}
+        className="w-20"
+      />
       <div className="min-w-0">
         <h2 className="text-lg font-semibold">{item.name}</h2>
         <p className="text-sm text-muted-foreground">

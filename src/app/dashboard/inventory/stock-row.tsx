@@ -31,7 +31,7 @@ export function StockRow(props: {
   return (
     <li className="flex flex-col gap-3 py-3 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-8">
       <div className="flex items-start gap-3 lg:flex-1">
-        <CardThumb src={row.imageUrl} kind={row.kind} />
+        <CardThumb src={row.imageUrl} kind={row.kind} language={row.language} />
         <div className="min-w-0 flex-1">
           <p
             lang={row.language === "en" ? undefined : row.language}

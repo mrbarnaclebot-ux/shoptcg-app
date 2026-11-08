@@ -191,7 +191,12 @@ function ResultItem({
         onClick={() => onPick(item)}
         className="flex w-full items-center gap-3 py-2 text-left hover:bg-surface"
       >
-        <CardThumb src={item.imageUrl} kind={item.kind} className="w-12" />
+        <CardThumb
+          src={item.imageUrl}
+          kind={item.kind}
+          language={item.language}
+          className="w-12"
+        />
         <span className="min-w-0">
           <span className="block truncate font-semibold">{item.name}</span>
           <span className="text-sm text-muted-foreground">
