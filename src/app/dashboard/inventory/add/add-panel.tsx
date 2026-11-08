@@ -45,20 +45,7 @@ export function AddPanel({
         <ChevronLeft aria-hidden className="size-4" />
         Back to results
       </button>
-      <div className="flex items-center gap-4">
-        <CardThumb src={item.imageUrl} kind={item.kind} className="w-20" />
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold">{item.name}</h2>
-          <p className="text-sm text-muted-foreground">
-            {[item.setName, item.number].filter(Boolean).join(" ")}
-          </p>
-          {item.grader && (
-            <p className="text-sm font-semibold">
-              {item.grader} {item.grade}
-            </p>
-          )}
-        </div>
-      </div>
+      <ItemHeader item={item} />
       {item.kind === "raw" && (
         <Segmented
           label="Condition"
@@ -141,6 +128,25 @@ function Added({ name, onAgain }: { name: string; onAgain: () => void }) {
         >
           View inventory
         </Link>
+      </div>
+    </div>
+  );
+}
+
+function ItemHeader({ item }: { item: CatalogItem }) {
+  return (
+    <div className="flex items-center gap-4">
+      <CardThumb src={item.imageUrl} kind={item.kind} className="w-20" />
+      <div className="min-w-0">
+        <h2 className="text-lg font-semibold">{item.name}</h2>
+        <p className="text-sm text-muted-foreground">
+          {[item.setName, item.number].filter(Boolean).join(" ")}
+        </p>
+        {item.grader && (
+          <p className="text-sm font-semibold">
+            {item.grader} {item.grade}
+          </p>
+        )}
       </div>
     </div>
   );

@@ -152,27 +152,7 @@ function Results(props: {
       )}
       <ul className="flex flex-col divide-y divide-border">
         {items.map((it) => (
-          <li key={it.id}>
-            <button
-              type="button"
-              onClick={() => props.onPick(it)}
-              className="flex w-full items-center gap-3 py-2 text-left hover:bg-surface"
-            >
-              <CardThumb src={it.imageUrl} kind={it.kind} className="w-12" />
-              <span className="min-w-0">
-                <span className="block truncate font-semibold">{it.name}</span>
-                <span className="text-sm text-muted-foreground">
-                  {[
-                    it.setName,
-                    it.number,
-                    it.grader && `${it.grader} ${it.grade}`,
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                </span>
-              </span>
-            </button>
-          </li>
+          <ResultItem key={it.id} item={it} onPick={props.onPick} />
         ))}
       </ul>
       <div className="flex flex-wrap gap-x-4">
@@ -194,5 +174,37 @@ function Results(props: {
         </button>
       </div>
     </div>
+  );
+}
+
+function ResultItem({
+  item,
+  onPick,
+}: {
+  item: CatalogItem;
+  onPick: (item: CatalogItem) => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onPick(item)}
+        className="flex w-full items-center gap-3 py-2 text-left hover:bg-surface"
+      >
+        <CardThumb src={item.imageUrl} kind={item.kind} className="w-12" />
+        <span className="min-w-0">
+          <span className="block truncate font-semibold">{item.name}</span>
+          <span className="text-sm text-muted-foreground">
+            {[
+              item.setName,
+              item.number,
+              item.grader && `${item.grader} ${item.grade}`,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          </span>
+        </span>
+      </button>
+    </li>
   );
 }

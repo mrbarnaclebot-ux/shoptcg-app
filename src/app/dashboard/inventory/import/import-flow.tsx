@@ -33,27 +33,11 @@ export function ImportFlow() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="inline-flex h-12 cursor-pointer items-center gap-2 rounded-md bg-brand px-5 font-bold text-on-brand has-focus-visible:ring-2 has-focus-visible:ring-focus has-focus-visible:ring-offset-2">
-          <Upload aria-hidden className="size-5" />
-          {rows ? "Choose another file" : "Choose CSV file"}
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            className="sr-only"
-            disabled={checking || importing}
-            onChange={(e) => choose(e.target.files?.[0])}
-          />
-        </label>
-        <a
-          href="/inventory-template.csv"
-          download
-          className="inline-flex min-h-11 items-center gap-2 font-semibold text-brand-text"
-        >
-          <Download aria-hidden className="size-4" />
-          CSV template
-        </a>
-      </div>
+      <FilePicker
+        again={Boolean(rows)}
+        disabled={checking || importing}
+        onFile={choose}
+      />
       {checking && (
         <p role="status" className="text-muted-foreground">
           Checking your rows against the catalog. Big files take a minute.
@@ -82,6 +66,36 @@ export function ImportFlow() {
             : `Import ${valid.length} ${valid.length === 1 ? "item" : "items"}`}
         </Button>
       )}
+    </div>
+  );
+}
+
+function FilePicker(props: {
+  again: boolean;
+  disabled: boolean;
+  onFile: (file: File | undefined) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <label className="inline-flex h-12 cursor-pointer items-center gap-2 rounded-md bg-brand px-5 font-bold text-on-brand has-focus-visible:ring-2 has-focus-visible:ring-focus has-focus-visible:ring-offset-2">
+        <Upload aria-hidden className="size-5" />
+        {props.again ? "Choose another file" : "Choose CSV file"}
+        <input
+          type="file"
+          accept=".csv,text/csv"
+          className="sr-only"
+          disabled={props.disabled}
+          onChange={(e) => props.onFile(e.target.files?.[0])}
+        />
+      </label>
+      <a
+        href="/inventory-template.csv"
+        download
+        className="inline-flex min-h-11 items-center gap-2 font-semibold text-brand-text"
+      >
+        <Download aria-hidden className="size-4" />
+        CSV template
+      </a>
     </div>
   );
 }

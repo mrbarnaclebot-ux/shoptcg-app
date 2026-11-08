@@ -1,4 +1,13 @@
-import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  or,
+  sql,
+  type Column,
+} from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { catalogItem, listing, pricePoint } from "@/db/schema";
 import type {
@@ -41,7 +50,7 @@ function latestPrices(db: Db, storeId: string) {
 }
 
 function filterConds(storeId: string, f: StockFilter) {
-  const name = sql<string>`coalesce(${listing.name}, ${catalogItem.name})`;
+  const name = pick<string>(listing.name, catalogItem.name);
   const conds = [
     eq(listing.storeId, storeId),
     eq(listing.active, f.kind !== "hidden"),
@@ -57,39 +66,35 @@ function filterConds(storeId: string, f: StockFilter) {
   return { name, where: and(...conds) };
 }
 
+// Custom fields win over the catalog row, so a vendor can relabel an item.
+const pick = <T>(own: Column, cat: Column) => sql<T>`coalesce(${own}, ${cat})`;
+
+function columns(latest: ReturnType<typeof latestPrices>) {
+  return {
+    id: listing.id,
+    catalogItemId: listing.catalogItemId,
+    setName: pick<string | null>(listing.setName, catalogItem.setName),
+    number: pick<string | null>(listing.number, catalogItem.number),
+    grader: pick<string | null>(listing.grader, catalogItem.grader),
+    grade: pick<string | null>(listing.grade, catalogItem.grade),
+    imageUrl: pick<string | null>(listing.imageUrl, catalogItem.imageUrl),
+    kind: listing.kind,
+    language: listing.language,
+    condition: listing.condition,
+    qty: listing.qty,
+    overridePrice: listing.overridePrice,
+    active: listing.active,
+    market: latest.market,
+    asOf: latest.asOf,
+  };
+}
+
 /** The store's stock with display fields resolved and the latest market price. */
 export async function listStock(db: Db, storeId: string, f: StockFilter = {}) {
   const latest = latestPrices(db, storeId);
   const { name, where } = filterConds(storeId, f);
   const rows = await db
-    .select({
-      id: listing.id,
-      catalogItemId: listing.catalogItemId,
-      name,
-      setName: sql<
-        string | null
-      >`coalesce(${listing.setName}, ${catalogItem.setName})`,
-      number: sql<
-        string | null
-      >`coalesce(${listing.number}, ${catalogItem.number})`,
-      grader: sql<
-        string | null
-      >`coalesce(${listing.grader}, ${catalogItem.grader})`,
-      grade: sql<
-        string | null
-      >`coalesce(${listing.grade}, ${catalogItem.grade})`,
-      imageUrl: sql<
-        string | null
-      >`coalesce(${listing.imageUrl}, ${catalogItem.imageUrl})`,
-      kind: listing.kind,
-      language: listing.language,
-      condition: listing.condition,
-      qty: listing.qty,
-      overridePrice: listing.overridePrice,
-      active: listing.active,
-      market: latest.market,
-      asOf: latest.asOf,
-    })
+    .select({ ...columns(latest), name })
     .from(listing)
     .leftJoin(catalogItem, eq(catalogItem.id, listing.catalogItemId))
     .leftJoin(latest, eq(latest.catalogItemId, listing.catalogItemId))

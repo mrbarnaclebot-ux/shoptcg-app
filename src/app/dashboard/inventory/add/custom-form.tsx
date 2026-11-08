@@ -46,9 +46,6 @@ export function CustomForm() {
     addCustomAction,
     {},
   );
-  const [kind, setKind] = useState<Kind>("raw");
-  const [language, setLanguage] = useState("zh");
-  const [condition, setCondition] = useState("NM");
   const e = state.errors ?? {};
   return (
     <form action={action} className="flex flex-col gap-5">
@@ -72,6 +69,32 @@ export function CustomForm() {
         <Field name="setName" label="Set (optional)" error={e.setName} />
         <Field name="number" label="Number" error={e.number} />
       </div>
+      <KindFields errors={e} />
+      <Field
+        name="imageUrl"
+        label="Image link (optional)"
+        placeholder="https://"
+        error={e.imageUrl}
+      />
+      <StockFields errors={e} />
+      <p className="text-sm text-subtle">
+        Custom items have no market price, so set a fixed price or add one
+        later.
+      </p>
+      <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
+        {pending ? "Adding" : "Add custom item"}
+      </Button>
+    </form>
+  );
+}
+
+// Type decides which of condition or grader + grade the item carries.
+function KindFields({ errors: e }: { errors: Record<string, string> }) {
+  const [kind, setKind] = useState<Kind>("raw");
+  const [language, setLanguage] = useState("zh");
+  const [condition, setCondition] = useState("NM");
+  return (
+    <>
       <Segmented
         name="kind"
         label="Type"
@@ -114,20 +137,6 @@ export function CustomForm() {
           <Field name="grade" label="Grade" placeholder="10" error={e.grade} />
         </div>
       )}
-      <Field
-        name="imageUrl"
-        label="Image link (optional)"
-        placeholder="https://"
-        error={e.imageUrl}
-      />
-      <StockFields errors={e} />
-      <p className="text-sm text-subtle">
-        Custom items have no market price, so set a fixed price or add one
-        later.
-      </p>
-      <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
-        {pending ? "Adding" : "Add custom item"}
-      </Button>
-    </form>
+    </>
   );
 }

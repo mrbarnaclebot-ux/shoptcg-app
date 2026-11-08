@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Segmented } from "@/components/segmented";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,10 +19,10 @@ type Values = {
 };
 
 const ROUNDING = [
-  { value: "0", label: "Exact cents" },
-  { value: "0.5", label: "Nearest $0.50" },
-  { value: "1", label: "Nearest $1" },
-];
+  ["0", "Exact cents"],
+  ["0.5", "Nearest $0.50"],
+  ["1", "Nearest $1"],
+] as const;
 
 function Err({ id, msg }: { id: string; msg?: string }) {
   return msg ? (
@@ -121,31 +122,13 @@ function PricingFields({ values, errors: e }: FieldsProps) {
         </p>
         <Err id="rule-error" msg={e.priceRulePct} />
       </div>
-      <div
-        className="flex flex-col gap-2"
-        role="radiogroup"
-        aria-label="Rounding"
-      >
-        <span className="text-sm font-medium">Rounding</span>
-        <div className="grid grid-cols-3 gap-2">
-          {ROUNDING.map((r) => (
-            <label
-              key={r.value}
-              className="flex min-h-12 cursor-pointer items-center justify-center rounded-md border border-border-strong bg-surface-2 px-2 text-center text-sm font-semibold has-checked:border-brand has-checked:bg-brand-bg has-checked:text-sunrise-200 has-focus-visible:ring-2 has-focus-visible:ring-focus"
-            >
-              <input
-                type="radio"
-                name="rounding"
-                value={r.value}
-                checked={rounding === r.value}
-                onChange={() => setRounding(r.value)}
-                className="sr-only"
-              />
-              {r.label}
-            </label>
-          ))}
-        </div>
-      </div>
+      <Segmented
+        name="rounding"
+        label="Rounding"
+        value={rounding}
+        options={ROUNDING}
+        onChange={setRounding}
+      />
       <p
         className="rounded-md bg-surface px-4 py-3 text-sm text-muted-foreground"
         aria-live="polite"

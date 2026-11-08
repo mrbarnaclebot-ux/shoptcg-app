@@ -23,7 +23,6 @@ export function EditPanel({
       setError(res.error);
       if (!res.error) onDone();
     });
-  const priceId = `price-${row.id}`;
   return (
     <form
       className="ml-[52px] flex flex-col gap-4 rounded-lg bg-surface p-4 shadow-1"
@@ -36,6 +35,34 @@ export function EditPanel({
         });
       }}
     >
+      <Fields row={row} />
+      {error && (
+        <p role="alert" className="text-sm text-danger">
+          {error}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
+          Save
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="lg"
+          disabled={pending}
+          onClick={() => save({ active: !row.active })}
+        >
+          {row.active ? "Hide from store" : "Show in store"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function Fields({ row }: { row: StockRow }) {
+  const priceId = `price-${row.id}`;
+  return (
+    <>
       <div className="flex flex-col gap-2">
         <Label htmlFor={priceId}>Fixed price (USD)</Label>
         <Input
@@ -65,25 +92,6 @@ export function EditPanel({
           </select>
         </div>
       )}
-      {error && (
-        <p role="alert" className="text-sm text-danger">
-          {error}
-        </p>
-      )}
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
-          Save
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="lg"
-          disabled={pending}
-          onClick={() => save({ active: !row.active })}
-        >
-          {row.active ? "Hide from store" : "Show in store"}
-        </Button>
-      </div>
-    </form>
+    </>
   );
 }
