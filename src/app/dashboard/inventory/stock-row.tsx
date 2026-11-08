@@ -98,10 +98,17 @@ function PriceColumn({ row, price, today }: Parameters<typeof StockRow>[0]) {
 function QtyStepper({ id, qty }: { id: string; qty: number }) {
   const [shown, setShown] = useOptimistic(qty);
   const [, start] = useTransition();
+  const [failed, setFailed] = useState(false);
   const step = (delta: 1 | -1) =>
     start(async () => {
+      setFailed(false);
       setShown(Math.max(0, shown + delta));
-      await stepQtyAction(id, delta);
+      try {
+        await stepQtyAction(id, delta);
+      } catch {
+        // The optimistic value reverts on its own; say why it moved back.
+        setFailed(true);
+      }
     });
   const btn =
     "grid size-11 place-items-center rounded-md bg-surface-2 ring-1 ring-border-strong disabled:opacity-40";
@@ -127,8 +134,16 @@ function QtyStepper({ id, qty }: { id: string; qty: number }) {
       >
         <Plus aria-hidden className="size-5" />
       </button>
-      {shown === 0 && (
-        <span className="ml-2 text-sm font-semibold text-subtle">Sold out</span>
+      {failed ? (
+        <span role="alert" className="ml-2 text-sm font-semibold text-danger">
+          Not saved. Try again.
+        </span>
+      ) : (
+        shown === 0 && (
+          <span className="ml-2 text-sm font-semibold text-subtle">
+            Sold out
+          </span>
+        )
       )}
     </div>
   );
