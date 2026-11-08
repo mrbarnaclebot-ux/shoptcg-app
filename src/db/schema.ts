@@ -204,6 +204,7 @@ export const listing = pgTable(
       sql`${t.catalogItemId} is not null or ${t.kind} <> 'graded' or (${t.grader} is not null and ${t.grade} is not null)`,
     ),
     check("listing_qty_nonneg", sql`${t.qty} >= 0`),
+    check("listing_qty_max", sql`${t.qty} <= 9999`),
     check("listing_override_positive", sql`${t.overridePrice} > 0`),
   ],
 );

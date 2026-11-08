@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "@/db/open";
 import * as schema from "@/db/schema";
@@ -10,6 +10,7 @@ import {
   importListings,
   listStock,
   ListingError,
+  MAX_ACTIVE_LISTINGS,
   stepQty,
   updateListing,
 } from "@/lib/listings";
@@ -100,11 +101,24 @@ describe("listings", () => {
   it("never steps qty below 0 and hides from the default view", async () => {
     const row = await addCustomListing(db, a, custom({ qty: 1 }));
     expect(await stepQty(db, a, row.id, -5)).toBe(0);
+    await updateListing(db, a, { id: row.id, qty: 9999 });
+    expect(await stepQty(db, a, row.id, 1)).toBe(9999);
     await updateListing(db, a, { id: row.id, active: false });
     const hidden = await listStock(db, a, { kind: "hidden" });
     expect(hidden.map((r) => r.id)).toContain(row.id);
     const shown = await listStock(db, a);
     expect(shown.map((r) => r.id)).not.toContain(row.id);
+  });
+
+  it("caps active listings per store", async () => {
+    const full = await addStore(db, "vfull");
+    await db.execute(
+      sql`insert into listing (store_id, kind, language, name, condition)
+        select ${full}, 'raw', 'en', 'x', 'NM' from generate_series(1, ${MAX_ACTIVE_LISTINGS})`,
+    );
+    await expect(addCustomListing(db, full, custom())).rejects.toThrow(
+      /can list 5000/,
+    );
   });
 
   it("imports all rows or none", async () => {

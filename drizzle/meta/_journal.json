@@ -43,6 +43,13 @@
       "when": 1794115600929,
       "tag": "0005_inventory",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794160454054,
+      "tag": "0006_listing_qty_max",
+      "breakpoints": true
     }
   ]
 }

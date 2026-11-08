@@ -1,5 +1,6 @@
 import {
   and,
+  count,
   desc,
   eq,
   ilike,
@@ -113,6 +114,20 @@ export type StockRow = Awaited<ReturnType<typeof listStock>>[number];
 
 export class ListingError extends Error {}
 
+export const MAX_ACTIVE_LISTINGS = 5000;
+
+// ponytail: count-then-insert can overshoot under concurrent adds; a trigger if that matters.
+async function assertRoom(db: Db, storeId: string, adding: number) {
+  const [{ n }] = await db
+    .select({ n: count() })
+    .from(listing)
+    .where(and(eq(listing.storeId, storeId), eq(listing.active, true)));
+  if (n + adding > MAX_ACTIVE_LISTINGS)
+    throw new ListingError(
+      `Your shop can list ${MAX_ACTIVE_LISTINGS} items. Hide or remove some first.`,
+    );
+}
+
 /** Lists a catalog item; kind and language come from the catalog row, not the client. */
 export async function addCatalogListing(
   db: Db,
@@ -126,6 +141,7 @@ export async function addCatalogListing(
   if (!item) throw new ListingError("That card is no longer in the catalog");
   if (item.kind === "raw" && !input.condition)
     throw new ListingError("Pick a condition");
+  await assertRoom(db, storeId, 1);
   const [row] = await db
     .insert(listing)
     .values({
@@ -154,6 +170,7 @@ export async function addCustomListing(
   storeId: string,
   input: CustomListingInput,
 ) {
+  await assertRoom(db, storeId, 1);
   const [row] = await db
     .insert(listing)
     .values(customValues(storeId, input))
@@ -194,6 +211,7 @@ export async function importListings(
     return { ...r.input, storeId, kind, language, condition };
   });
   if (!values.length) return 0;
+  await assertRoom(db, storeId, values.length);
   // 1000 rows x 18 columns stays under the 65535 bind-parameter cap.
   const inserted = await db
     .insert(listing)
@@ -216,7 +234,7 @@ export async function updateListing(
   return rows.length > 0;
 }
 
-/** Moves qty by delta, never below 0; false when the listing is not theirs. */
+/** Moves qty by delta within 0 to 9999; null when the listing is not theirs. */
 export async function stepQty(
   db: Db,
   storeId: string,
@@ -226,7 +244,7 @@ export async function stepQty(
   const rows = await db
     .update(listing)
     .set({
-      qty: sql`greatest(0, ${listing.qty} + ${delta})`,
+      qty: sql`least(9999, greatest(0, ${listing.qty} + ${delta}))`,
       updatedAt: sql`now()`,
     })
     .where(and(eq(listing.id, id), eq(listing.storeId, storeId)))

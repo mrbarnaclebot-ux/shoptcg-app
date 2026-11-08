@@ -139,6 +139,7 @@ export async function importCsvAction(
     const count = await importListings(getDb(), store.id, parsed.data);
     return { count };
   } catch (err) {
+    if (err instanceof ListingError) return { error: err.message };
     console.error("[inventory] import failed", err);
     return { error: "Nothing was imported. Preview the file again and retry." };
   }
