@@ -34,9 +34,16 @@ import { requireStore } from "@/lib/session";
 type Result = { error?: string };
 const SAVE_FAILED = "Couldn't save that. Try again.";
 
+const deltaSchema = z.union([z.literal(1), z.literal(-1)]);
+
 export async function stepQtyAction(id: string, delta: 1 | -1) {
   const { store } = await requireStore();
-  const qty = await stepQty(getDb(), store.id, z.uuid().parse(id), delta);
+  const qty = await stepQty(
+    getDb(),
+    store.id,
+    z.uuid().parse(id),
+    deltaSchema.parse(delta),
+  );
   refresh();
   return qty;
 }
@@ -84,7 +91,13 @@ export async function addCustomAction(
   const { store } = await requireStore();
   const parsed = customListingSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { errors: fieldErrors(parsed.error) };
-  await addCustomListing(getDb(), store.id, parsed.data);
+  try {
+    await addCustomListing(getDb(), store.id, parsed.data);
+  } catch (err) {
+    if (err instanceof ListingError) return { errors: { form: err.message } };
+    console.error("[inventory] add custom failed", err);
+    return { errors: { form: SAVE_FAILED } };
+  }
   return { added: parsed.data.name, n: (prev.n ?? 0) + 1 };
 }
 

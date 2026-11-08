@@ -81,6 +81,11 @@ export function CustomForm() {
         Custom items have no market price, so set a fixed price or add one
         later.
       </p>
+      {e.form && (
+        <p role="alert" className="text-sm font-semibold text-danger">
+          {e.form}
+        </p>
+      )}
       <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
         {pending ? "Adding" : "Add custom item"}
       </Button>
