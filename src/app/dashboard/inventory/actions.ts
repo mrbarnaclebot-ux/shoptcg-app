@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/db";
+import type { Db } from "@/db/open";
 import { chargeMiss, searchCatalog } from "@/lib/catalog";
 import {
   importRowsSchema,
@@ -36,6 +37,16 @@ type Result = { error?: string };
 /** What the toast needs: the new listing's id and whether it was the store's first. */
 type Added = { id: string; first: boolean };
 const SAVE_FAILED = "Couldn't save that. Try again.";
+
+// The insert already succeeded; a failed count only loses the celebration.
+async function isFirst(db: Db, storeId: string) {
+  try {
+    return (await countListings(db, storeId)) === 1;
+  } catch (err) {
+    console.error("[inventory] count failed", err);
+    return false;
+  }
+}
 
 const deltaSchema = z.union([z.literal(1), z.literal(-1)]);
 
@@ -75,7 +86,7 @@ export async function addCatalogAction(
   try {
     const db = getDb();
     const row = await addCatalogListing(db, store.id, parsed.data);
-    return { id: row.id, first: (await countListings(db, store.id)) === 1 };
+    return { id: row.id, first: await isFirst(db, store.id) };
   } catch (err) {
     if (err instanceof ListingError) return { error: err.message };
     console.error("[inventory] add failed", err);
@@ -105,7 +116,7 @@ export async function addCustomAction(
   try {
     const db = getDb();
     const row = await addCustomListing(db, store.id, parsed.data);
-    const first = (await countListings(db, store.id)) === 1;
+    const first = await isFirst(db, store.id);
     const { name, qty, overridePrice, condition } = parsed.data;
     const price = overridePrice ? Number(overridePrice) : null;
     const added = { id: row.id, first, name, qty, price, condition };

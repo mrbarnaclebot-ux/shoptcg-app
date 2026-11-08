@@ -127,8 +127,9 @@ function Qty({ row }: { row: Row }) {
       const next = Math.max(0, shown + delta);
       setShown(next);
       try {
-        await stepQtyAction(row.id, delta);
-        if (next === 0) toast.qtyZero(row.name, hide);
+        // null: the row is gone or not this store's; nothing to warn about.
+        const qty = await stepQtyAction(row.id, delta);
+        if (qty === 0) toast.qtyZero(row.name, hide);
       } catch {
         // The optimistic value reverts on its own; say why it moved back.
         setFailed(true);
@@ -137,7 +138,7 @@ function Qty({ row }: { row: Row }) {
     });
   return (
     <div className="flex items-center gap-2">
-      <Stepper value={shown} label="Quantity" onStep={step} />
+      <Stepper value={shown} label={`Quantity, ${row.name}`} onStep={step} />
       {failed ? (
         <span className="text-sm font-semibold text-danger">Not saved.</span>
       ) : (
