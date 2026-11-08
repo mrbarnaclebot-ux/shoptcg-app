@@ -3,13 +3,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Wordmark } from "@/components/wordmark";
 import { getDb } from "@/db";
 import type { Store } from "@/db/schema";
 import { requireUser } from "@/lib/session";
@@ -21,12 +15,16 @@ export const metadata: Metadata = { title: "Dashboard - shoptcg" };
 
 export default function DashboardPage() {
   return (
-    <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-6 py-10">
+    <div className="flex flex-1 flex-col">
       {/* Session reads are request-time, so they stream in behind a boundary. */}
-      <Suspense fallback={<p className="text-muted-foreground">Loading...</p>}>
+      <Suspense
+        fallback={
+          <div className="mx-auto mt-20 h-48 w-full max-w-lg animate-pulse rounded-lg bg-surface" />
+        }
+      >
         <Dashboard />
       </Suspense>
-    </main>
+    </div>
   );
 }
 
@@ -35,57 +33,80 @@ async function Dashboard() {
   const store = await getStoreByOwner(getDb(), user.id);
   return (
     <>
-      <header className="flex items-center justify-between gap-4">
-        <p className="truncate text-sm text-muted-foreground">{user.email}</p>
-        <form action={signOutAction}>
-          <Button type="submit" variant="ghost" size="sm">
-            Sign out
-          </Button>
-        </form>
+      <header className="border-b border-border">
+        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-4 px-4 py-2 md:px-6 lg:px-8">
+          <Wordmark />
+          <div className="flex min-w-0 items-center gap-2">
+            <p className="hidden truncate text-sm text-subtle sm:block">
+              {user.email}
+            </p>
+            <form action={signOutAction}>
+              <Button type="submit" variant="ghost" size="lg">
+                Sign out
+              </Button>
+            </form>
+          </div>
+        </div>
       </header>
-      {store ? <StoreSummary store={store} /> : <NewStore />}
+      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-8 px-4 pt-10 pb-16">
+        {store ? <StoreSummary store={store} /> : <NewStore />}
+      </main>
     </>
   );
 }
 
 function NewStore() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <h1>Create your store</h1>
-        </CardTitle>
-        <CardDescription>
-          The address is what buyers reach from your table QR code.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <CreateStoreForm />
-      </CardContent>
-    </Card>
+    <>
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold wdth-112">Name your store</h1>
+        <p className="text-muted-foreground">
+          The link is what buyers reach from your table QR code.
+        </p>
+      </div>
+      <CreateStoreForm />
+    </>
   );
 }
 
 async function StoreSummary({ store }: { store: Store }) {
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
+  const initials = store.name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <h1>{store.name}</h1>
-        </CardTitle>
-        <CardDescription>{store.isOpen ? "Open" : "Closed"}</CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2">
-        <p className="text-sm text-muted-foreground">Public page</p>
+    <section className="flex flex-col gap-6 rounded-lg bg-surface p-5 shadow-1 ring-1 ring-border">
+      <div className="flex items-center gap-4">
+        <div className="grid size-12 shrink-0 place-items-center rounded-md bg-surface-2 text-lg font-extrabold text-sunrise-300 shadow-2 wdth-118">
+          {initials}
+        </div>
+        <div className="min-w-0">
+          <h1 className="truncate text-2xl font-bold wdth-112">{store.name}</h1>
+          <p
+            className={`flex items-center gap-1.5 text-sm font-semibold ${store.isOpen ? "text-success" : "text-subtle"}`}
+          >
+            <span
+              className={`size-2 rounded-full ${store.isOpen ? "bg-success" : "bg-subtle"}`}
+            />
+            {store.isOpen ? "Open" : "Closed"}
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-col gap-1 border-t border-border pt-5">
+        <p className="text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
+          Public page
+        </p>
         <Link
           href={`/${store.slug}`}
-          className="break-all text-primary underline"
+          className="inline-flex min-h-11 items-center break-all text-brand-text underline underline-offset-4"
         >
           {origin}/{store.slug}
         </Link>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }

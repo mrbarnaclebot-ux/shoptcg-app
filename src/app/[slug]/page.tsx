@@ -8,8 +8,12 @@ import { getStoreBySlug } from "@/lib/stores";
 // Stub: the real public store page arrives in phase 4.
 export default function StorePage({ params }: PageProps<"/[slug]">) {
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-6">
-      <Suspense fallback={<p className="text-muted-foreground">Loading...</p>}>
+    <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col px-4 pt-6 md:px-6 lg:px-8">
+      <Suspense
+        fallback={
+          <div className="h-12 w-64 animate-pulse rounded-md bg-surface" />
+        }
+      >
         <StoreName params={params} />
       </Suspense>
     </main>
@@ -25,6 +29,16 @@ async function StoreName({ params }: { params: Promise<{ slug: string }> }) {
   const store = await getStoreBySlug(getDb(), slug);
   if (!store) notFound();
   return (
-    <h1 className="text-3xl font-semibold tracking-tight">{store.name}</h1>
+    <div className="flex flex-col gap-1">
+      <h1 className="text-2xl font-bold wdth-112">{store.name}</h1>
+      <p
+        className={`flex items-center gap-1.5 text-sm font-semibold ${store.isOpen ? "text-success" : "text-subtle"}`}
+      >
+        <span
+          className={`size-2 rounded-full ${store.isOpen ? "bg-success" : "bg-subtle"}`}
+        />
+        {store.isOpen ? "Open now" : "Closed"}
+      </p>
+    </div>
   );
 }

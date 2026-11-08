@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ function toSlug(value: string) {
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
   return (
-    <p id={id} className="text-sm text-destructive">
+    <p id={id} className="text-sm text-danger">
       {message}
     </p>
   );
@@ -37,23 +38,36 @@ export function CreateStoreForm() {
     <form action={action} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Label htmlFor="name">Store name</Label>
-        <Input id="name" name="name" required maxLength={80} />
+        <Input
+          id="name"
+          name="name"
+          required
+          maxLength={80}
+          placeholder="Ridgeline Cards"
+        />
         <FieldError id="name-error" message={state.errors?.name} />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="slug">Store address</Label>
-        <Input
-          id="slug"
-          name="slug"
-          required
-          maxLength={40}
-          value={slug}
-          onChange={(e) => setSlug(toSlug(e.target.value))}
-          aria-invalid={slugError ? true : undefined}
-          aria-describedby="slug-hint slug-error"
-        />
-        <p id="slug-hint" className="text-sm text-muted-foreground">
-          shoptcg.app/{slug || "your-store"}
+        <Label htmlFor="slug">Store link</Label>
+        <div className="flex h-12 items-center rounded-md border border-input bg-surface-2 pl-3.5 focus-within:ring-2 focus-within:ring-ring has-aria-invalid:border-destructive">
+          <span className="text-base text-subtle select-none">
+            shoptcg.app/
+          </span>
+          <Input
+            id="slug"
+            name="slug"
+            required
+            maxLength={40}
+            placeholder="your-store"
+            value={slug}
+            onChange={(e) => setSlug(toSlug(e.target.value))}
+            aria-invalid={slugError ? true : undefined}
+            aria-describedby="slug-hint slug-error"
+            className="h-full rounded-none border-0 bg-transparent pl-0.5 focus-visible:ring-0 aria-invalid:ring-0"
+          />
+        </div>
+        <p id="slug-hint" className="text-sm text-subtle">
+          Lowercase letters, numbers and dashes.
         </p>
         <FieldError id="slug-error" message={slugError} />
       </div>
@@ -62,9 +76,17 @@ export function CreateStoreForm() {
         type="submit"
         size="lg"
         disabled={pending || check?.success === false}
+        aria-busy={pending}
       >
-        {pending ? "Creating..." : "Create store"}
+        {pending ? "Creating store" : "Create store"}
       </Button>
+      <p className="text-sm text-subtle">
+        By creating a store you agree to the{" "}
+        <Link href="/terms" className="text-brand-text underline">
+          Terms
+        </Link>
+        .
+      </p>
     </form>
   );
 }

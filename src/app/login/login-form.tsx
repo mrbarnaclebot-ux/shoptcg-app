@@ -13,10 +13,17 @@ export function LoginForm() {
   );
   if (state.sent) {
     return (
-      <p role="status">
-        Check <strong>{state.sent}</strong> for a sign-in link. It expires in 5
-        minutes.
-      </p>
+      <div
+        role="status"
+        className="rounded-lg bg-surface p-5 shadow-1 ring-1 ring-border"
+      >
+        <p className="text-lg font-semibold">Check your email.</p>
+        <p className="mt-1 text-muted-foreground">
+          We sent a link to{" "}
+          <strong className="break-all text-foreground">{state.sent}</strong>.
+          It works for 5 minutes.
+        </p>
+      </div>
     );
   }
   return (
@@ -27,19 +34,20 @@ export function LoginForm() {
           id="email"
           name="email"
           type="email"
+          inputMode="email"
           autoComplete="email"
           required
           aria-invalid={state.error ? true : undefined}
           aria-describedby={state.error ? "email-error" : undefined}
         />
         {state.error && (
-          <p id="email-error" className="text-sm text-destructive">
+          <p id="email-error" className="text-sm text-danger">
             {state.error}
           </p>
         )}
       </div>
-      <Button type="submit" size="lg" disabled={pending}>
-        {pending ? "Sending..." : "Email me a sign-in link"}
+      <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
+        {pending ? "Sending link" : "Email me a link"}
       </Button>
     </form>
   );
