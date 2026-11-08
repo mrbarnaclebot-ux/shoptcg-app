@@ -48,7 +48,7 @@ export function CustomForm() {
   );
   const e = state.errors ?? {};
   return (
-    <form action={action} className="flex flex-col gap-5">
+    <form key={state.n ?? 0} action={action} className="flex flex-col gap-5">
       {state.added && !pending && (
         <p
           role="status"

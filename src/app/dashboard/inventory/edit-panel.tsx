@@ -25,7 +25,7 @@ export function EditPanel({
     });
   return (
     <form
-      className="ml-[52px] flex flex-col gap-4 rounded-lg bg-surface p-4 shadow-1"
+      className="ml-[52px] flex flex-col gap-4 rounded-lg bg-surface p-4 shadow-1 lg:max-w-lg lg:basis-full"
       onSubmit={(e) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);

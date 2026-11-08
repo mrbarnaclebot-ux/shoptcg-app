@@ -29,8 +29,8 @@ export function StockRow(props: {
     gradeLabel(row),
   ].filter(Boolean);
   return (
-    <li className="flex flex-col gap-3 py-3">
-      <div className="flex items-start gap-3">
+    <li className="flex flex-col gap-3 py-3 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-8">
+      <div className="flex items-start gap-3 lg:flex-1">
         <CardThumb src={row.imageUrl} kind={row.kind} />
         <div className="min-w-0 flex-1">
           <p
@@ -50,7 +50,7 @@ export function StockRow(props: {
         </div>
         <PriceColumn {...props} />
       </div>
-      <div className="flex items-center justify-between gap-3 pl-[52px]">
+      <div className="flex items-center justify-between gap-3 pl-[52px] lg:gap-6 lg:pl-0">
         <QtyStepper id={row.id} qty={row.qty} />
         <button
           type="button"

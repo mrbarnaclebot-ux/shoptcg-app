@@ -37,3 +37,20 @@ test("a vendor adds a custom item and sees it in inventory", async ({
       .locator("output"),
   ).toHaveText("3");
 });
+
+test("store settings keep their choices after saving", async ({ page }) => {
+  await newVendor(page);
+  await page.goto("/dashboard/settings");
+  await page.getByLabel("Price rule (% of market)").fill("-10");
+  await page.getByText("Nearest $0.50").click();
+  await page.getByRole("button", { name: "Save settings" }).click();
+  await expect(page.getByText("Saved.")).toBeVisible();
+  await expect(
+    page.getByRole("radio", { name: "Nearest $0.50" }),
+  ).toBeChecked();
+  await page.reload();
+  await expect(
+    page.getByRole("radio", { name: "Nearest $0.50" }),
+  ).toBeChecked();
+  await expect(page.getByLabel("Price rule (% of market)")).toHaveValue("-10");
+});

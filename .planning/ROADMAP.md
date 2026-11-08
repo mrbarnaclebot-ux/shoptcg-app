@@ -6,7 +6,7 @@ Source of truth for scope: `PROJECT.md`. One branch and one PR per phase.
 | - | ----- | ------ | ------ |
 | 1 | Foundation: scaffold, vendor auth, create store, T&C, design tokens, CI | built, reviewed, awaiting PR | phase-1-foundation |
 | 2 | Catalog + nightly price sync | research spike in progress | - |
-| 3 | Inventory: search-add, custom items, CSV import, pricing rule, FX | planned | - |
+| 3 | Inventory: search-add, custom items, CSV import, pricing rule, FX | built, awaiting review (shots in phases/03-inventory/shots) | phase-3-inventory |
 | 4 | Public store page + QR sign | planned | - |
 | 5 | Interest flow + seller ping (holds, SSE, push) | planned | - |
 | 6 | Confirm sale + receipts | planned | - |

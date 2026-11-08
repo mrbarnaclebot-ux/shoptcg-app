@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { Segmented } from "@/components/segmented";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +39,16 @@ export function SettingsForm({ values }: { values: Values }) {
   );
   const e = state.errors ?? {};
   return (
-    <form action={action} className="flex flex-col gap-8">
+    <form
+      className="flex flex-col gap-8"
+      // Submitted by hand: a form action would auto-reset the fields after
+      // saving and desync the controlled rule and rounding inputs.
+      onSubmit={(ev) => {
+        ev.preventDefault();
+        const data = new FormData(ev.currentTarget);
+        startTransition(() => action(data));
+      }}
+    >
       <PricingFields values={values} errors={e} />
       <CurrencyFields values={values} errors={e} />
 

@@ -72,18 +72,20 @@ export async function addCatalogAction(input: unknown): Promise<Result> {
 
 export type CustomState = {
   added?: string;
+  // Bumped per success so the form remounts empty with its default choices.
+  n?: number;
   errors?: Record<string, string>;
 };
 
 export async function addCustomAction(
-  _prev: CustomState,
+  prev: CustomState,
   form: FormData,
 ): Promise<CustomState> {
   const { store } = await requireStore();
   const parsed = customListingSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { errors: fieldErrors(parsed.error) };
   await addCustomListing(getDb(), store.id, parsed.data);
-  return { added: parsed.data.name };
+  return { added: parsed.data.name, n: (prev.n ?? 0) + 1 };
 }
 
 export async function previewCsvAction(
