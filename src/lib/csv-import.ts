@@ -22,6 +22,7 @@ export const CSV_COLUMNS = [
   "price",
 ] as const;
 export const MAX_ROWS = 1000;
+export const MAX_CSV_CHARS = 1_000_000;
 
 // Vendors write JP and CN; the catalog stores ISO codes.
 const LANGUAGE_ALIASES: Record<string, string> = { jp: "ja", cn: "zh" };
@@ -50,6 +51,8 @@ function toInput(cells: Record<string, string>) {
 
 /** Parses and validates a CSV export. Throws a readable Error for file-level problems. */
 export function readCsv(text: string): ParsedRow[] {
+  if (text.length > MAX_CSV_CHARS)
+    throw new Error("That file is too big. Keep it under 1 MB.");
   const [head, ...body] = parseCsv(text);
   if (!head) throw new Error("The file is empty.");
   const cols = head.cells.map((c) => c.trim().toLowerCase());

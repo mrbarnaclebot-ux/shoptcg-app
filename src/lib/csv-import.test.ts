@@ -67,6 +67,16 @@ describe("readCsv", () => {
     const big = [HEAD, ...Array(1001).fill("a,,,en,raw,NM,,,1,")].join("\n");
     expect(() => readCsv(big)).toThrow(/1000/);
   });
+
+  it("rejects a line of commas fast instead of copying per cell", () => {
+    const t = Date.now();
+    expect(() =>
+      readCsv(`${HEAD}
+${",".repeat(999_000)}`),
+    ).toThrow(/50 columns/);
+    expect(() => readCsv("x".repeat(1_000_001))).toThrow(/1 MB/);
+    expect(Date.now() - t).toBeLessThan(500);
+  });
 });
 
 const item = (over: Partial<CatalogItem>): CatalogItem => ({
