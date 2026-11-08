@@ -6,6 +6,7 @@ import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "./schema";
+import { databaseUrl } from "./url";
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
@@ -21,8 +22,8 @@ function openPglite(): Db {
 
 // Lazy so `next build` workers never open the PGlite directory concurrently.
 export function getDb(): Db {
-  const url = process.env.DATABASE_URL;
-  // ponytail: PGlite fallback is single-process and dev-only; production always sets DATABASE_URL.
+  const url = databaseUrl();
+  // ponytail: PGlite fallback is single-process and dev-only; databaseUrl() refuses it when deployed.
   g.shoptcgDb ??= url
     ? drizzlePostgres(postgres(url), { schema })
     : openPglite();

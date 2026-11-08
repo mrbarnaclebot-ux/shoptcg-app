@@ -1,7 +1,8 @@
 import { mkdirSync } from "node:fs";
 import { defineConfig } from "drizzle-kit";
+import { databaseUrl } from "./src/db/url";
 
-const url = process.env.DATABASE_URL;
+const url = databaseUrl();
 // PGlite creates only the leaf directory, not its parents.
 if (!url) mkdirSync(".data", { recursive: true });
 
