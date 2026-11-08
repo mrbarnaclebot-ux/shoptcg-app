@@ -147,6 +147,16 @@ export const searchMiss = pgTable(
   (t) => [index("search_miss_user_at_idx").on(t.userId, t.at)],
 );
 
+// One row per magic-link send attempt that passed the limit, keyed "email:..." or "ip:...".
+export const signInSend = pgTable(
+  "sign_in_send",
+  {
+    key: text("key").notNull(),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("sign_in_send_key_at_idx").on(t.key, t.at)],
+);
+
 export type CatalogItem = typeof catalogItem.$inferSelect;
 export type NewCatalogItem = typeof catalogItem.$inferInsert;
 
