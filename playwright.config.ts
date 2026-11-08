@@ -9,6 +9,7 @@ export const OUTBOX = join(tmpdir(), "shoptcg-magic-links.txt");
 
 export default defineConfig({
   testDir: "e2e",
+  globalSetup: "./e2e/global-setup.ts",
   forbidOnly: ci,
   retries: ci ? 1 : 0,
   use: { baseURL: "http://localhost:3000", trace: "on-first-retry" },
