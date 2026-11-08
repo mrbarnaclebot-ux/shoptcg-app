@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { getAuth } from "@/lib/auth";
 
 export async function getCurrentUser() {
-  const session = await getAuth().api.getSession({ headers: await headers() });
+  // headers() first: it ends prerendering before getAuth() opens the database.
+  const h = await headers();
+  const session = await getAuth().api.getSession({ headers: h });
   return session?.user ?? null;
 }
 
