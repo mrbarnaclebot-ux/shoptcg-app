@@ -20,6 +20,8 @@ export default function StorePage({ params }: PageProps<"/[slug]">) {
   );
 }
 
+// ponytail: notFound() inside Suspense streams after the 200 status is sent, so
+// unknown slugs are a soft 404. Phase 4 moves the lookup above the boundary.
 async function StoreName({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   // Skip the DB for anything that could never be a store slug.
