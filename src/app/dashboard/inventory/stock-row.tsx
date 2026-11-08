@@ -1,9 +1,11 @@
 "use client";
 
-import { Minus, Plus, TriangleAlert } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 import { useOptimistic, useState, useTransition } from "react";
 import { CardThumb } from "@/components/card-thumb";
+import { Stepper } from "@/components/stepper";
 import {
+  certNo,
   daysBetween,
   gradeLabel,
   LANGUAGE_LABEL,
@@ -11,12 +13,14 @@ import {
   usd,
 } from "@/lib/format";
 import type { StockRow as Row } from "@/lib/listings";
-import { stepQtyAction } from "./actions";
+import { toast } from "@/lib/toast";
+import { stepQtyAction, updateListingAction } from "./actions";
 import { EditPanel } from "./edit-panel";
 
 // Synced nightly, so two days without a new point means the sync is missing it.
 const STALE_DAYS = 2;
 
+/** One inventory item as a slab: label strip on top, readout and controls below. */
 export function StockRow(props: {
   row: Row;
   price: number | null;
@@ -24,45 +28,57 @@ export function StockRow(props: {
 }) {
   const { row } = props;
   const [editing, setEditing] = useState(false);
-  const meta = [
-    [row.setName, row.number].filter(Boolean).join(" "),
-    gradeLabel(row),
-  ].filter(Boolean);
   return (
-    <li className="flex flex-col gap-3 py-3 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-8">
-      <div className="flex items-start gap-3 lg:flex-1">
-        <CardThumb src={row.imageUrl} kind={row.kind} language={row.language} />
-        <div className="min-w-0 flex-1">
+    <li className="flex flex-col rounded-sm bg-surface ring-1 ring-border">
+      <SlabLabel row={row} />
+      <div className="flex flex-col gap-3 p-3 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-8">
+        <div className="flex items-start gap-3 lg:flex-1">
+          <CardThumb
+            src={row.imageUrl}
+            kind={row.kind}
+            language={row.language}
+          />
           <p
             lang={row.language === "en" ? undefined : row.language}
-            className="line-clamp-2 font-semibold"
+            className="line-clamp-2 min-w-0 flex-1 font-semibold wdth-108"
           >
             {row.name}
           </p>
-          <p className="text-sm text-muted-foreground">
-            {meta.join(". ")}
-            {row.language !== "en" && (
-              <span className="ml-2 rounded-sm bg-surface-2 px-1.5 py-0.5 text-xs font-semibold">
-                {LANGUAGE_LABEL[row.language]}
-              </span>
-            )}
-          </p>
+          <PriceColumn {...props} />
         </div>
-        <PriceColumn {...props} />
+        <div className="flex items-center justify-between gap-3 pl-[52px] lg:gap-6 lg:pl-0">
+          <Qty row={row} />
+          <button
+            type="button"
+            aria-expanded={editing}
+            onClick={() => setEditing(!editing)}
+            className="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-brand-text"
+          >
+            {editing ? "Close" : "Edit"}
+          </button>
+        </div>
+        {editing && <EditPanel row={row} onDone={() => setEditing(false)} />}
       </div>
-      <div className="flex items-center justify-between gap-3 pl-[52px] lg:gap-6 lg:pl-0">
-        <QtyStepper id={row.id} qty={row.qty} />
-        <button
-          type="button"
-          aria-expanded={editing}
-          onClick={() => setEditing(!editing)}
-          className="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-brand-text"
-        >
-          {editing ? "Close" : "Edit"}
-        </button>
-      </div>
-      {editing && <EditPanel row={row} onDone={() => setEditing(false)} />}
     </li>
+  );
+}
+
+// The grading-label strip: set and number condensed, grade, cert number.
+function SlabLabel({ row }: { row: Row }) {
+  const set = [row.setName, row.number].filter(Boolean).join(" ");
+  return (
+    <div className="flex items-center gap-x-3 gap-y-1 border-b border-border px-3 py-1.5 text-xs font-bold tracking-[0.08em] text-muted-foreground uppercase">
+      <span className="min-w-0 truncate wdth-80">{set || "Custom item"}</span>
+      <span className="rounded-[3px] bg-seal-50 px-1.5 text-galaxy-950">
+        {gradeLabel(row) || "Raw"}
+      </span>
+      {row.language !== "en" && <span>{LANGUAGE_LABEL[row.language]}</span>}
+      {!row.active && <span className="text-warning">Hidden</span>}
+      <span className="num ml-auto shrink-0 font-semibold text-subtle">
+        <span className="sr-only">Cert </span>
+        {certNo(row.id)}
+      </span>
+    </div>
   );
 }
 
@@ -95,56 +111,56 @@ function PriceColumn({ row, price, today }: Parameters<typeof StockRow>[0]) {
   );
 }
 
-function QtyStepper({ id, qty }: { id: string; qty: number }) {
-  const [shown, setShown] = useOptimistic(qty);
+function Qty({ row }: { row: Row }) {
+  const [shown, setShown] = useOptimistic(row.qty);
   const [, start] = useTransition();
   const [failed, setFailed] = useState(false);
+  const hide = () =>
+    start(async () => {
+      const res = await updateListingAction({ id: row.id, active: false });
+      if (res.error) toast.notSaved(res.error);
+      else toast.itemHidden(row.id, row.name);
+    });
   const step = (delta: 1 | -1) =>
     start(async () => {
       setFailed(false);
-      setShown(Math.max(0, shown + delta));
+      const next = Math.max(0, shown + delta);
+      setShown(next);
       try {
-        await stepQtyAction(id, delta);
+        await stepQtyAction(row.id, delta);
+        if (next === 0) toast.qtyZero(row.name, hide);
       } catch {
         // The optimistic value reverts on its own; say why it moved back.
         setFailed(true);
+        toast.qtyFailed(shown);
       }
     });
-  const btn =
-    "grid size-11 place-items-center rounded-md bg-surface-2 ring-1 ring-border-strong disabled:opacity-40";
   return (
-    <div className="flex items-center gap-1" role="group" aria-label="Quantity">
-      <button
-        type="button"
-        className={btn}
-        aria-label="One fewer"
-        disabled={shown === 0}
-        onClick={() => step(-1)}
-      >
-        <Minus aria-hidden className="size-5" />
-      </button>
-      <output aria-live="polite" className="num w-12 text-center text-lg">
-        {shown}
-      </output>
-      <button
-        type="button"
-        className={btn}
-        aria-label="One more"
-        onClick={() => step(1)}
-      >
-        <Plus aria-hidden className="size-5" />
-      </button>
+    <div className="flex items-center gap-2">
+      <Stepper value={shown} label="Quantity" onStep={step} />
       {failed ? (
-        <span role="alert" className="ml-2 text-sm font-semibold text-danger">
-          Not saved. Try again.
-        </span>
+        <span className="text-sm font-semibold text-danger">Not saved.</span>
       ) : (
-        shown === 0 && (
-          <span className="ml-2 text-sm font-semibold text-subtle">
-            Sold out
-          </span>
-        )
+        shown === 0 && <SoldOut active={row.active} onHide={hide} />
       )}
     </div>
+  );
+}
+
+// The toast's "Hide item" lives here too: toast buttons are shortcuts, never the only path.
+function SoldOut({ active, onHide }: { active: boolean; onHide: () => void }) {
+  return (
+    <span className="flex items-center gap-1 text-sm font-semibold text-subtle">
+      Sold out
+      {active && (
+        <button
+          type="button"
+          onClick={onHide}
+          className="min-h-11 px-2 text-brand-text"
+        >
+          Hide
+        </button>
+      )}
+    </span>
   );
 }

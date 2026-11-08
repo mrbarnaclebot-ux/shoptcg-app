@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Settings - shoptcg" };
 export default function SettingsPage() {
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-8 px-4 pt-8 pb-16">
-      <h1 className="text-2xl font-bold wdth-112">Store settings</h1>
+      <h1 className="text-3xl font-extrabold wdth-125">Store settings</h1>
       <Suspense
         fallback={
           <div className="h-[640px] animate-pulse rounded-lg bg-surface" />

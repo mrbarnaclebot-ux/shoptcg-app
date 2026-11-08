@@ -3,10 +3,12 @@
 import { CircleAlert, Download, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { LabeledProgressIndicator } from "@/components/labeled-progress-indicator";
 import { Button } from "@/components/ui/button";
 import type { PreviewRow } from "@/lib/csv-import";
+import { toast, type ImportSummary } from "@/lib/toast";
 import { importCsvAction, previewCsvAction } from "../actions";
-import { PreviewTable } from "./preview-table";
+import { needsPrice, PreviewTable } from "./preview-table";
 
 // Server actions reject bodies over 1 MB with an opaque error; stop short of it here.
 const MAX_FILE_BYTES = 900_000;
@@ -21,29 +23,31 @@ export function ImportFlow() {
   const [importing, startImport] = useTransition();
   const valid = rows?.flatMap((r) => (r.row ? [r.row] : [])) ?? [];
 
+  const fail = (why: string) => {
+    setError(why);
+    toast.csvUnreadable(why);
+  };
   const choose = (file: File | undefined) =>
     file &&
     startCheck(async () => {
       setRows(undefined);
+      setError(undefined);
       if (file.size > MAX_FILE_BYTES)
-        return setError(
-          "That file is too big. Keep it under 900 KB, or split it.",
-        );
+        return fail("That file is too big. Keep it under 900 KB, or split it.");
       try {
         const res = await previewCsvAction(await file.text());
-        setError(res.error);
+        if (res.error) fail(res.error);
         setRows(res.rows);
       } catch {
-        setError(FAILED);
+        fail(FAILED);
       }
     });
   const confirm = () =>
     startImport(async () => {
       try {
-        const res = await importCsvAction(valid);
-        if (res.error) return setError(res.error);
-      } catch {
-        return setError(FAILED);
+        await toast.importCsv(valid.length, runImport(valid, rows!));
+      } catch (err) {
+        return setError((err as Error).message);
       }
       router.push("/dashboard/inventory");
     });
@@ -56,15 +60,18 @@ export function ImportFlow() {
         onFile={choose}
       />
       {checking && (
-        <p role="status" className="text-muted-foreground">
-          Checking your rows against the catalog. Big files take a minute.
-        </p>
+        <LabeledProgressIndicator
+          label="Checking your CSV"
+          steps={[
+            "Reading rows",
+            "Matching the catalog",
+            "Looking up new cards",
+            "Big files take a minute",
+          ]}
+        />
       )}
       {error && (
-        <p
-          role="alert"
-          className="flex gap-2 rounded-md bg-danger-bg px-4 py-3 text-danger"
-        >
+        <p className="flex gap-2 rounded-sm bg-danger-bg px-4 py-3 text-danger">
           <CircleAlert aria-hidden className="mt-0.5 size-5 shrink-0" />
           {error}
         </p>
@@ -85,6 +92,22 @@ export function ImportFlow() {
       )}
     </div>
   );
+}
+
+// Rejects with a user-safe message so the toast and the inline error agree.
+async function runImport(
+  valid: NonNullable<PreviewRow["row"]>[],
+  rows: PreviewRow[],
+): Promise<ImportSummary> {
+  const res: { count?: number; error?: string } = await importCsvAction(
+    valid,
+  ).catch(() => ({ error: FAILED }));
+  if (res.error) throw new Error(res.error);
+  return {
+    count: res.count ?? 0,
+    unpriced: rows.filter(needsPrice).length,
+    rejected: rows.filter((r) => r.status === "error").map((r) => r.line),
+  };
 }
 
 function FilePicker(props: {

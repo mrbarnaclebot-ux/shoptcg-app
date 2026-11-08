@@ -9,7 +9,7 @@ const BADGE = {
 } as const;
 
 /** A custom row with no price imports fine but shows "No price" until the vendor sets one. */
-const needsPrice = (r: PreviewRow) =>
+export const needsPrice = (r: PreviewRow) =>
   r.row?.kind === "custom" && !r.row.input.overridePrice;
 
 const BADGE_BASE =

@@ -7,7 +7,7 @@ import { requireUser } from "@/lib/session";
 import { settingsSchema, updateSettings } from "@/lib/stores";
 
 export type SettingsState = {
-  saved?: boolean;
+  saved?: { pct: number; rounding: number };
   errors?: Record<string, string>;
 };
 
@@ -21,5 +21,6 @@ export async function saveSettingsAction(
   const ok = await updateSettings(getDb(), user.id, parsed.data);
   if (!ok) return { errors: { form: "Create your store first." } };
   refresh();
-  return { saved: true };
+  const { priceRulePct, rounding } = parsed.data;
+  return { saved: { pct: priceRulePct, rounding: Number(rounding) } };
 }

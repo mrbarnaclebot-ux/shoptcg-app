@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { CardThumb } from "@/components/card-thumb";
 import { Input } from "@/components/ui/input";
 import type { CatalogItem } from "@/db/schema";
+import { toast } from "@/lib/toast";
 import { searchCatalogAction } from "../../catalog-actions";
 import { AddPanel } from "./add-panel";
 import { Segmented } from "@/components/segmented";
@@ -35,6 +36,7 @@ function useCatalogSearch() {
       if (id !== latest.current) return;
       setItems(res.items);
       setError(res.error);
+      if (res.limit) toast.searchLimit(res.limit);
     } catch {
       if (id === latest.current) setError("Search failed. Try again.");
     }

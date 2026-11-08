@@ -1,14 +1,14 @@
 "use client";
 
-import { Check } from "lucide-react";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Segmented } from "@/components/segmented";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CONDITIONS } from "@/lib/listing-input";
+import { toast } from "@/lib/toast";
 import { addCustomAction, type CustomState } from "../actions";
-import { StockFields } from "./add-panel";
+import { Added, StockFields } from "./add-panel";
 
 type Kind = "raw" | "graded" | "sealed";
 
@@ -47,16 +47,14 @@ export function CustomForm() {
     {},
   );
   const e = state.errors ?? {};
+  useEffect(() => {
+    if (state.added) toast.itemAdded(state.added);
+    else if (state.errors?.form) toast.notSaved(state.errors.form);
+  }, [state]);
   return (
     <form key={state.n ?? 0} action={action} className="flex flex-col gap-5">
       {state.added && !pending && (
-        <p
-          role="status"
-          className="flex items-center gap-2 rounded-lg bg-success-bg p-4 font-semibold text-success"
-        >
-          <Check aria-hidden className="size-5" />
-          Added {state.added} to your stock.
-        </p>
+        <Added name={state.added.name} first={state.added.first} />
       )}
       <Field
         name="name"
@@ -81,11 +79,7 @@ export function CustomForm() {
         Custom items have no market price, so set a fixed price or add one
         later.
       </p>
-      {e.form && (
-        <p role="alert" className="text-sm font-semibold text-danger">
-          {e.form}
-        </p>
-      )}
+      {e.form && <p className="text-sm font-semibold text-danger">{e.form}</p>}
       <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
         {pending ? "Adding" : "Add custom item"}
       </Button>

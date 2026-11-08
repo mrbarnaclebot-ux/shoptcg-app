@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CONDITIONS } from "@/lib/listing-input";
 import type { StockRow } from "@/lib/listings";
+import { toast } from "@/lib/toast";
 import { updateListingAction } from "./actions";
 
 export function EditPanel({
@@ -17,30 +18,35 @@ export function EditPanel({
 }) {
   const [error, setError] = useState<string>();
   const [pending, start] = useTransition();
-  const save = (patch: Record<string, unknown>) =>
+  const save = (patch: Record<string, unknown>, done: () => void) =>
     start(async () => {
       const res = await updateListingAction({ id: row.id, ...patch });
       setError(res.error);
-      if (!res.error) onDone();
+      if (res.error) return void toast.notSaved(res.error);
+      done();
+      onDone();
     });
   return (
     <form
-      className="ml-[52px] flex flex-col gap-4 rounded-lg bg-surface p-4 shadow-1 lg:max-w-lg lg:basis-full"
+      className="flex flex-col gap-4 rounded-sm bg-surface-2 p-4 lg:max-w-lg lg:basis-full"
       onSubmit={(e) => {
         e.preventDefault();
         const form = new FormData(e.currentTarget);
-        save({
-          overridePrice: form.get("overridePrice"),
-          ...(row.kind === "raw" && { condition: form.get("condition") }),
-        });
+        const fixed = String(form.get("overridePrice") ?? "").trim();
+        const change = fixed
+          ? `Fixed price ${fixed.replace("$", "")}.`
+          : "Follows the market.";
+        save(
+          {
+            overridePrice: fixed,
+            ...(row.kind === "raw" && { condition: form.get("condition") }),
+          },
+          () => toast.itemUpdated(row.id, row.name, change),
+        );
       }}
     >
       <Fields row={row} />
-      {error && (
-        <p role="alert" className="text-sm text-danger">
-          {error}
-        </p>
-      )}
+      {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex flex-wrap gap-2">
         <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
           Save
@@ -50,7 +56,17 @@ export function EditPanel({
           variant="ghost"
           size="lg"
           disabled={pending}
-          onClick={() => save({ active: !row.active })}
+          onClick={() =>
+            save({ active: !row.active }, () =>
+              row.active
+                ? toast.itemHidden(row.id, row.name)
+                : toast.itemUpdated(
+                    row.id,
+                    row.name,
+                    "Back on your public table.",
+                  ),
+            )
+          }
         >
           {row.active ? "Hide from store" : "Show in store"}
         </Button>

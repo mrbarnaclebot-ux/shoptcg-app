@@ -1,11 +1,12 @@
 "use client";
 
-import { startTransition, useActionState, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { Segmented } from "@/components/segmented";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usd } from "@/lib/format";
+import { toast } from "@/lib/toast";
 import { vendorPrice } from "@/lib/vendor-price";
 import { saveSettingsAction, type SettingsState } from "./actions";
 
@@ -38,6 +39,10 @@ export function SettingsForm({ values }: { values: Values }) {
     {},
   );
   const e = state.errors ?? {};
+  useEffect(() => {
+    if (state.saved) toast.settingsSaved(state.saved.pct, state.saved.rounding);
+    else if (state.errors) toast.notSaved(saveError(state.errors));
+  }, [state]);
   return (
     <form
       className="flex flex-col gap-8"
@@ -53,9 +58,7 @@ export function SettingsForm({ values }: { values: Values }) {
       <CurrencyFields values={values} errors={e} />
 
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-3 text-xl font-bold wdth-108">
-          At the table
-        </legend>
+        <legend className={LEGEND}>At the table</legend>
         <Toggle
           name="isOpen"
           checked={values.isOpen}
@@ -82,6 +85,15 @@ export function SettingsForm({ values }: { values: Values }) {
     </form>
   );
 }
+
+function saveError(errors: Record<string, string>) {
+  if (errors.form) return errors.form;
+  const n = Object.keys(errors).length;
+  return `${n} ${n === 1 ? "field needs" : "fields need"} a fix. Your entries are still here.`;
+}
+
+const LEGEND =
+  "mb-4 w-full border-t border-border-strong pt-2 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase";
 
 function Toggle(props: {
   name: string;
@@ -113,7 +125,7 @@ function PricingFields({ values, errors: e }: FieldsProps) {
   const example = vendorPrice(48.1, Number(pct) || 0, Number(rounding), null);
   return (
     <fieldset className="flex flex-col gap-4">
-      <legend className="mb-4 text-xl font-bold wdth-108">Pricing</legend>
+      <legend className={LEGEND}>Pricing</legend>
       <div className="flex flex-col gap-2">
         <Label htmlFor="priceRulePct">Price rule (% of market)</Label>
         <Input
@@ -139,7 +151,7 @@ function PricingFields({ values, errors: e }: FieldsProps) {
         onChange={setRounding}
       />
       <p
-        className="rounded-md bg-surface px-4 py-3 text-sm text-muted-foreground"
+        className="rounded-sm bg-surface px-4 py-3 text-sm text-muted-foreground ring-1 ring-border"
         aria-live="polite"
       >
         A card at <span className="num text-text">$48.10</span> market sells for{" "}
@@ -155,9 +167,7 @@ function PricingFields({ values, errors: e }: FieldsProps) {
 function CurrencyFields({ values, errors: e }: FieldsProps) {
   return (
     <fieldset className="flex flex-col gap-4">
-      <legend className="mb-1 text-xl font-bold wdth-108">
-        Second currency
-      </legend>
+      <legend className={LEGEND}>Second currency</legend>
       <p className="text-sm text-subtle">
         Buyers see an approximate price in your currency next to USD. Leave
         blank to show USD only.

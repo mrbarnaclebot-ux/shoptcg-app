@@ -4,12 +4,14 @@ import { Check, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { CardThumb } from "@/components/card-thumb";
+import { RipMoment } from "@/components/rip-moment";
 import { Segmented } from "@/components/segmented";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CatalogItem } from "@/db/schema";
 import { CONDITIONS, type Condition } from "@/lib/listing-input";
+import { toast } from "@/lib/toast";
 import { addCatalogAction } from "../actions";
 
 export function AddPanel({
@@ -21,20 +23,32 @@ export function AddPanel({
 }) {
   const [condition, setCondition] = useState<Condition>("NM");
   const [error, setError] = useState<string>();
-  const [added, setAdded] = useState(false);
+  const [added, setAdded] = useState<{ first: boolean }>();
   const [pending, start] = useTransition();
   const submit = (form: FormData) =>
     start(async () => {
+      const fixed = String(form.get("overridePrice") ?? "").trim();
       const res = await addCatalogAction({
         catalogItemId: item.id,
         condition: item.kind === "raw" ? condition : null,
         qty: form.get("qty"),
-        overridePrice: form.get("overridePrice"),
+        overridePrice: fixed,
       });
       setError(res.error);
-      setAdded(!res.error);
+      if (res.error) return void toast.notSaved(res.error);
+      const first = Boolean(res.first);
+      setAdded({ first });
+      toast.itemAdded({
+        id: res.id!,
+        name: item.name,
+        qty: Number(form.get("qty")),
+        condition: item.kind === "raw" ? condition : null,
+        price: fixed ? Number(fixed.replace("$", "")) : null,
+        first,
+      });
     });
-  if (added) return <Added name={item.name} onAgain={onClose} />;
+  if (added)
+    return <Added name={item.name} first={added.first} onAgain={onClose} />;
   return (
     <form action={submit} className="flex flex-col gap-5">
       <button
@@ -55,11 +69,7 @@ export function AddPanel({
         />
       )}
       <StockFields />
-      {error && (
-        <p role="alert" className="text-sm text-danger">
-          {error}
-        </p>
-      )}
+      {error && <p className="text-sm text-danger">{error}</p>}
       <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
         {pending ? "Adding" : "Add to stock"}
       </Button>
@@ -108,27 +118,46 @@ export function StockFields({
   );
 }
 
-function Added({ name, onAgain }: { name: string; onAgain: () => void }) {
+/** Inline confirmation; the store's first item gets the Direction C moment. */
+export function Added(props: {
+  name: string;
+  first: boolean;
+  onAgain?: () => void;
+}) {
+  const actions = (
+    <div className="flex flex-wrap gap-3">
+      {props.onAgain && (
+        <Button type="button" size="lg" onClick={props.onAgain}>
+          Add another
+        </Button>
+      )}
+      <Link
+        href="/dashboard/inventory"
+        className="inline-flex min-h-12 items-center px-2 font-semibold text-brand-text"
+      >
+        View inventory
+      </Link>
+    </div>
+  );
+  if (props.first)
+    return (
+      <RipMoment kicker="Item 0001" headline="First hit logged">
+        <p className="text-muted-foreground">
+          Your table is live. Added {props.name} to your stock.
+        </p>
+        {actions}
+      </RipMoment>
+    );
   return (
     <div
       role="status"
-      className="flex flex-col gap-4 rounded-lg bg-success-bg p-5"
+      className="flex flex-col gap-4 rounded-sm bg-success-bg p-5"
     >
       <p className="flex items-center gap-2 font-semibold text-success">
         <Check aria-hidden className="size-5" />
-        Added {name} to your stock.
+        Added {props.name} to your stock.
       </p>
-      <div className="flex flex-wrap gap-3">
-        <Button type="button" size="lg" onClick={onAgain}>
-          Add another
-        </Button>
-        <Link
-          href="/dashboard/inventory"
-          className="inline-flex min-h-12 items-center px-2 font-semibold text-brand-text"
-        >
-          View inventory
-        </Link>
-      </div>
+      {actions}
     </div>
   );
 }

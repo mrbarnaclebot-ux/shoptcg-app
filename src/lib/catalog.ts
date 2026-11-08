@@ -1,7 +1,7 @@
 import { and, count, eq, gt, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { catalogItem, searchMiss, type CatalogItem } from "@/db/schema";
-import { SearchError } from "@/lib/pricing/errors";
+import { SearchLimitError } from "@/lib/pricing/errors";
 import { safeImageUrl } from "@/lib/pricing/images";
 import {
   defaultProvider,
@@ -104,7 +104,7 @@ export async function chargeMiss(db: Db, userId: string) {
     .where(and(eq(searchMiss.userId, userId), gt(searchMiss.at, since)));
   // ponytail: count-then-insert lets concurrent requests overshoot by a few; fine for a credit guard.
   if (n >= MISSES_PER_HOUR)
-    throw new SearchError(
+    throw new SearchLimitError(
       "Search limit reached for this hour. Results already in the catalog still work.",
     );
   await db.insert(searchMiss).values({ userId });

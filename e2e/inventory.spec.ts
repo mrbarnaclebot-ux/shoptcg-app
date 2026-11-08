@@ -6,7 +6,7 @@ test("a vendor adds a custom item and sees it in inventory", async ({
 }) => {
   await newVendor(page);
   await page.getByRole("link", { name: "Inventory" }).first().click();
-  await expect(page.getByText("Your shelf is empty.")).toBeVisible();
+  await expect(page.getByText("0 items logged.")).toBeVisible();
 
   await page.getByRole("link", { name: "Add a card" }).click();
   await page.getByText("Custom item", { exact: true }).click();

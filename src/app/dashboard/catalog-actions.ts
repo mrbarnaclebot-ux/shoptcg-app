@@ -2,8 +2,8 @@
 
 import { z } from "zod";
 import { getDb } from "@/db";
-import { chargeMiss, searchCatalog } from "@/lib/catalog";
-import { SearchError } from "@/lib/pricing/errors";
+import { chargeMiss, MISSES_PER_HOUR, searchCatalog } from "@/lib/catalog";
+import { SearchError, SearchLimitError } from "@/lib/pricing/errors";
 import { defaultProvider } from "@/lib/pricing/provider";
 import { requireUser } from "@/lib/session";
 
@@ -32,7 +32,13 @@ export async function searchCatalogAction(input: unknown) {
     return { items };
   } catch (err) {
     // Next hides thrown messages in production, so return the friendly ones.
-    if (err instanceof SearchError) return { items: [], error: err.message };
+    if (err instanceof SearchError)
+      return {
+        items: [],
+        error: err.message,
+        // The hourly cap, so the toast can state the number.
+        limit: err instanceof SearchLimitError ? MISSES_PER_HOUR : undefined,
+      };
     throw err;
   }
 }

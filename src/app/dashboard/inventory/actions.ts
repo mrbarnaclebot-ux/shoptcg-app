@@ -20,6 +20,7 @@ import {
 import {
   addCatalogListing,
   addCustomListing,
+  countListings,
   importListings,
   ListingError,
   stepQty,
@@ -32,6 +33,8 @@ import { requireStore } from "@/lib/session";
 // only ever used together with that store id (see lib/listings.ts).
 
 type Result = { error?: string };
+/** What the toast needs: the new listing's id and whether it was the store's first. */
+type Added = { id: string; first: boolean };
 const SAVE_FAILED = "Couldn't save that. Try again.";
 
 const deltaSchema = z.union([z.literal(1), z.literal(-1)]);
@@ -63,22 +66,30 @@ export async function updateListingAction(patch: unknown): Promise<Result> {
   return {};
 }
 
-export async function addCatalogAction(input: unknown): Promise<Result> {
+export async function addCatalogAction(
+  input: unknown,
+): Promise<Result & Partial<Added>> {
   const { store } = await requireStore();
   const parsed = catalogListingSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   try {
-    await addCatalogListing(getDb(), store.id, parsed.data);
+    const db = getDb();
+    const row = await addCatalogListing(db, store.id, parsed.data);
+    return { id: row.id, first: (await countListings(db, store.id)) === 1 };
   } catch (err) {
     if (err instanceof ListingError) return { error: err.message };
     console.error("[inventory] add failed", err);
     return { error: SAVE_FAILED };
   }
-  return {};
 }
 
 export type CustomState = {
-  added?: string;
+  added?: Added & {
+    name: string;
+    qty: number;
+    price: number | null;
+    condition: string | null;
+  };
   // Bumped per success so the form remounts empty with its default choices.
   n?: number;
   errors?: Record<string, string>;
@@ -92,13 +103,18 @@ export async function addCustomAction(
   const parsed = customListingSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { errors: fieldErrors(parsed.error) };
   try {
-    await addCustomListing(getDb(), store.id, parsed.data);
+    const db = getDb();
+    const row = await addCustomListing(db, store.id, parsed.data);
+    const first = (await countListings(db, store.id)) === 1;
+    const { name, qty, overridePrice, condition } = parsed.data;
+    const price = overridePrice ? Number(overridePrice) : null;
+    const added = { id: row.id, first, name, qty, price, condition };
+    return { added, n: (prev.n ?? 0) + 1 };
   } catch (err) {
     if (err instanceof ListingError) return { errors: { form: err.message } };
     console.error("[inventory] add custom failed", err);
     return { errors: { form: SAVE_FAILED } };
   }
-  return { added: parsed.data.name, n: (prev.n ?? 0) + 1 };
 }
 
 export async function previewCsvAction(

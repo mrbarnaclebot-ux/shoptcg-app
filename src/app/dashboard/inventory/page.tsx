@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { buttonVariants } from "@/components/ui/button";
+import { shortDate } from "@/lib/format";
 import { getDb } from "@/db";
 import { listStock } from "@/lib/listings";
 import { requireStore } from "@/lib/session";
@@ -33,12 +34,16 @@ async function Inventory({
   const today = new Date().toISOString().slice(0, 10);
   const filtered = Boolean(filter.q || filter.kind || filter.language);
   const rule = [store.priceRulePct, Number(store.rounding)] as const;
+  const synced = rows.reduce<string | null>(
+    (max, r) => (r.asOf && (!max || r.asOf > max) ? r.asOf : max),
+    null,
+  );
   return (
     <>
-      <Header count={filtered ? null : rows.length} />
+      <Header count={filtered ? null : rows.length} synced={synced} />
       {rows.length || filtered ? <Filters filter={filter} /> : null}
       {rows.length ? (
-        <ul className="flex flex-col divide-y divide-border border-y border-border">
+        <ul className="flex flex-col gap-2">
           {rows.map((r) => (
             <StockRow
               key={r.id}
@@ -57,17 +62,26 @@ async function Inventory({
   );
 }
 
-function Header({ count }: { count: number | null }) {
+function Header(props: { count: number | null; synced: string | null }) {
+  const { count } = props;
   return (
-    <div className="flex items-center justify-between gap-3">
-      <h1 className="text-2xl font-bold wdth-112">
-        Inventory{" "}
-        {count !== null && (
-          <small className="num text-base font-medium text-muted-foreground">
-            {count} {count === 1 ? "item" : "items"}
-          </small>
-        )}
-      </h1>
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-col gap-2">
+        <p className="eyebrow self-start">
+          <span aria-hidden className="live-dot" />
+          {props.synced
+            ? `Market data ${shortDate(props.synced)}, sync nightly`
+            : "Market sync nightly"}
+        </p>
+        <h1 className="text-3xl font-extrabold wdth-125">
+          Inventory{" "}
+          {count !== null && (
+            <small className="num text-base font-semibold text-muted-foreground wdth-100">
+              {count} {count === 1 ? "item" : "items"}
+            </small>
+          )}
+        </h1>
+      </div>
       <div className="flex gap-2">
         <Link
           href="/dashboard/inventory/import"
@@ -95,11 +109,13 @@ function Header({ count }: { count: number | null }) {
 
 function EmptyShelf() {
   return (
-    <section className="flex flex-col items-center gap-3 rounded-lg border border-border px-5 py-12 text-center">
+    <section className="flex flex-col items-center gap-3 rounded-sm border border-dashed border-border-strong px-5 py-12 text-center">
       <LayoutGrid aria-hidden className="size-8 stroke-[1.75] text-subtle" />
-      <h2 className="text-xl font-bold wdth-108">Your shelf is empty.</h2>
+      <h2 className="text-xl font-extrabold wdth-118">
+        <span className="num">0</span> items logged.
+      </h2>
       <p className="max-w-[36ch] text-muted-foreground">
-        Add your first card by name or number, or import a CSV of your stock.
+        Search by name or number, or import a CSV.
       </p>
       <div className="mt-2 flex flex-wrap justify-center gap-3">
         <Link
@@ -143,9 +159,9 @@ function NoMatches() {
 function Skeleton() {
   return (
     <div className="flex flex-col gap-3" aria-hidden>
-      <div className="h-12 animate-pulse rounded-md bg-surface" />
+      <div className="h-12 animate-pulse rounded-sm bg-surface" />
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="h-20 animate-pulse rounded-md bg-surface" />
+        <div key={i} className="h-28 animate-pulse rounded-sm bg-surface" />
       ))}
     </div>
   );

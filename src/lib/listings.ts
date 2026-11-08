@@ -251,3 +251,12 @@ export async function stepQty(
     .returning({ qty: listing.qty });
   return rows[0]?.qty ?? null;
 }
+
+/** Every listing the store has, hidden ones included; 1 right after the first add. */
+export async function countListings(db: Db, storeId: string) {
+  const [{ n }] = await db
+    .select({ n: count() })
+    .from(listing)
+    .where(eq(listing.storeId, storeId));
+  return n;
+}
