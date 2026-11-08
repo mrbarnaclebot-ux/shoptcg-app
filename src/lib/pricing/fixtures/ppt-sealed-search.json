@@ -1,0 +1,45 @@
+{
+  "data": [
+    {
+      "id": "696fa94698d6a52492c89f24",
+      "tcgPlayerId": "506640",
+      "tcgPlayerUrl": "https://www.tcgplayer.com/product/506640",
+      "name": "151 Elite Trainer Box Case",
+      "setId": "23237",
+      "setName": "SV: Scarlet & Violet 151",
+      "unopenedPrice": 6750,
+      "imageCdnUrl": "https://tcgplayer-cdn.tcgplayer.com/product/506640_in_200x200.jpg",
+      "imageCdnUrl200": "https://tcgplayer-cdn.tcgplayer.com/product/506640_in_200x200.jpg",
+      "imageCdnUrl400": "https://tcgplayer-cdn.tcgplayer.com/product/506640_in_400x400.jpg",
+      "imageCdnUrl800": "https://tcgplayer-cdn.tcgplayer.com/product/506640_in_800x800.jpg",
+      "imageUrl": "https://tcgplayer-cdn.tcgplayer.com/product/506640_in_200x200.jpg",
+      "lastScrapedAt": "2026-11-07T12:14:31.677Z",
+      "createdAt": "2026-01-20T16:11:50.512Z",
+      "updatedAt": "2026-11-07T12:14:32.896Z"
+    }
+  ],
+  "metadata": {
+    "total": 2,
+    "count": 1,
+    "limit": 1,
+    "offset": 0,
+    "hasMore": true,
+    "language": "english",
+    "includes": {
+      "priceHistory": false
+    },
+    "historyWindow": {
+      "days": 30,
+      "from": "2026-10-09",
+      "to": "2026-11-08"
+    },
+    "apiCallsConsumed": {
+      "total": 1,
+      "breakdown": {
+        "products": 1,
+        "history": 0
+      },
+      "costPerProduct": 1
+    }
+  }
+}
