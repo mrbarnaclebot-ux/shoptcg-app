@@ -2,14 +2,32 @@ import "server-only";
 import { appendFile } from "node:fs/promises";
 
 const FROM = process.env.EMAIL_FROM ?? "shoptcg <onboarding@resend.dev>";
+const DEPLOYED = [
+  "RAILWAY_ENVIRONMENT",
+  "RAILWAY_ENVIRONMENT_ID",
+  "RAILWAY_PROJECT_ID",
+];
+
+/**
+ * E2E only: playwright.config.ts sets MAGIC_LINK_OUTBOX so tests read sign-in
+ * links from a file. On a deployed service that would let anyone with file
+ * access sign in as anyone, so refuse to start instead of ignoring it.
+ */
+export function outboxPath(env: Record<string, string | undefined>) {
+  const outbox = env.MAGIC_LINK_OUTBOX;
+  if (outbox && DEPLOYED.some((k) => env[k]))
+    throw new Error(
+      "MAGIC_LINK_OUTBOX must never be set on a deployed service",
+    );
+  return outbox || null;
+}
+
+const OUTBOX = outboxPath(process.env);
 
 export async function sendMagicLinkEmail(to: string, url: string) {
-  // E2E only: playwright.config.ts sets this so tests read the link from a
-  // file instead of an inbox. Never set it on a deployed service.
-  const outbox = process.env.MAGIC_LINK_OUTBOX;
-  if (outbox && !process.env.RAILWAY_ENVIRONMENT) {
+  if (OUTBOX) {
     await appendFile(
-      outbox,
+      OUTBOX,
       `${to} ${url}
 `,
     );
