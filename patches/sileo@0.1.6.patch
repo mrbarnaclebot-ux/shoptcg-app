@@ -1,0 +1,26 @@
+diff --git a/dist/index.js b/dist/index.js
+index 79aa792998ed2f8917d4b46725af2b0bbab692e0..9ec1eafc9beba1335885ae6ddc21560dd4f7dd7c 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -28,7 +28,7 @@ const AUTO_EXPAND_DELAY = DEFAULT_TOAST_DURATION * 0.025;
+ const AUTO_COLLAPSE_DELAY = DEFAULT_TOAST_DURATION - 2000;
+ const SPRING = {
+     type: "spring",
+-    bounce: 0.25,
++    bounce: 0,
+     duration: DURATION_S
+ };
+ /* --------------------------------- Render --------------------------------- */ const BLUR_RATIO = 0.5;
+diff --git a/dist/index.mjs b/dist/index.mjs
+index f687f84725d587b4c539fccb2f86568a9c18294d..6acda81e1740bfcc0a8c434f15bb9830499ebfc6 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -26,7 +26,7 @@ const AUTO_EXPAND_DELAY = DEFAULT_TOAST_DURATION * 0.025;
+ const AUTO_COLLAPSE_DELAY = DEFAULT_TOAST_DURATION - 2000;
+ const SPRING = {
+     type: "spring",
+-    bounce: 0.25,
++    bounce: 0,
+     duration: DURATION_S
+ };
+ /* --------------------------------- Render --------------------------------- */ const BLUR_RATIO = 0.5;
