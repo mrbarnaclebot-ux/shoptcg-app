@@ -19,7 +19,7 @@ export function DashboardNav() {
   return (
     <nav
       aria-label="Dashboard"
-      className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-border bg-surface-2 pb-[env(safe-area-inset-bottom)] lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-24 lg:flex-col lg:gap-1 lg:border-t-0 lg:border-r lg:bg-bg lg:pt-4 lg:pb-0"
+      className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-border bg-surface-2 pb-[env(safe-area-inset-bottom)] lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-24 lg:flex-col lg:gap-1 lg:border-t-0 lg:bg-bg lg:pt-4 lg:pb-0"
     >
       {TABS.map(({ href, label, icon: Icon }) => (
         <Link
