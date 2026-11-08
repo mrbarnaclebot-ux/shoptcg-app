@@ -14,8 +14,8 @@ export function vendorPrice(
 ): number | null {
   if (override !== null) return override;
   if (market === null) return null;
-  // Work in cents so 0.1 + 0.2 style float error never leaks into a price.
-  const cents = Math.round(market * (100 + rulePct));
+  // Integer cents first: 1.15 * 110 is 126.4999 in floats but 115 * 110 is exact.
+  const cents = Math.round((Math.round(market * 100) * (100 + rulePct)) / 100);
   const step = Math.round(rounding * 100) || 1;
   const rounded = Math.round(cents / step) * step;
   // A cheap card rounded to a whole-dollar step must not become free.
