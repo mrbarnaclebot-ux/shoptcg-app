@@ -4,9 +4,8 @@
     "builder": "RAILPACK"
   },
   "deploy": {
-    "preDeployCommand": ["pnpm db:migrate"],
-    "startCommand": "pnpm start",
-    "healthcheckPath": "/",
+    "startCommand": "pnpm db:migrate && pnpm start",
+    "healthcheckPath": "/api/health",
     "restartPolicyType": "ON_FAILURE"
   }
 }
