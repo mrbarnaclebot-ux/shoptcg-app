@@ -483,3 +483,6 @@ Still open for the build: placeholder art is uniformly grey, so the "vault" rich
 - Table sign: replace "Live prices / Synced nightly" with "Market-checked prices / Updated daily".
 - Table sign: NFC line "Or tap your phone here" only when the vendor enables an NFC toggle in store settings.
 - Store page and dashboard: reserve bottom padding equal to the sticky cart bar / bottom nav height so the last row is never covered.
+
+## Personality decision (owner, 2026-11-08)
+Direction B "Grading lab" is the base for every screen (slab labels, cert-stamp toasts, precise copy, no overshoot). Direction C "Booster rip" celebration is used only for three moments: store created, first item added, sale confirmed. Toasts via Sileo; animated components via Watermelon UI (verified picks in `personality/PERSONALITY.md`). Every toast action must also exist on the page (Sileo action button is nested; errors announce politely).
