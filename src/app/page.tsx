@@ -27,7 +27,7 @@ const proof = [
 
 export default function Home() {
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col overflow-x-clip">
       <header className="mx-auto flex w-full max-w-[1200px] items-center justify-between px-4 py-3 md:px-6 lg:px-8">
         <Wordmark />
         <Link
@@ -39,9 +39,9 @@ export default function Home() {
       </header>
 
       <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 md:px-6 lg:px-8">
-        <section className="grid items-center gap-12 pt-10 pb-16 md:grid-cols-2 md:pt-16 md:pb-24">
+        <section className="grid items-center gap-12 pt-8 pb-16 md:grid-cols-2 md:gap-8 md:pt-0 md:pb-16 lg:grid-cols-[1.1fr_1fr]">
           <div className="flex flex-col gap-6">
-            <h1 className="text-[2.5rem] leading-[2.75rem] font-extrabold wdth-118 md:text-display">
+            <h1 className="text-[2.5rem] leading-[2.75rem] font-extrabold wdth-118 md:text-[clamp(3.25rem,6vw,4.75rem)] md:leading-[0.98]">
               Your table, <span className="block">priced live.</span>
             </h1>
             <p className="max-w-[46ch] text-lg text-muted-foreground">
@@ -61,7 +61,13 @@ export default function Home() {
               </Link>
             </div>
           </div>
-          <PhonePreview />
+          <div className="relative isolate py-6 md:py-4">
+            <div
+              aria-hidden="true"
+              className="hero-sky absolute inset-x-[-25%] inset-y-[-10%] -z-10"
+            />
+            <PhonePreview />
+          </div>
         </section>
 
         <section
