@@ -1,0 +1,85 @@
+/*
+  Design tokens: the single source of brand values.
+  Provisional until .planning/design/UI-SPEC.md lands; swap values here only.
+  Dark-first: the app has one dark theme, so :root holds the dark values.
+*/
+
+:root {
+  /* Brand families */
+  --galaxy-950: #07070c;
+  --galaxy-900: #0b0b12;
+  --galaxy-800: #14141f;
+  --galaxy-700: #1e1e2c;
+  --galaxy-600: #2a2a3b;
+  --seal-500: #8a8f98;
+  --seal-400: #a4a8b0;
+  --seal-300: #c3c6cc;
+  --seal-100: #eceef1;
+  --sunrise-600: #e5620a;
+  --sunrise-500: #ff7a1a;
+  --sunrise-400: #ff9a4d;
+
+  /* Semantic roles consumed by shadcn/ui */
+  --background: var(--galaxy-900);
+  --foreground: var(--seal-100);
+  --card: var(--galaxy-800);
+  --card-foreground: var(--seal-100);
+  --popover: var(--galaxy-800);
+  --popover-foreground: var(--seal-100);
+  --primary: var(--sunrise-500);
+  --primary-foreground: var(--galaxy-950);
+  --secondary: var(--galaxy-700);
+  --secondary-foreground: var(--seal-100);
+  --muted: var(--galaxy-700);
+  --muted-foreground: var(--seal-500);
+  --accent: var(--galaxy-700);
+  --accent-foreground: var(--seal-100);
+  --destructive: #ef4444;
+  --border: var(--galaxy-600);
+  --input: var(--galaxy-600);
+  --ring: var(--sunrise-400);
+  --radius: 0.625rem;
+}
+
+@theme inline {
+  --color-galaxy-950: var(--galaxy-950);
+  --color-galaxy-900: var(--galaxy-900);
+  --color-galaxy-800: var(--galaxy-800);
+  --color-galaxy-700: var(--galaxy-700);
+  --color-galaxy-600: var(--galaxy-600);
+  --color-seal-500: var(--seal-500);
+  --color-seal-400: var(--seal-400);
+  --color-seal-300: var(--seal-300);
+  --color-seal-100: var(--seal-100);
+  --color-sunrise-600: var(--sunrise-600);
+  --color-sunrise-500: var(--sunrise-500);
+  --color-sunrise-400: var(--sunrise-400);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist-sans);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
