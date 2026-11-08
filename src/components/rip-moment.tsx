@@ -11,7 +11,7 @@ export function RipMoment(props: {
   children?: ReactNode;
 }) {
   return (
-    <section role="status" className="flex flex-col">
+    <section className="flex flex-col">
       <div aria-hidden className="rip-crimp" />
       <div className="rip flex flex-col gap-3 px-5 pt-4 pb-5">
         <span aria-hidden className="rip-foil" />

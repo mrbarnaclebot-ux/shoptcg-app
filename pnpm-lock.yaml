@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   sileo@0.1.6:
-    hash: 1e87688098e408234ada2f5e1f34dc72aca3fc35a5c8ff5f818aa7686887566f
+    hash: 69d8cce389c36fc53a3a1815ce76c6e5df26d67a25b7788e8cc31b469821c31d
     path: patches/sileo@0.1.6.patch
 
 importers:
@@ -57,7 +57,7 @@ importers:
         version: 0.0.1
       sileo:
         specifier: 0.1.6
-        version: 0.1.6(patch_hash=1e87688098e408234ada2f5e1f34dc72aca3fc35a5c8ff5f818aa7686887566f)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        version: 0.1.6(patch_hash=69d8cce389c36fc53a3a1815ce76c6e5df26d67a25b7788e8cc31b469821c31d)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -6840,7 +6840,7 @@ snapshots:
 
   signal-exit@4.1.0: {}
 
-  sileo@0.1.6(patch_hash=1e87688098e408234ada2f5e1f34dc72aca3fc35a5c8ff5f818aa7686887566f)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
+  sileo@0.1.6(patch_hash=69d8cce389c36fc53a3a1815ce76c6e5df26d67a25b7788e8cc31b469821c31d)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     dependencies:
       motion: 12.43.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react: 19.3.0

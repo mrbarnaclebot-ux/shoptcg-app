@@ -50,7 +50,7 @@ export function AddPanel({
   if (added)
     return <Added name={item.name} first={added.first} onAgain={onClose} />;
   return (
-    <form action={submit} className="flex flex-col gap-5">
+    <form action={submit} data-panel className="flex flex-col gap-5">
       <button
         type="button"
         onClick={onClose}

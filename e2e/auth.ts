@@ -7,7 +7,7 @@ export async function signIn(page: Page, email: string) {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Email me a link" }).click();
-  await expect(page.getByText("Link sent.")).toBeVisible();
+  await expect(page.getByText("Link sent.", { exact: true })).toBeVisible();
   let url: string | undefined;
   await expect
     .poll(async () => {

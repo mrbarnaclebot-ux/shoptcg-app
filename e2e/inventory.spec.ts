@@ -44,7 +44,7 @@ test("store settings keep their choices after saving", async ({ page }) => {
   await page.getByLabel("Price rule (% of market)").fill("-10");
   await page.getByText("Nearest $0.50").click();
   await page.getByRole("button", { name: "Save settings" }).click();
-  await expect(page.getByText("Saved.")).toBeVisible();
+  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("radio", { name: "Nearest $0.50" }),
   ).toBeChecked();

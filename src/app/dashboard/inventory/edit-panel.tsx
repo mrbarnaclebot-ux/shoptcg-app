@@ -28,6 +28,7 @@ export function EditPanel({
     });
   return (
     <form
+      data-panel
       className="flex flex-col gap-4 rounded-sm bg-surface-2 p-4 lg:max-w-lg lg:basis-full"
       onSubmit={(e) => {
         e.preventDefault();

@@ -30,7 +30,7 @@ for (const width of [390, 1280]) {
       .getByLabel("Email")
       .fill(`shots-${width}-${Date.now()}@example.test`);
     await page.getByRole("button", { name: "Email me a link" }).click();
-    await expect(page.getByText("Link sent.")).toBeVisible();
+    await expect(page.getByText("Link sent.", { exact: true })).toBeVisible();
     await shot(page, "login-sent", width, MID_ANIMATION_MS);
 
     await newVendor(page);
@@ -43,7 +43,7 @@ for (const width of [390, 1280]) {
     await page.getByLabel("Price rule (% of market)").fill("-10");
     await page.getByText("Nearest $0.50").click();
     await page.getByRole("button", { name: "Save settings" }).click();
-    await expect(page.getByText("Saved.")).toBeVisible();
+    await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
     await shot(page, "settings-saved", width, MID_ANIMATION_MS);
 
     await page.goto("/dashboard/inventory/import");
@@ -60,7 +60,7 @@ for (const width of [390, 1280]) {
     const row = page.getByRole("listitem").first();
     while ((await row.locator("output").textContent()) !== "0")
       await row.getByRole("button", { name: "One fewer" }).click();
-    await expect(page.getByText("Qty 0")).toBeVisible();
+    await expect(page.getByText("Qty 0", { exact: true })).toBeVisible();
     await shot(page, "inventory-toast", width, MID_ANIMATION_MS);
   });
 }

@@ -70,10 +70,8 @@ export function LoginForm() {
 
 function Sent({ email }: { email: string }) {
   return (
-    <div
-      role="status"
-      className="flex flex-col rounded-sm bg-surface ring-1 ring-border"
-    >
+    // No role="status": the linkSent toast already announces it.
+    <div className="flex flex-col rounded-sm bg-surface ring-1 ring-border">
       <div className="flex items-baseline justify-between gap-3 border-b border-border px-5 py-3">
         <p className="text-lg font-bold wdth-112">Link sent.</p>
         <p className="num text-xs text-subtle">VALID 5 MIN</p>

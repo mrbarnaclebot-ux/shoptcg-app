@@ -41,7 +41,7 @@ test("setup: settings, search, CSV preview", async ({ page }) => {
   await page.getByLabel("Your rate for 1 USD").fill("1.52");
   await page.getByText("I have an NFC tag on my table").click();
   await page.getByRole("button", { name: "Save settings" }).click();
-  await expect(page.getByText("Saved.")).toBeVisible();
+  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
   await shoot(page, "settings");
 
   await page.goto("/dashboard/inventory/add");

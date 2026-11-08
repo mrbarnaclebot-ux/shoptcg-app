@@ -2,8 +2,8 @@
 
 import { MotionConfig } from "motion/react";
 import { useEffect, useSyncExternalStore, type ReactNode } from "react";
-import { sileo, Toaster } from "sileo";
-import { ALERT_REGION_ID, toast } from "@/lib/toast";
+import { Toaster } from "sileo";
+import { ALERT_REGION_ID, STATUS_REGION_ID, toast } from "@/lib/toast";
 
 const PHONE = "(max-width: 767px)";
 
@@ -37,10 +37,19 @@ function useConnectionToasts() {
   }, []);
 }
 
-// Escape clears toasts; Sileo has no keyboard dismiss of its own.
+// Escape clears timed toasts; Sileo has no keyboard dismiss of its own. Skipped
+// when something else already took the key or focus is in a dialog or panel.
 function useEscapeDismiss() {
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && sileo.clear();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      const el = document.activeElement;
+      if (
+        el?.closest("dialog, [role=dialog], [role=alertdialog], [data-panel]")
+      )
+        return;
+      toast.dismissTransient();
+    };
     addEventListener("keydown", onKey);
     return () => removeEventListener("keydown", onKey);
   }, []);
@@ -60,6 +69,7 @@ export function ToastRoot({ children }: { children: ReactNode }) {
         offset={phone ? { bottom: 76 } : { top: 60, right: 8 }}
         options={{ fill: "#151622", roundness: 7 }}
       />
+      <div id={STATUS_REGION_ID} role="status" className="sr-only" />
       <div id={ALERT_REGION_ID} role="alert" className="sr-only" />
     </MotionConfig>
   );

@@ -1,5 +1,5 @@
 diff --git a/dist/index.js b/dist/index.js
-index 79aa792998ed2f8917d4b46725af2b0bbab692e0..9ec1eafc9beba1335885ae6ddc21560dd4f7dd7c 100644
+index 79aa792998ed2f8917d4b46725af2b0bbab692e0..dad9dc61eadf5977ca8168785e0d31c36f6fcd27 100644
 --- a/dist/index.js
 +++ b/dist/index.js
 @@ -28,7 +28,7 @@ const AUTO_EXPAND_DELAY = DEFAULT_TOAST_DURATION * 0.025;
@@ -11,8 +11,17 @@ index 79aa792998ed2f8917d4b46725af2b0bbab692e0..9ec1eafc9beba1335885ae6ddc21560d
      duration: DURATION_S
  };
  /* --------------------------------- Render --------------------------------- */ const BLUR_RATIO = 0.5;
+@@ -1044,7 +1044,7 @@ function Toaster({ children, position = "top-right", offset, options, theme }) {
+                     "data-sileo-viewport": true,
+                     "data-position": pos,
+                     "data-theme": theme ? resolvedTheme : undefined,
+-                    "aria-live": "polite",
++                    "aria-live": "off",
+                     style: getViewportStyle(pos),
+                     children: items.map((item)=>{
+                         var _item_fill;
 diff --git a/dist/index.mjs b/dist/index.mjs
-index f687f84725d587b4c539fccb2f86568a9c18294d..6acda81e1740bfcc0a8c434f15bb9830499ebfc6 100644
+index f687f84725d587b4c539fccb2f86568a9c18294d..a1eaba53eb4eb891cf59cddd9d746cb8ba5d69be 100644
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
 @@ -26,7 +26,7 @@ const AUTO_EXPAND_DELAY = DEFAULT_TOAST_DURATION * 0.025;
@@ -24,3 +33,12 @@ index f687f84725d587b4c539fccb2f86568a9c18294d..6acda81e1740bfcc0a8c434f15bb9830
      duration: DURATION_S
  };
  /* --------------------------------- Render --------------------------------- */ const BLUR_RATIO = 0.5;
+@@ -1042,7 +1042,7 @@ function Toaster({ children, position = "top-right", offset, options, theme }) {
+                     "data-sileo-viewport": true,
+                     "data-position": pos,
+                     "data-theme": theme ? resolvedTheme : undefined,
+-                    "aria-live": "polite",
++                    "aria-live": "off",
+                     style: getViewportStyle(pos),
+                     children: items.map((item)=>{
+                         var _item_fill;

@@ -6,14 +6,29 @@ import { certNo, usd } from "@/lib/format";
 // Direction C only for the three earned moments). Copy lives here, nowhere else.
 
 export const ALERT_REGION_ID = "toast-alert";
+export const STATUS_REGION_ID = "toast-status";
 
-// Sileo's viewport is aria-live polite for every state; errors also go to an
-// assertive region so they interrupt.
-function announce(text: string) {
-  const el = document.getElementById(ALERT_REGION_ID);
+// Sileo's viewport is patched to aria-live off (patches/sileo@0.1.6.patch), so
+// every toast is announced exactly once here: errors assertively, the rest politely.
+function announce(text: string, urgent = false) {
+  const el = document.getElementById(
+    urgent ? ALERT_REGION_ID : STATUS_REGION_ID,
+  );
   if (!el) return;
   el.textContent = "";
   setTimeout(() => (el.textContent = text), 50);
+}
+
+type Kind = "success" | "info" | "warning";
+/** A non-error toast plus its spoken text (titles and spec blocks are not plain strings). */
+// Escape dismisses only these; sticky errors and offline stay until resolved.
+const transient = new Set<string>();
+
+function show(kind: Kind, say: string, opts: SileoOptions) {
+  announce(say);
+  const id = sileo[kind](opts);
+  transient.add(id);
+  return id;
 }
 
 // Sileo types title as string but renders it as a React child; the cert stamp
@@ -49,7 +64,7 @@ function spec(rows: [string, ReactNode][], lead?: string) {
 const RIP: SileoOptions["styles"] = { title: "toast-rip" };
 
 function error(title: string, description: string, stamp?: string) {
-  announce(`${title}. ${description}`);
+  announce(`${title}. ${description}`, true);
   return sileo.error({
     title: head(title, stamp),
     description,
@@ -77,6 +92,7 @@ function importResult(r: ImportSummary): SileoOptions {
   if (r.unpriced) rows.push(["Set a price", r.unpriced]);
   if (r.rejected.length) rows.push(["Rejected rows", r.rejected.join(", ")]);
   const review = r.unpriced > 0 || r.rejected.length > 0;
+  announce(rows.map(([k, v]) => `${k} ${v}`).join(". "));
   return {
     title: head(`${r.count} logged`, "CSV"),
     description: spec(rows),
@@ -85,117 +101,139 @@ function importResult(r: ImportSummary): SileoOptions {
 }
 
 export const toast = {
-  linkSent: (email: string) =>
-    sileo.success({
+  linkSent: (email: string) => {
+    const description = `To ${email}. Valid 5 min, single use.`;
+    return show("success", `Link sent. ${description}`, {
       title: "Link sent",
-      description: `To ${email}. Valid 5 min, single use.`,
+      description,
       duration: 6000,
-    }),
+    });
+  },
   linkExpired: () =>
     error("Link expired", "Single use, 5 min. Request a new one below."),
   sendFailed: (why: string) => error("Not sent", why),
-  rateLimited: () =>
-    sileo.warning({
+  rateLimited: () => {
+    const description =
+      "Too many links requested. Wait a few minutes, then try again.";
+    return show("warning", `Limit reached. ${description}`, {
       title: "Limit reached",
-      description: "Too many links requested. Wait 60 s, then try again.",
+      description,
       duration: 8000,
-    }),
+    });
+  },
 
-  storeCreated: (slug: string) =>
-    sileo.success({
+  storeCreated: (slug: string) => {
+    const description = `shoptcg.app/${slug} is live. Time to stock it.`;
+    return show("success", `You're open. ${description}`, {
       title: "You're open",
-      description: `shoptcg.app/${slug} is live. Time to stock it.`,
+      description,
       styles: RIP,
       duration: 6000,
-    }),
+    });
+  },
   slugTaken: (slug: string) =>
     error("Slug taken", `"${slug}" is in use. Try "${slug}-cards".`),
 
-  settingsSaved: (pct: number, rounding: number) =>
-    sileo.success({
+  settingsSaved: (pct: number, rounding: number) => {
+    const description = `Rule: market ${pct > 0 ? "+" : ""}${pct}%, ${rounding ? `round to ${usd(rounding)}` : "exact cents"}.`;
+    return show("success", `Settings saved. ${description}`, {
       title: "Settings saved",
-      description: `Rule: market ${pct > 0 ? "+" : ""}${pct}%, ${rounding ? `round to ${usd(rounding)}` : "exact cents"}.`,
+      description,
       duration: 4000,
-    }),
+    });
+  },
   notSaved: (why: string) => error("Not saved", why),
 
   itemAdded: (item: LoggedItem) => {
     const price = item.price == null ? "Market rule" : usd(item.price);
-    if (item.first)
-      return sileo.success({
+    const what = `${item.name}${item.condition ? `, ${item.condition}` : ""}, ${price}`;
+    if (item.first) {
+      const description = `Your table is live. ${what}.`;
+      return show("success", `First hit logged. ${description}`, {
         title: "First hit logged",
-        description: `Your table is live. ${item.name}${item.condition ? `, ${item.condition}` : ""}, ${price}.`,
+        description,
         styles: RIP,
         duration: 6000,
       });
+    }
     const rows: [string, ReactNode][] = [
       ["Qty", item.qty],
       ["Your price", price],
     ];
     if (item.condition) rows.unshift(["Condition", item.condition]);
-    return sileo.success({
+    return show("success", `Logged. ${what}, qty ${item.qty}.`, {
       title: head("Logged", certNo(item.id)),
       description: spec(rows, item.name),
       duration: 5000,
     });
   },
   itemUpdated: (id: string, name: string, change: string) =>
-    sileo.success({
+    show("success", `Updated. ${name}. ${change}`, {
       title: head("Updated", certNo(id)),
       description: `${name}. ${change}`,
       duration: 4000,
     }),
-  itemHidden: (id: string, name: string) =>
-    sileo.info({
+  itemHidden: (id: string, name: string) => {
+    const description = `${name} is off your public table.`;
+    return show("info", `Hidden. ${description}`, {
       title: head("Hidden", certNo(id)),
-      description: `${name} is off your public table.`,
+      description,
       duration: 5000,
-    }),
-  qtyZero: (name: string, onHide: () => void) =>
-    sileo.warning({
+    });
+  },
+  qtyZero: (name: string, onHide: () => void) => {
+    const description = `${name} shows as sold out.`;
+    return show("warning", `Qty 0. ${description}`, {
       title: "Qty 0",
-      description: `${name} shows as sold out.`,
+      description,
       button: { title: "Hide item", onClick: onHide },
       duration: 8000,
-    }),
+    });
+  },
   qtyFailed: (qty: number) =>
     error(
       "Not saved",
       `Qty change didn't reach the server. Count held at ${qty}.`,
     ),
-  searchLimit: (perHour: number) =>
-    sileo.warning({
+  searchLimit: (perHour: number) => {
+    const description = `${perHour} new lookups per hour. Cards already in the catalog still search.`;
+    return show("warning", `Limit reached. ${description}`, {
       title: "Limit reached",
-      description: `${perHour} new lookups per hour. Cards already in the catalog still search.`,
+      description,
       duration: 8000,
-    }),
+    });
+  },
 
   csvUnreadable: (why: string) => error("CSV not read", why),
   /** One toast that morphs from loading to the result; `run` rejects with a user-safe message. */
-  importCsv: (rows: number, run: Promise<ImportSummary>) =>
-    sileo.promise(run, {
+  importCsv: (rows: number, run: Promise<ImportSummary>) => {
+    announce(`Importing ${rows}`);
+    return sileo.promise(run, {
       loading: { title: head(`Importing ${rows}`, "CSV") },
       success: (r) => importResult(r),
       error: (err) => {
         const why =
           err instanceof Error ? err.message : "Nothing was imported.";
-        announce(`Not imported. ${why}`);
+        announce(`Not imported. ${why}`, true);
         return { title: "Not imported", description: why, duration: null };
       },
-    }),
+    });
+  },
 
   offline: () => {
     let back = () => {};
     const online = new Promise<void>((resolve) => (back = resolve));
+    const description = "Changes can't save until the connection is back.";
+    announce(`Offline. ${description}`, true);
     sileo.promise(online, {
-      loading: {
-        title: "Offline",
-        description: "Changes can't save until the connection is back.",
-      },
-      success: {
-        title: "Online",
-        description: "Connection restored.",
-        duration: 4000,
+      loading: { title: "Offline", description },
+      success: () => {
+        announce("Online. Connection restored.");
+        return {
+          title: "Online",
+          description: "Connection restored.",
+          duration: 4000,
+        };
       },
       error: { title: "Offline" },
     });
@@ -203,4 +241,9 @@ export const toast = {
   },
 
   dismiss: (id: string) => sileo.dismiss(id),
+  /** Escape: clear timed toasts, never sticky errors or offline. */
+  dismissTransient: () => {
+    transient.forEach(sileo.dismiss);
+    transient.clear();
+  },
 };

@@ -3,7 +3,7 @@
 // Adapted from Watermelon UI "Labeled Progress Indicator" (MIT,
 // registry.watermelon.sh/r/labeled-progress-indicator.json). Changes: an
 // indeterminate progressbar role (the server reports no row count while it
-// checks), labels in a polite status, brand tokens, ruler ticks under a
+// checks), labels mirrored in the progressbar value text, brand tokens, ruler ticks under a
 // sweeping bar instead of the blue shimmer, no blur or 3D flip, and both
 // motions stop under reduced motion.
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -26,8 +26,9 @@ export function LabeledProgressIndicator(props: {
   }, [steps.length, intervalMs]);
   return (
     <div className="flex max-w-md flex-col gap-2">
+      {/* Visual only: the progressbar's aria-valuetext carries the same step. */}
       <p
-        role="status"
+        aria-hidden
         className="relative h-6 overflow-hidden text-sm font-semibold text-muted-foreground"
       >
         <AnimatePresence mode="popLayout" initial={false}>
