@@ -3,7 +3,7 @@
 Shared UI used by more than one route.
 
 - `ui/`: shadcn primitives (button, card, input, label).
-- `toast-root.tsx`: the one Sileo `<Toaster />`, reduced-motion `MotionConfig`, offline toasts, the assertive alert region. Toast copy lives in `src/lib/toast.ts`.
+- `toast-root.tsx`: the Sileo `<Toaster />` (mounted by the login and dashboard layouts only), reduced-motion `MotionConfig`, offline toasts, the polite and assertive announcement regions. Toast copy lives in `src/lib/toast.ts`.
 - `rip-moment.tsx`: Direction C celebration (store created, first item, sale confirmed).
 - `slab-head.tsx`: Direction B section header (rule, label, ruler ticks).
 - `stepper.tsx`, `continuous-tabs.tsx`, `labeled-progress-indicator.tsx`: adapted Watermelon UI components (MIT); each file header lists what changed from upstream.
