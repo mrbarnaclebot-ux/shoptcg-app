@@ -16,3 +16,4 @@ Source of truth for scope: `PROJECT.md`. One branch and one PR per phase.
 - Railway CLI login expired on dev machine: owner runs `railway login` before first deploy.
 - Domain shoptcg.app ownership unconfirmed: use Resend test sender until DNS is set.
 - PokemonPriceTracker API key: owner adds to `.env` (never committed).
+- Price API licence: build on Free/Pro (dev allowed). Decide Business ($99/mo) vs alternative BEFORE the first real show. See research/PRICING-API.md.

@@ -39,9 +39,9 @@ Vendors at card shows price items with sticky labels or binders and check market
 | Database | Postgres (Railway) with Drizzle ORM | Constraints enforce stock integrity (stock never below 0, one active hold per unit). |
 | Realtime seller ping | Postgres LISTEN/NOTIFY to Server-Sent Events, plus Web Push | No extra service. Web Push for when the seller app is in the background. |
 | Scheduled jobs | Railway cron service running a sync script nightly, plus a 1-minute hold-expiry sweep | Built in on Railway. |
-| Auth | Vendor-only, email magic link (Auth.js + Resend) | No passwords. Buyers never sign in. |
+| Auth | Vendor-only, email magic link (Better Auth magic-link plugin + Resend; Auth.js is now maintained by Better Auth, who recommend it for new projects) | No passwords. Buyers never sign in. |
 | Email | Resend (magic links, receipts, promos) | Simple API, good deliverability, free tier covers a hobby project. |
-| Pricing data | PokemonPriceTracker API (primary, paid, about $10 to $30/mo): raw, graded PSA/BGS/CGC/SGC, sealed, EN + JP. pokemontcg.io / TCGdex for images and metadata. JustTCG as a JP fallback. | TCGplayer API is closed to new developers. One provider covers all three product types. |
+| Pricing data | PokemonPriceTracker API (primary; dev on Free/Pro, commercial use needs Business $99/mo, decided before first real show): raw, graded PSA/BGS/CGC/SGC, sealed, EN + JP. pokemontcg.io / TCGdex for images and metadata. JustTCG as a JP fallback. | TCGplayer API is closed to new developers. One provider covers all three product types. |
 | Chinese products | Manual custom items, vendor sets the price | No reliable CN price source exists. |
 | Currency | USD base. Vendor can show a second currency with their own typed-in FX rate. | Vendors use their own real-world rate, not Google's. |
 | Vendor price | Store rule (e.g. market -10%, rounded to 0.50 or 1.00) plus per-item override. Recomputed nightly. | Vendors rarely sell at exactly market. |
