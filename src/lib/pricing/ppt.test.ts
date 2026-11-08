@@ -4,121 +4,17 @@ import history from "./fixtures/ppt-card-history.json";
 import jaCards from "./fixtures/ppt-cards-ja.json";
 import rawCards from "./fixtures/ppt-cards-search.json";
 import sealed from "./fixtures/ppt-sealed-search.json";
-import enSearch from "./fixtures/tcgdex-en-search.json";
-import enCard from "./fixtures/tcgdex-en-sv03.5-199.json";
-import jaSearch from "./fixtures/tcgdex-ja-search.json";
-import jaCard from "./fixtures/tcgdex-ja-SV2a-006.json";
-import { parseGradeKey, ppt } from "./ppt";
-import type { PriceRef, SearchQuery } from "./provider";
+import { PartialPricesError } from "./errors";
+import { ppt } from "./ppt";
+import { parseGradeKey } from "./ppt-map";
+import { raw, query, serve } from "./test-fetch";
 import { tcgdex } from "./tcgdex";
-
-// Serves fixtures by URL substring; anything unmatched is a 404.
-function serve(routes: [string, unknown][]) {
-  const calls: URL[] = [];
-  vi.stubGlobal("fetch", async (input: string) => {
-    const url = new URL(input);
-    calls.push(url);
-    const hit = routes.find(([part]) => decodeURI(url.href).includes(part));
-    return hit
-      ? Response.json(hit[1])
-      : new Response("not found", { status: 404 });
-  });
-  return calls;
-}
 
 afterEach(() => vi.unstubAllGlobals());
 
-const query = (over: Partial<SearchQuery>): SearchQuery => ({
-  text: "charizard 199",
-  name: "charizard",
-  number: "199",
-  setTotal: null,
-  kind: "raw",
-  language: "en",
-  limit: 10,
-  ...over,
-});
-
-const raw: PriceRef = {
-  providerId: "517045",
-  kind: "raw",
-  language: "en",
-  grader: null,
-  grade: null,
-};
-
-describe("tcgdex adapter", () => {
-  it("maps an EN search hit with set name and image", async () => {
-    serve([
-      ["/en/cards?", enSearch],
-      ["/en/cards/sv03.5-199", enCard],
-    ]);
-    const [hit] = await tcgdex.search(query({}));
-    expect(hit).toEqual({
-      provider: "tcgdex",
-      providerId: "sv03.5-199",
-      kind: "raw",
-      language: "en",
-      name: "Charizard ex",
-      setName: "151",
-      number: "199",
-      imageUrl: "https://assets.tcgdex.net/en/sv/sv03.5/199/high.webp",
-      grader: null,
-      grade: null,
-    });
-  });
-
-  it("maps a JA hit and leaves it unpriced (TCGdex has no USD for JA)", async () => {
-    // Only the first brief has a detail fixture; the other 404s and is dropped.
-    serve([
-      ["/ja/cards?", jaSearch],
-      ["/ja/cards/SV2a-006", jaCard],
-    ]);
-    const hits = await tcgdex.search(
-      query({
-        text: "リザードンex 006",
-        name: "リザードンex",
-        number: "006",
-        language: "ja",
-      }),
-    );
-    expect(hits).toHaveLength(1);
-    expect(hits[0]).toMatchObject({
-      name: "リザードンex",
-      setName: "ポケモンカード151",
-    });
-    expect(await tcgdex.getPrices(hits)).toEqual([]);
-  });
-
-  it("prices EN raw from the TCGplayer block and skips graded and sealed", async () => {
-    serve([["/en/cards/sv03.5-199", enCard]]);
-    const ref = { ...raw, providerId: "sv03.5-199" };
-    const quotes = await tcgdex.getPrices([
-      ref,
-      { ...ref, kind: "sealed" as const },
-    ]);
-    expect(quotes).toEqual([
-      {
-        ref,
-        marketUsd: 295.26,
-        lowUsd: 233.96,
-        highUsd: 10000,
-        sampleSize: null,
-      },
-    ]);
-  });
-
-  it("returns nothing for graded or sealed searches", async () => {
-    const calls = serve([]);
-    expect(await tcgdex.search(query({ kind: "graded" }))).toEqual([]);
-    expect(await tcgdex.search(query({ kind: "sealed" }))).toEqual([]);
-    expect(calls).toHaveLength(0);
-  });
-});
-
 // Fixtures are live Pro-plan responses from 2026-11-08, trimmed.
 describe("ppt adapter (recorded fixtures)", () => {
-  const client = ppt("test-key", 0);
+  const client = ppt("test-key", { gapMs: 0, maxWaitMs: Infinity });
   const psa = {
     ...raw,
     kind: "graded" as const,
@@ -246,7 +142,32 @@ describe("ppt adapter (recorded fixtures)", () => {
       async () =>
         new Response("", { status: 429, headers: { "Retry-After": "0.01" } }),
     );
-    await expect(client.getPrices([raw])).rejects.toThrow("PPT 429");
+    const err = await client.getPrices([raw]).catch((e) => e);
+    expect(err).toBeInstanceOf(PartialPricesError);
+    expect(err.cause.message).toContain("PPT 429");
+  });
+
+  it("skips market <= 0 and keeps paid quotes when one item fails", async () => {
+    const zero = { ...rawCards.data[0], prices: { market: 0, low: 5 } };
+    serve([["/cards?", { data: zero }]]);
+    expect(await client.getPrices([raw])).toEqual([]);
+    vi.stubGlobal("fetch", async (input: string) =>
+      input.includes("tcgPlayerId=1")
+        ? new Response("boom", { status: 500 })
+        : Response.json({ data: rawCards.data[0] }),
+    );
+    const err = await client
+      .getPrices([{ ...raw, providerId: "1" }, raw])
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(PartialPricesError);
+    expect([err.failed, err.quotes[0].marketUsd]).toEqual([1, 296.24]);
+  });
+
+  it("maps a hit with no id to an empty id, never the string null", async () => {
+    const noId = { ...rawCards.data[0], tcgPlayerId: null };
+    serve([["/cards?", { data: [noId] }]]);
+    const [hit] = await client.search(query({}));
+    expect(hit.providerId).toBe("");
   });
 
   it.each([

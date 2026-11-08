@@ -12,6 +12,8 @@ import type {
 // under source "tcgdex" for cross-checking and never shown as the display price.
 const BASE = "https://api.tcgdex.net/v2";
 const LANG: Record<Language, string> = { en: "en", ja: "ja", zh: "zh-tw" };
+// Detail calls in flight at once per search; TCGdex is free, so be polite.
+const DETAIL_CONCURRENCY = 3;
 // Preferred when a card has several printings priced.
 const PRINTINGS = ["normal", "holofoil", "reverse-holofoil"];
 
@@ -64,8 +66,29 @@ function tcgplayerPrice(card: TcgdexCard): TcgplayerPrice | null {
   keys.sort((a, b) => rank(a) - rank(b));
   const priced = keys
     .map((k) => tp[k] as TcgplayerPrice)
-    .find((p) => typeof p?.marketPrice === "number");
+    .find((p) => positive(p?.marketPrice) !== null);
   return priced ?? null;
+}
+
+// 0 or less is never a price.
+function positive(v: unknown) {
+  return typeof v === "number" && Number.isFinite(v) && v > 0 ? v : null;
+}
+
+const cardPath = (lang: string, id: string) =>
+  `/${lang}/cards/${encodeURIComponent(id)}`;
+
+async function details(lang: string, briefs: TcgdexBrief[]) {
+  const cards: (TcgdexCard | null)[] = [];
+  for (let i = 0; i < briefs.length; i += DETAIL_CONCURRENCY) {
+    const batch = briefs.slice(i, i + DETAIL_CONCURRENCY);
+    cards.push(
+      ...(await Promise.all(
+        batch.map((b) => get<TcgdexCard>(cardPath(lang, b.id))),
+      )),
+    );
+  }
+  return cards;
 }
 
 function rank(printing: string) {
@@ -84,9 +107,7 @@ async function search(q: SearchQuery): Promise<CatalogHit[]> {
   const lang = LANG[q.language];
   const briefs = (await get<TcgdexBrief[]>(`/${lang}/cards?${params}`)) ?? [];
   // The list endpoint omits the set name, so each hit needs its detail call.
-  const cards = await Promise.all(
-    briefs.map((b) => get<TcgdexCard>(`/${lang}/cards/${b.id}`)),
-  );
+  const cards = await details(lang, briefs);
   return cards
     .filter((c): c is TcgdexCard => c !== null)
     .map((c) => toHit(c, q.language));
@@ -96,15 +117,17 @@ async function getPrices<T extends PriceRef>(refs: T[]): Promise<Quote<T>[]> {
   const quotes: Quote<T>[] = [];
   for (const ref of refs) {
     if (ref.kind !== "raw") continue;
-    const path = `/${LANG[ref.language]}/cards/${ref.providerId}`;
-    const card = await get<TcgdexCard>(path);
+    const card = await get<TcgdexCard>(
+      cardPath(LANG[ref.language], ref.providerId),
+    );
     const price = card && tcgplayerPrice(card);
-    if (!price || typeof price.marketPrice !== "number") continue;
+    const market = positive(price?.marketPrice);
+    if (!price || market === null) continue;
     quotes.push({
       ref,
-      marketUsd: price.marketPrice,
-      lowUsd: price.lowPrice ?? null,
-      highUsd: price.highPrice ?? null,
+      marketUsd: market,
+      lowUsd: positive(price.lowPrice),
+      highUsd: positive(price.highPrice),
       sampleSize: null,
     });
   }

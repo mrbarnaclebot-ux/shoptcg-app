@@ -1,4 +1,4 @@
-import { ppt } from "./ppt";
+import { ppt, SYNC_RATE } from "./ppt";
 import { tcgdex } from "./tcgdex";
 
 export type Kind = "raw" | "graded" | "sealed";
@@ -60,10 +60,10 @@ export function defaultProvider(): PriceProvider {
   return key ? ppt(key) : tcgdex;
 }
 
-/** The adapter that owns rows stored under this provider name, if configured. */
+/** The nightly sync's adapter for rows stored under this provider name, if configured. */
 export function providerByName(name: string): PriceProvider | null {
   if (name === tcgdex.name) return tcgdex;
   const key = process.env.PPT_API_KEY;
-  if (name === "ppt" && key) return ppt(key);
+  if (name === "ppt" && key) return ppt(key, SYNC_RATE);
   return null;
 }
