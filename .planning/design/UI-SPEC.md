@@ -486,3 +486,13 @@ Still open for the build: placeholder art is uniformly grey, so the "vault" rich
 
 ## Personality decision (owner, 2026-11-08)
 Direction B "Grading lab" is the base for every screen (slab labels, cert-stamp toasts, precise copy, no overshoot). Direction C "Booster rip" celebration is used only for three moments: store created, first item added, sale confirmed. Toasts via Sileo; animated components via Watermelon UI (verified picks in `personality/PERSONALITY.md`). Every toast action must also exist on the page (Sileo action button is nested; errors announce politely).
+
+## Visual direction decision (owner, 2026-11-09) - SUPERSEDES the personality decision above
+The owner found Direction B still "AI-y" and chose variation 3 "Show floor, after dark" from four fal-illustrated variations.
+Source of truth: `design/variations/v3-showfloor/index.html` + `NOTES.md` (+ `assets/`).
+- Two materials: the hall (galaxy black) and warm paper ticket stock for everything you hold (requests, receipts, toasts, list bar, sign).
+- Fonts: Big Shoulders Display (table numbers, prices, names, headlines), Schibsted Grotesk (UI and body, sentence case). No tracked uppercase micro-labels.
+- Orange is lamplight only: table number block, hold timer, the one primary ticket button, the under-market stamp. Darker orange for text on paper.
+- Square corners, notched ticket buttons with stub, perforations, stamp badges; no pills, glass, gradients, or grid backgrounds.
+- Documentary photography (fal nano-banana-pro) and a looping hall video (fal wan-3.0-prime) on the landing; poster only under reduced motion.
+- Booster-rip celebrations are replaced by show-floor equivalents (e.g. ticket punch / stamp) for store created, first item, sale confirmed.
