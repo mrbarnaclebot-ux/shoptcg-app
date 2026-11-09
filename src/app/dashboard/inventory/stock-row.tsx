@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { CardThumb } from "@/components/card-thumb";
 import { HangTag } from "@/components/hang-tag";
 import { Stamp } from "@/components/stamp";
@@ -77,7 +77,7 @@ function Name({ row, price }: { row: Row; price: number | null }) {
       >
         {row.name}
       </p>
-      <p className="text-[0.8125rem] text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         {[set || "Custom item", gradeLabel(row) || "Raw"].join(". ")}
         <span className="lg:hidden">. {LANGUAGE_LABEL[row.language]}</span>
       </p>
@@ -94,7 +94,14 @@ function PriceTag({ row, price, today }: Parameters<typeof StockRow>[0]) {
       : null;
   return (
     <div className="col-start-3 row-start-1 flex flex-col items-end gap-1 lg:col-start-5">
-      <HangTag price={price === null ? "No price" : usd(price)} />
+      {price === null ? (
+        // A task, not a price: outline only, so it never reads as one.
+        <span className="inline-flex min-h-9 items-center px-3 text-[0.9375rem] font-semibold text-brand-text shadow-[inset_0_0_0_1.5px_var(--brand)]">
+          Set a price
+        </span>
+      ) : (
+        <HangTag price={usd(price)} />
+      )}
       {row.overridePrice !== null && (
         <span className="text-xs font-semibold text-muted-foreground">
           Fixed price
@@ -118,6 +125,13 @@ function Qty({ row }: { row: Row }) {
   const [shown, setShown] = useOptimistic(row.qty);
   const [, start] = useTransition();
   const [failed, setFailed] = useState(false);
+  // "Not saved." goes once the network is back; the toast says so too.
+  useEffect(() => {
+    if (!failed) return;
+    const clear = () => setFailed(false);
+    addEventListener("online", clear);
+    return () => removeEventListener("online", clear);
+  }, [failed]);
   const hide = () =>
     start(async () => {
       const res = await updateListingAction({ id: row.id, active: false });

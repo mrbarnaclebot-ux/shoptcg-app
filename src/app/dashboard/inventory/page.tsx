@@ -1,4 +1,4 @@
-import { FileSpreadsheet, Plus } from "lucide-react";
+import { FileSpreadsheet } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -84,18 +84,12 @@ function Header(props: { count: number | null; synced: string | null }) {
       <div className="flex gap-3">
         <Link
           href="/dashboard/inventory/import"
-          aria-label="Import CSV"
           className={`${lineButton} px-3.5`}
         >
           <FileSpreadsheet aria-hidden className="size-5" />
-          <span className="hidden sm:inline">Import CSV</span>
+          Import<span className="hidden sm:inline"> CSV</span>
         </Link>
-        <TicketButton
-          href="/dashboard/inventory/add"
-          icon={<Plus className="size-[18px]" strokeWidth={2.4} />}
-        >
-          Add
-        </TicketButton>
+        <TicketButton href="/dashboard/inventory/add">Add</TicketButton>
       </div>
     </div>
   );
@@ -146,13 +140,11 @@ function NoMatches() {
   );
 }
 
+// No grey boxes in the hall: one line of ticket text while the list loads.
 function Skeleton() {
   return (
-    <div className="flex flex-col gap-3" aria-hidden>
-      <div className="h-12 animate-pulse bg-surface" />
-      {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="h-24 animate-pulse bg-surface" />
-      ))}
-    </div>
+    <p role="status" className="py-10 font-semibold text-subtle">
+      Counting stock...
+    </p>
   );
 }

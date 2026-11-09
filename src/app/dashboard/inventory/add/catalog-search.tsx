@@ -69,31 +69,6 @@ export function CatalogSearch({ onCustom }: { onCustom: () => void }) {
   if (picked) return <AddPanel item={picked} onClose={() => setPicked(null)} />;
   return (
     <div className="flex flex-col gap-4">
-      <Segmented
-        label="Type"
-        value={kind}
-        options={[
-          ["raw", "Raw"],
-          ["graded", "Graded"],
-          ["sealed", "Sealed"],
-        ]}
-        onChange={(k) => {
-          setKind(k);
-          change(query, k);
-        }}
-      />
-      <Segmented
-        label="Language"
-        value={language}
-        options={[
-          ["en", "English"],
-          ["ja", "Japanese"],
-        ]}
-        onChange={(l) => {
-          setLanguage(l);
-          change(query, kind, l);
-        }}
-      />
       <div className="relative">
         <Search
           aria-hidden
@@ -110,6 +85,34 @@ export function CatalogSearch({ onCustom }: { onCustom: () => void }) {
           placeholder="Name or number, e.g. charizard 199"
           aria-label="Search the catalog"
           className="pl-11"
+        />
+      </div>
+      {/* Vendors type first; type and language sit under the box on one row. */}
+      <div className="flex flex-wrap gap-x-6 gap-y-3">
+        <Segmented
+          label="Type"
+          value={kind}
+          options={[
+            ["raw", "Raw"],
+            ["graded", "Graded"],
+            ["sealed", "Sealed"],
+          ]}
+          onChange={(k) => {
+            setKind(k);
+            change(query, k);
+          }}
+        />
+        <Segmented
+          label="Language"
+          value={language}
+          options={[
+            ["en", "EN"],
+            ["ja", "JP"],
+          ]}
+          onChange={(l) => {
+            setLanguage(l);
+            change(query, kind, l);
+          }}
         />
       </div>
       <Results

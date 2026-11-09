@@ -35,7 +35,7 @@ function Placeholder(props: {
       aria-hidden
       className={cn(
         props.className,
-        "relative grid place-items-center text-subtle",
+        "relative grid place-items-center text-muted-foreground",
       )}
     >
       <svg

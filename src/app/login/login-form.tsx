@@ -78,8 +78,10 @@ function Sent({ email }: { email: string }) {
       </p>
       <p className="text-muted-foreground">
         We sent a link to{" "}
-        <span className="font-semibold break-all text-text">{email}</span>. It
-        works once, for 5 minutes.
+        <span className="font-semibold [overflow-wrap:anywhere] text-text">
+          {email}
+        </span>
+        . It works once, for 5 minutes.
       </p>
       <p className="border-t border-dashed border-border pt-3 text-sm text-muted-foreground">
         Didn&apos;t get it? Check spam, or reload this page to send again.

@@ -63,7 +63,7 @@
   --night-3: oklch(0.25 0.014 285);
   --seal: #7e848b;
   --on-night: oklch(0.94 0.012 80);
-  --on-night-2: oklch(0.76 0.01 250);
+  --on-night-2: oklch(0.78 0.01 250);
   /* the lamp */
   --sun: #f77c10;
   --sun-hover: oklch(0.76 0.17 57);

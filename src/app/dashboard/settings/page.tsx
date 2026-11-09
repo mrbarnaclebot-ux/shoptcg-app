@@ -32,7 +32,8 @@ async function Settings() {
   return (
     <>
       <p className="-mt-7 text-sm text-muted-foreground">
-        Signed in as {user.email}
+        Signed in as{" "}
+        <span className="[overflow-wrap:anywhere]">{user.email}</span>
       </p>
       <SettingsForm
         values={{

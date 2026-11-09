@@ -9,7 +9,10 @@ test("a vendor adds a custom item and sees it in inventory", async ({
   await expect(page.getByText("Your shelf is empty.")).toBeVisible();
 
   await page.getByRole("link", { name: "Add a card" }).click();
-  await page.getByText("Custom item", { exact: true }).click();
+  await page
+    .getByRole("button", { name: "Not in the catalog? Add a custom item" })
+    .click();
+  await page.getByText("Chinese", { exact: true }).click();
   await page.getByLabel("Name").fill("Pikachu Gold Star CN promo");
   await page.getByLabel("Number").fill("SM-P 1");
   await page.getByLabel("Qty").fill("2");
