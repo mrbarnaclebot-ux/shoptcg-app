@@ -62,6 +62,30 @@ export async function createStore(
   }
 }
 
+/** "B14": the organiser's table number; blank clears it. Mirrors store_table_label_format. */
+export const tableLabelSchema = z.preprocess(
+  (v) => (typeof v === "string" ? v.trim() || null : v),
+  z
+    .string()
+    .max(8, "8 characters at most")
+    .regex(/^[A-Za-z0-9-]+$/, "Letters, numbers and dashes only")
+    .nullable(),
+);
+
+/** Sets the owner's table number; the owner id is the ownership check. */
+export async function updateTableLabel(
+  db: Db,
+  ownerUserId: string,
+  tableLabel: string | null,
+) {
+  const rows = await db
+    .update(store)
+    .set({ tableLabel })
+    .where(eq(store.ownerUserId, ownerUserId))
+    .returning({ id: store.id });
+  return rows.length > 0;
+}
+
 const checkbox = z.preprocess((v) => v === "on" || v === true, z.boolean());
 
 export const settingsSchema = z
@@ -88,6 +112,7 @@ export const settingsSchema = z
         .max(1_000_000)
         .nullable(),
     ),
+    tableLabel: tableLabelSchema,
     nfcEnabled: checkbox,
     isOpen: checkbox,
   })

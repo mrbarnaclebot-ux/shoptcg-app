@@ -123,9 +123,14 @@ function RequestsEmpty() {
           When a buyer scans your table sign and sends a list, it lands here and
           your phone chimes. Stock your table first.
         </p>
-        <Link href="/dashboard/inventory" className={`${lineButton} mt-1`}>
-          Go to inventory
-        </Link>
+        <div className="mt-1 flex flex-wrap gap-3">
+          <Link href="/dashboard/inventory" className={lineButton}>
+            Go to inventory
+          </Link>
+          <Link href="/dashboard/sign" className={lineButton}>
+            Print table sign
+          </Link>
+        </div>
       </div>
     </section>
   );

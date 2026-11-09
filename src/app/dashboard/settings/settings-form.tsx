@@ -17,6 +17,7 @@ type Values = {
   rounding: string;
   secondCurrency: string;
   fxRate: string;
+  tableLabel: string;
   nfcEnabled: boolean;
   isOpen: boolean;
 };
@@ -63,6 +64,25 @@ export function SettingsForm({ values }: { values: Values }) {
         <SectionMark n={3} level="legend" className="mb-4">
           At the table
         </SectionMark>
+        <div className="mb-2 flex flex-col gap-2">
+          <Label htmlFor="tableLabel">Table number</Label>
+          <Input
+            id="tableLabel"
+            name="tableLabel"
+            defaultValue={values.tableLabel}
+            maxLength={8}
+            placeholder="B14"
+            autoCapitalize="characters"
+            aria-invalid={e.tableLabel ? true : undefined}
+            aria-describedby="table-hint table-error"
+            className="max-w-32"
+          />
+          <p id="table-hint" className="text-sm text-muted-foreground">
+            The number the organiser gave your table. Shown on your sign and
+            store page.
+          </p>
+          <Err id="table-error" msg={e.tableLabel} />
+        </div>
         <Toggle
           name="isOpen"
           checked={values.isOpen}

@@ -141,6 +141,16 @@ export const toast = {
     });
   },
   notSaved: (why: string) => error("Not saved", why),
+  tableSaved: (label: string | null) => {
+    const description = label
+      ? `Table ${label} is on your sign and store page.`
+      : "Your sign no longer shows a table number.";
+    return show("success", `Settings saved. ${description}`, {
+      title: "Settings saved",
+      description,
+      duration: 4000,
+    });
+  },
 
   itemAdded: (item: LoggedItem) => {
     const price = item.price == null ? "Follows market" : usd(item.price);

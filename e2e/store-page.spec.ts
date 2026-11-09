@@ -139,3 +139,54 @@ test("the buyer's list survives a reload", async ({ page, browser }) => {
     buyer.getByRole("status").filter({ hasText: "Your list" }),
   ).toContainText("2 items, $313.60");
 });
+
+test("the table sign prints one A5 page with a QR that scans to the store", async ({
+  page,
+}) => {
+  const id = await newVendor(page);
+  const slug = `e2e-${id}`;
+  await page.goto("/dashboard/sign");
+  await expect(page.getByTestId("sign-url")).toHaveText(
+    new RegExp(`/${slug}$`),
+  );
+  await expect(page.locator(".ts-nfc")).toHaveCount(0);
+
+  // Decode in the page: SVG to canvas to jsQR, as a phone camera would.
+  await page.addScriptTag({ path: require.resolve("jsqr/dist/jsQR.js") });
+  const decoded = await page
+    .locator("svg[aria-label^='QR code']")
+    .evaluate(async (svg) => {
+      const img = new Image();
+      const xml = new XMLSerializer().serializeToString(svg);
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
+      await img.decode();
+      const c = document.createElement("canvas");
+      c.width = c.height = 400;
+      const ctx = c.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, 400, 400);
+      const { data } = ctx.getImageData(0, 0, 400, 400);
+      type Decode = (
+        d: Uint8ClampedArray,
+        w: number,
+        h: number,
+      ) => { data: string } | null;
+      return (window as unknown as { jsQR: Decode }).jsQR(data, 400, 400)?.data;
+    });
+  expect(decoded).toBe(`http://localhost:3000/${slug}?src=sign`);
+
+  await page.getByLabel("Table number").fill("B14");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator(".ts-table")).toHaveText("TableB14");
+
+  const pdf = await page.pdf({
+    preferCSSPageSize: true,
+    printBackground: true,
+  });
+  const pages = pdf.toString("latin1").match(/\/Type\s*\/Page[^s]/g) ?? [];
+  expect(pages).toHaveLength(1);
+
+  await saveSettings(page, { nfc: true });
+  await page.goto("/dashboard/sign");
+  await expect(page.locator(".ts-nfc")).toBeVisible();
+  await expect(page.getByText(`/${slug}?src=nfc`)).toBeVisible();
+});

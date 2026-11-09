@@ -40,6 +40,7 @@ async function Settings() {
           rounding: String(Number(store.rounding)),
           secondCurrency: store.secondCurrency ?? "",
           fxRate: store.fxRate === null ? "" : String(Number(store.fxRate)),
+          tableLabel: store.tableLabel ?? "",
           nfcEnabled: store.nfcEnabled,
           isOpen: store.isOpen,
         }}
