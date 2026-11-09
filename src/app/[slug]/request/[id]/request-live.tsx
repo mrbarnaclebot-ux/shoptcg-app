@@ -36,7 +36,9 @@ export function RequestLive(props: {
   const { status, slug } = props;
   const router = useRouter();
   const sendAgain = useSendAgain(slug, props.lines);
-  useLive(status === "pending" ? `/api/live/request/${props.id}` : null);
+  // The seller can still confirm a lapsed hold while the buyer is at the table.
+  const open = status === "pending" || status === "expired";
+  useLive(open ? `/api/live/request/${props.id}` : null);
   const last = useRef(status);
   useEffect(() => {
     if (last.current === status) return;

@@ -2,12 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
+import { ReceiptSummary } from "@/components/receipt-summary";
 import { RequestLines } from "@/components/request-lines";
+import { ShowMoment } from "@/components/show-moment";
 import { StubValue, Ticket } from "@/components/ticket";
 import { lineButton } from "@/components/ticket-button";
 import { getDb } from "@/db";
 import { readBuyerSid } from "@/lib/buyer-session";
 import { buyerRequest } from "@/lib/request-reads";
+import { saleForRequest } from "@/lib/sales";
 import { UUID } from "@/lib/storefront";
 import { storeOr404 } from "../../store-lookup";
 import {
@@ -26,11 +29,6 @@ export const metadata: Metadata = {
 };
 
 const COPY = {
-  // ponytail: phase 6 replaces this with the receipt summary.
-  confirmed: {
-    title: "Confirmed",
-    sub: "The seller confirmed this sale.",
-  },
   declined: {
     title: "The seller couldn't do this one.",
     sub: "Items are back in the store. You can talk to the seller at the table or send a new list.",
@@ -53,6 +51,7 @@ export default async function RequestPage({
   const sid = await readBuyerSid();
   const r = sid && UUID.test(id) ? await buyerRequest(getDb(), id, sid) : null;
   if (!r || r.slug !== slug) notFound();
+  if (r.status === "confirmed") return <Sold requestId={r.id} slug={slug} />;
   return (
     <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col gap-5 px-4 pt-6 pb-16 md:pt-10">
       <RequestLive id={r.id} slug={slug} status={r.status} lines={r.lines} />
@@ -94,6 +93,29 @@ export default async function RequestPage({
           }
         />
       )}
+    </main>
+  );
+}
+
+async function Sold(props: { requestId: string; slug: string }) {
+  const sale = await saleForRequest(getDb(), props.requestId);
+  if (!sale) notFound();
+  return (
+    <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col gap-5 px-4 pt-6 pb-16 md:pt-10">
+      <h1 className="sr-only">Your receipt</h1>
+      <ShowMoment
+        stamp="SOLD"
+        headline="Sold. Enjoy your cards!"
+        no={sale.receiptNo}
+      >
+        <ReceiptSummary sale={sale} />
+      </ShowMoment>
+      <p className="[overflow-wrap:anywhere]">
+        Your receipt is on its way to {sale.buyerEmail}.
+      </p>
+      <Link href={`/${props.slug}`} className={`${lineButton} self-start`}>
+        Back to store
+      </Link>
     </main>
   );
 }
