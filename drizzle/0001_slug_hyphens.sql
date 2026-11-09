@@ -1,0 +1,2 @@
+ALTER TABLE "store" DROP CONSTRAINT "store_slug_format";--> statement-breakpoint
+ALTER TABLE "store" ADD CONSTRAINT "store_slug_format" CHECK ("store"."slug" ~ '^[a-z0-9]+(-[a-z0-9]+)*$' and char_length("store"."slug") between 3 and 40);

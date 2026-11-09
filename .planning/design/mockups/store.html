@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ridgeline Cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#090911;--surface:#11121C;--surface-2:#1C1C2C;--surface-3:#2D2E44;
+  --border:#373B40;--border-strong:#646970;--text:#F3F5F8;--muted:#B6BBC1;--subtle:#9A9FA6;
+  --accent:#F77C10;--accent-hover:#FF9044;--on-accent:#090911;--accent-bg:#3D1D06;
+  --success:#61CB7C;--hold:#8BBCEF;--hold-bg:#172839;--deal:#5CDDC4;--deal-bg:#062D26;
+  --sunrise-200:#FFC49E;--sunrise-300:#FFA86F;
+  --ease:cubic-bezier(.25,1,.5,1);
+  font-family:"Archivo",ui-sans-serif,system-ui,-apple-system,"Segoe UI","Hiragino Sans","Noto Sans CJK JP",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--bg);color:var(--text)}
+body{min-height:100vh;padding-bottom:96px;font-size:16px;line-height:1.5}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent-hover);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums lining-nums;font-feature-settings:"tnum" 1,"lnum" 1;font-weight:700}
+.wrap{max-width:1200px;margin:0 auto;padding:0 16px}
+
+/* header */
+.store{padding:20px 0 16px;display:grid;grid-template-columns:auto 1fr;gap:12px 14px;align-items:center}
+.metarow{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.mono{width:48px;height:48px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;color:var(--sunrise-300);font-weight:800;font-variation-settings:"wdth" 118;font-size:18px;letter-spacing:.02em;box-shadow:inset 0 1px 0 rgb(255 255 255/.06)}
+.store h1{font-size:26px;line-height:30px;font-weight:700;font-variation-settings:"wdth" 114;letter-spacing:-.01em}
+.status{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:14px;color:var(--muted);margin-top:2px}
+.open{color:var(--success);font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.open::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--success)}
+.meta{font-size:14px;color:var(--subtle)}
+.cur{display:inline-flex;background:var(--surface-2);border-radius:10px;padding:3px;align-self:start}
+.cur button{border:0;background:none;padding:0 10px;height:38px;min-width:44px;border-radius:7px;font-size:14px;font-weight:600;color:var(--muted)}
+.cur button[aria-pressed=true]{background:var(--surface-3);color:var(--text)}
+
+/* controls */
+.controls{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0 10px;border-bottom:1px solid var(--border)}
+.search{display:flex;align-items:center;gap:10px;height:48px;padding:0 14px;background:var(--surface-2);border:1px solid var(--border-strong);border-radius:10px}
+.search input{flex:1;background:none;border:0;color:var(--text);font:inherit;font-size:16px;outline:none;min-width:0}
+.search input::placeholder{color:var(--subtle)}
+.search svg{flex:none;color:var(--muted)}
+.chips{display:flex;gap:8px;margin-top:10px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:40px;padding:0 14px;border-radius:8px;border:1px solid transparent;background:var(--surface-2);color:var(--muted);font-size:15px;font-weight:600}
+.chip[aria-pressed=true]{background:var(--accent-bg);border-color:var(--accent);color:var(--sunrise-200)}
+.sep{flex:none;width:1px;background:var(--border);margin:6px 4px}
+
+.bar{display:flex;justify-content:space-between;align-items:center;padding:14px 0 12px;font-size:14px;color:var(--muted)}
+.sort{background:none;border:0;color:var(--text);font-weight:600;font-size:14px;display:inline-flex;gap:6px;align-items:center;height:44px}
+
+/* grid */
+.grid{list-style:none;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 12px}
+@media (min-width:640px){.grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:32px 20px}}
+.tile{display:flex;flex-direction:column;min-width:0}
+.art{position:relative;aspect-ratio:63/88;border-radius:4.6%/3.3%;overflow:hidden;background:var(--g);box-shadow:inset 0 0 0 1px rgb(255 255 255/.06)}
+.art::before{content:"";position:absolute;left:8%;right:8%;top:11%;height:42%;border-radius:3px;background:rgb(255 255 255/.07);box-shadow:inset 0 0 0 1px rgb(255 255 255/.08)}
+.art::after{content:"";position:absolute;left:8%;right:30%;top:60%;height:4%;border-radius:2px;background:rgb(255 255 255/.06);box-shadow:0 14px 0 rgb(255 255 255/.045),0 28px 0 -2px rgb(255 255 255/.04)}
+.art.slab{aspect-ratio:3/5;border-radius:6px;background:linear-gradient(#2a2d33,#1f2126);padding:22% 9% 7%}
+.art.slab::before,.art.slab::after{display:none}
+.slab .label{position:absolute;left:7%;right:7%;top:4%;height:13%;border-radius:3px;background:#E5E8EC;color:#090911;display:flex;align-items:center;justify-content:space-between;padding:0 8%;font-size:12px;font-weight:800;font-variation-settings:"wdth" 92}
+.slab .inner{height:100%;border-radius:4.6%/3.3%;background:var(--g)}
+.art.sealed{aspect-ratio:63/88;background:var(--surface);display:grid;place-items:center}
+.art.sealed::before,.art.sealed::after{display:none}
+.sealed .box{width:78%;aspect-ratio:1/1.12;border-radius:6px;background:var(--g);box-shadow:0 10px 24px -8px rgb(0 0 0/.7),inset 0 1px 0 rgb(255 255 255/.12)}
+.lang{position:absolute;top:8px;left:8px;z-index:3;font-size:12px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:5px;background:rgb(9 9 17/.85);color:var(--text)}
+.held{position:absolute;inset:0;z-index:2;display:grid;place-items:center;background:repeating-linear-gradient(135deg,rgb(23 40 57/.82) 0 10px,rgb(23 40 57/.68) 10px 20px)}
+.held span{display:inline-flex;gap:6px;align-items:center;font-size:14px;font-weight:700;color:var(--hold);background:var(--hold-bg);padding:6px 10px;border-radius:6px;box-shadow:inset 0 0 0 1px rgb(139 188 239/.35)}
+
+.info{display:grid;grid-template-columns:1fr auto;gap:0 8px;padding-top:10px}
+.badge{position:absolute;left:6px;bottom:6px;z-index:3;box-shadow:0 2px 8px rgb(0 0 0/.5);font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--deal);background:var(--deal-bg);padding:3px 7px;border-radius:5px;}
+.name{grid-column:1/-1;font-size:16px;line-height:20px;font-weight:600;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sub{grid-column:1/-1;font-size:14px;line-height:20px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:2px}
+.price{font-size:22px;line-height:28px;margin-top:8px}
+.price .c{font-weight:500;color:var(--muted);margin-right:1px}
+.fx{font-size:14px;line-height:18px;color:var(--muted);font-weight:500}
+.stock{font-size:14px;line-height:18px;color:var(--muted);margin-top:2px}
+.stock.last{color:var(--text);font-weight:600}
+.stock.hold{color:var(--hold)}
+.add{grid-column:2;align-self:end;width:44px;height:44px;border-radius:10px;border:1px solid var(--border-strong);background:var(--surface-2);display:grid;place-items:center;transition:background .2s var(--ease),transform .12s var(--ease)}
+.add:active{transform:scale(.94)}
+.add.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.add:disabled{opacity:.4;cursor:not-allowed}
+.priceblock{display:flex;flex-direction:column}
+
+.foot{margin:40px 0 0;padding:20px 0;border-top:1px solid var(--border);font-size:14px;color:var(--subtle);max-width:68ch}
+.foot p+p{margin-top:8px}
+.foot a{color:#FF9044}
+
+/* list bar */
+.listbar{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface-2);border-top:1px solid var(--border);box-shadow:0 -12px 32px -12px rgb(0 0 0/.7);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+.listbar .in{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.listbar .count{font-size:14px;color:var(--muted)}
+.listbar .tot{font-size:22px;line-height:26px}
+.cta{height:48px;padding:0 20px;border:0;border-radius:10px;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:16px;display:inline-flex;align-items:center;gap:8px}
+.cta:hover{background:var(--accent-hover)}
+@media (min-width:1024px){
+  .wrap,.listbar .in{padding:0 32px}
+  .store{padding:32px 0 20px}
+  .store h1{font-size:34px;line-height:38px}
+  .controls{display:flex;gap:16px;align-items:center}
+  .search{width:420px;flex:none}
+  .chips{margin-top:0}
+  body{padding-bottom:140px}
+  .listbar{left:auto;right:24px;bottom:24px;width:420px;border:1px solid var(--border);border-radius:16px;padding:14px 16px}
+  .listbar .in{padding:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="store">
+    <div class="mono" aria-hidden="true">RC</div>
+    <div>
+      <h1>Ridgeline Cards</h1>
+      <div class="status"><span class="open">Open</span><span>Table B14</span></div>
+    </div>
+    <div class="metarow"><p class="meta">214 items. Prices updated 6:00 AM today.</p>
+    <div class="cur" role="group" aria-label="Currency">
+      <button aria-pressed="true">USD</button><button aria-pressed="false">AUD</button>
+    </div></div>
+  </header>
+</div>
+
+<div class="controls">
+
+  <div class="wrap" style="width:100%">
+    <div style="display:flex;flex-wrap:wrap;gap:0 16px;align-items:center">
+    <label class="search" style="flex:1 1 300px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input type="search" placeholder="Search name or number" aria-label="Search name or number">
+    </label>
+    <div class="chips" role="toolbar" aria-label="Filters">
+      <button class="chip" aria-pressed="true">All</button>
+      <button class="chip" aria-pressed="false">Raw</button>
+      <button class="chip" aria-pressed="false">Graded</button>
+      <button class="chip" aria-pressed="false">Sealed</button>
+      <span class="sep" aria-hidden="true"></span>
+      <button class="chip" aria-pressed="false">EN</button>
+      <button class="chip" aria-pressed="false">JP</button>
+      <button class="chip" aria-pressed="false">CN</button>
+    </div>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="bar">
+    <span>214 items</span>
+    <button class="sort">Sort: Price high to low
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></button>
+  </div>
+
+  <ul class="grid">
+    <li class="tile">
+      <div class="art slab"><div class="label"><span>PSA</span><span class="num">10</span></div><div class="inner" style="--g:linear-gradient(160deg,#5b5f68,#30333a 60%,#24262c)"></div></div>
+      <div class="info">
+        <span class="name">Umbreon VMAX</span>
+        <span class="sub">Evolving Skies 215/203. PSA 10</span>
+        <div class="priceblock"><span class="price num"><span class="c">$</span>1,240.00</span><span class="fx num">approx. A$1,885</span><span class="stock last">Last one</span></div>
+        <button class="add" aria-label="Add Umbreon VMAX PSA 10 to your list"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+    </li>
+    <li class="tile">
+      <div class="art" style="--g:linear-gradient(165deg,#6b6e76,#3c3f46 55%,#2a2c32)"><span class="badge">12% under market</span></div>
+      <div class="info">
+        <span class="name">Charizard ex</span>
+        <span class="sub">Obsidian Flames 223/197. NM</span>
+        <div class="priceblock"><span class="price num"><span class="c">$</span>42.00</span><span class="fx num">approx. A$64</span><span class="stock">3 left</span></div>
+        <button class="add on" aria-label="Charizard ex is in your list, quantity 1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></button>
+      </div>
+    </li>
+    <li class="tile">
+      <div class="art" style="--g:linear-gradient(160deg,#565a63,#34373e 60%,#25272c)"><span class="lang">JP</span><div class="held"><span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>On hold</span></div></div>
+      <div class="info">
+        <span class="name" lang="ja">ピカチュウ</span>
+        <span class="sub">Shiny Treasure ex 236/190. NM</span>
+        <div class="priceblock"><span class="price num"><span class="c">$</span>38.50</span><span class="fx num">approx. A$59</span><span class="stock hold">Back in about 12 min</span></div>
+        <button class="add" disabled aria-label="On hold for another buyer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+    </li>
+    <li class="tile">
+      <div class="art sealed"><div class="box" style="--g:linear-gradient(150deg,#62666e,#3a3d44 60%,#2b2d33)"></div><span class="badge">8% under market</span></div>
+      <div class="info">
+        <span class="name">Paldean Fates Elite Trainer Box</span>
+        <span class="sub">Sealed. English</span>
+        <div class="priceblock"><span class="price num"><span class="c">$</span>54.00</span><span class="fx num">approx. A$82</span><span class="stock">6 left</span></div>
+        <button class="add" aria-label="Add Paldean Fates Elite Trainer Box to your list"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+    </li>
+    <li class="tile">
+      <div class="art" style="--g:linear-gradient(170deg,#4f535b,#2f3238 60%,#222428)"><span class="lang">CN</span></div>
+      <div class="info">
+        <span class="name" lang="zh">喷火龙</span>
+        <span class="sub">Custom item. NM</span>
+        <div class="priceblock"><span class="price num"><span class="c">$</span>18.00</span><span class="fx num">approx. A$27</span><span class="stock">2 left</span></div>
+        <button class="add" aria-label="Add Charizard (CN) to your list"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+    </li>
+    <li class="tile">
+      <div class="art" style="--g:linear-gradient(160deg,#5f636b,#373a41 60%,#26282d)"></div>
+      <div class="info">
+        <span class="name">Iono</span>
+        <span class="sub">Paldea Evolved 254/193. LP</span>
+        <div class="priceblock"><span class="price num"><span class="c">$</span>44.00</span><span class="fx num">approx. A$67</span><span class="stock">1 left</span></div>
+        <button class="add on" aria-label="Iono is in your list, quantity 1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></button>
+      </div>
+    </li>
+    <li class="tile">
+      <div class="art slab"><div class="label"><span>CGC</span><span class="num">9.5</span></div><div class="inner" style="--g:linear-gradient(160deg,#575b64,#2f3238 60%,#24262b)"></div></div>
+      <div class="info">
+        <span class="name">Mew ex</span>
+        <span class="sub">151 205/165. CGC 9.5</span>
+        <div class="priceblock"><span class="price num"><span class="c">$</span>96.00</span><span class="fx num">approx. A$146</span><span class="stock">2 left</span></div>
+        <button class="add" aria-label="Add Mew ex CGC 9.5 to your list"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+    </li>
+    <li class="tile">
+      <div class="art" style="--g:linear-gradient(165deg,#696c74,#3d4047 55%,#2b2d32)"><span class="badge">5% under market</span></div>
+      <div class="info">
+        <span class="name">Gardevoir ex</span>
+        <span class="sub">Scarlet and Violet 245/198. NM</span>
+        <div class="priceblock"><span class="price num"><span class="c">$</span>21.50</span><span class="fx num">approx. A$33</span><span class="stock">4 left</span></div>
+        <button class="add" aria-label="Add Gardevoir ex to your list"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+    </li>
+  </ul>
+
+  <footer class="foot">
+    <p>AUD shown at the seller's rate: 1 USD = 1.52 AUD. You pay in whatever the seller accepts at the table.</p>
+    <p>Prices are this seller's asking prices. Market prices come from public sales data, updated nightly. <a href="#">Terms</a></p>
+  </footer>
+</main>
+
+<div class="listbar" role="region" aria-label="Your list">
+  <div class="in">
+    <div><div class="count">2 items</div><div class="tot num">$86.00</div></div>
+    <button class="cta">Review list
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg></button>
+  </div>
+</div>
+</body>
+</html>
