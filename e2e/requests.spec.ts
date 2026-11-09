@@ -294,12 +294,16 @@ test("the list says what it had to change", async ({ page, browser }) => {
   const buyer = await newBuyer(browser, slug);
   await add(buyer, "Charizard ex");
   const [id] = Object.keys(await readLines(buyer, slug));
+  await add(buyer, "Mew ex");
+  const mew = Object.keys(await readLines(buyer, slug)).find((k) => k !== id)!;
   const gone = randomUUID();
-  const fillers = Array.from({ length: 29 }, () => randomUUID());
+  const fillers = Array.from({ length: 28 }, () => randomUUID());
+  // 31 lines, the 31st still for sale: it must be read once a line goes.
   const lines: Lines = {
     [id]: { qty: 99, price: 1 },
     [gone]: { qty: 1, price: 1, name: "Old promo" },
     ...Object.fromEntries(fillers.map((f) => [f, { qty: 1, price: 1 }])),
+    [mew]: { qty: 1, price: 1, name: "Mew ex" },
   };
   await writeLines(buyer, slug, lines);
   await buyer.goto(`/${slug}/list`);
@@ -322,6 +326,10 @@ test("the list says what it had to change", async ({ page, browser }) => {
     0,
   );
   await expect(buyer.getByText(/won't be sent/)).toHaveCount(0);
+  await expect(buyer.getByText("Mew ex is no longer for sale.")).toHaveCount(0);
+  await expect(
+    buyer.getByRole("button", { name: "Remove Mew ex" }),
+  ).toBeVisible();
 });
 
 test("Send again asks before replacing a newer list", async ({
@@ -394,6 +402,8 @@ test.describe("signing out", () => {
     await addPushRow(`e2e-${id}@example.test`, endpoint);
     await stubPush(page, false, endpoint);
     await page.goto("/dashboard/settings");
+    // The endpoint is read on load; a tap before that signs out without it.
+    await expect(page.locator("input[name=endpoint]")).toHaveValue(endpoint);
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/$/);
     expect(

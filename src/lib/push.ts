@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import webpush from "web-push";
 import type { Db } from "@/db/open";
 import { pushSubscription, store } from "@/db/schema";
@@ -12,7 +12,23 @@ type Env = Record<string, string | undefined>;
 
 export const MAX_PUSH_DEVICES = 10;
 
-/** Upserts a browser's endpoint and keeps a vendor's newest devices only. */
+/** One browser's subscription, only if it belongs to this vendor. */
+export async function removePush(db: Db, userId: string, endpoint: string) {
+  await db
+    .delete(pushSubscription)
+    .where(
+      and(
+        eq(pushSubscription.endpoint, endpoint),
+        eq(pushSubscription.userId, userId),
+      ),
+    );
+}
+
+/**
+ * Upserts a browser's endpoint and keeps a vendor's newest devices only.
+ * ponytail: upsert and prune aren't one transaction, so concurrent saves can
+ * leave 11 rows for a moment; never a newer device deleted.
+ */
 export async function savePush(
   db: Db,
   row: typeof pushSubscription.$inferInsert,
@@ -23,7 +39,8 @@ export async function savePush(
     // Dashboards re-save on load, so the date means "last seen".
     .onConflictDoUpdate({
       target: pushSubscription.endpoint,
-      set: { ...row, createdAt: new Date() },
+      // The database's clock, as on insert, so devices order correctly.
+      set: { ...row, createdAt: sql`now()` },
     });
   await db
     .delete(pushSubscription)

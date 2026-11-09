@@ -1,10 +1,8 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { pushSubscription } from "@/db/schema";
-import { pushToUser, savePush } from "@/lib/push";
+import { pushToUser, removePush, savePush } from "@/lib/push";
 import { requireUser } from "@/lib/session";
 
 const key = z
@@ -34,14 +32,7 @@ export async function savePushSubscription(sub: unknown) {
 
 export async function removePushSubscription(endpoint: string) {
   const user = await requireUser();
-  await getDb()
-    .delete(pushSubscription)
-    .where(
-      and(
-        eq(pushSubscription.endpoint, endpoint),
-        eq(pushSubscription.userId, user.id),
-      ),
-    );
+  await removePush(getDb(), user.id, String(endpoint));
 }
 
 /** "Test alert": the same path a real request takes, to this vendor's own browsers. */
