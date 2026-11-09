@@ -44,23 +44,12 @@ export type PublicFilter = {
   sort?: Sort;
 };
 
-/**
- * Units held for other buyers' pending requests, by listing id.
- * ponytail: holds arrive with requests in phase 5; until then nothing is held.
- */
-/* eslint-disable @typescript-eslint/no-unused-vars -- the phase 5 signature */
-export async function heldByListing(
-  db: Db,
-  storeId: string,
-): Promise<Map<string, { qty: number; endsAt: Date }>> {
-  return new Map();
-}
-/* eslint-enable @typescript-eslint/no-unused-vars */
+/** Units held for other buyers' pending requests, by listing id. */
+type Held = Map<string, { qty: number; endsAt: Date }>;
+// ponytail: holds arrive with requests in phase 5; until then nothing is held.
+const NO_HOLDS: Held = new Map();
 
-function toPublic(
-  s: PublicStore,
-  held: Awaited<ReturnType<typeof heldByListing>>,
-) {
+function toPublic(s: PublicStore, held: Held) {
   return (r: StockRow) => {
     const price = vendorPrice(
       r.market,
@@ -112,13 +101,14 @@ export async function listPublicStock(
   s: PublicStore,
   f: PublicFilter = {},
 ) {
-  const [rows, held] = await Promise.all([
-    listStock(db, s.id, { kind: f.type, languages: f.langs, q: f.q }),
-    heldByListing(db, s.id),
-  ]);
+  const rows = await listStock(db, s.id, {
+    kind: f.type,
+    languages: f.langs,
+    q: f.q,
+  });
   const by = BY[f.sort ?? "price-desc"];
   return rows
-    .map(toPublic(s, held))
+    .map(toPublic(s, NO_HOLDS))
     .sort((a, b) => Number(!a.qty) - Number(!b.qty) || by(a, b));
 }
 
@@ -145,11 +135,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** One active listing of this store, or null (bad id, hidden, other store). */
 export async function getPublicItem(db: Db, s: PublicStore, id: string) {
   if (!UUID.test(id)) return null;
-  const [rows, held] = await Promise.all([
-    listStock(db, s.id, { id }),
-    heldByListing(db, s.id),
-  ]);
-  return rows[0] ? toPublic(s, held)(rows[0]) : null;
+  const rows = await listStock(db, s.id, { id });
+  return rows[0] ? toPublic(s, NO_HOLDS)(rows[0]) : null;
 }
 
 /** Daily market points for the chart, oldest first. */
