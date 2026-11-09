@@ -1,0 +1,189 @@
+{
+  "data": {
+    "id": "696e440852d86878bfd57fab",
+    "tcgPlayerId": "517045",
+    "setId": 23237,
+    "setName": "SV: Scarlet & Violet 151",
+    "name": "Charizard ex - 199/165",
+    "cardNumber": "199/165",
+    "totalSetNumber": null,
+    "rarity": "Special Illustration Rare",
+    "cardType": "Pokemon",
+    "hp": "330",
+    "stage": "Stage 2",
+    "weakness": "Wx2",
+    "resistance": "None",
+    "retreatCost": "2",
+    "artist": "miki kudo",
+    "pokemonType": "Fire",
+    "energyType": ["Fire"],
+    "tcgPlayerUrl": "https://www.tcgplayer.com/product/517045",
+    "prices": {
+      "market": 296.24,
+      "low": 168.5,
+      "sellers": 205,
+      "listings": 241,
+      "recentSales": 0,
+      "primaryPrinting": "Holofoil",
+      "lastUpdated": "2026-11-07T12:02:14.882Z",
+      "variants": {
+        "Holofoil": {
+          "Near Mint": {
+            "price": 296.24,
+            "listings": null,
+            "priceString": "$296.24",
+            "lastUpdated": "2026-11-07T00:00:00.000Z"
+          },
+          "Damaged": {
+            "price": 265.63,
+            "listings": null,
+            "priceString": "$265.63",
+            "lastUpdated": "2026-11-07T00:00:00.000Z"
+          },
+          "Lightly Played": {
+            "price": 262.75,
+            "listings": null,
+            "priceString": "$262.75",
+            "lastUpdated": "2026-11-07T00:00:00.000Z"
+          },
+          "Moderately Played": {
+            "price": 314.65,
+            "listings": null,
+            "priceString": "$314.65",
+            "lastUpdated": "2026-11-07T00:00:00.000Z"
+          },
+          "Heavily Played": {
+            "price": 285,
+            "listings": null,
+            "priceString": "$285.00",
+            "lastUpdated": "2026-11-07T00:00:00.000Z"
+          }
+        }
+      },
+      "conditions": {
+        "Near Mint": {
+          "price": 296.24,
+          "listings": null,
+          "priceString": "$296.24",
+          "lastUpdated": "2026-11-07T00:00:00.000Z"
+        },
+        "Damaged": {
+          "price": 265.63,
+          "listings": null,
+          "priceString": "$265.63",
+          "lastUpdated": "2026-11-07T00:00:00.000Z"
+        },
+        "Lightly Played": {
+          "price": 262.75,
+          "listings": null,
+          "priceString": "$262.75",
+          "lastUpdated": "2026-11-07T00:00:00.000Z"
+        },
+        "Moderately Played": {
+          "price": 314.65,
+          "listings": null,
+          "priceString": "$314.65",
+          "lastUpdated": "2026-11-07T00:00:00.000Z"
+        },
+        "Heavily Played": {
+          "price": 285,
+          "listings": null,
+          "priceString": "$285.00",
+          "lastUpdated": "2026-11-07T00:00:00.000Z"
+        }
+      }
+    },
+    "imageCdnUrl": "https://tcgplayer-cdn.tcgplayer.com/product/517045_in_800x800.jpg",
+    "imageCdnUrl200": "https://tcgplayer-cdn.tcgplayer.com/product/517045_in_200x200.jpg",
+    "imageCdnUrl400": "https://tcgplayer-cdn.tcgplayer.com/product/517045_in_400x400.jpg",
+    "imageCdnUrl800": "https://tcgplayer-cdn.tcgplayer.com/product/517045_in_800x800.jpg",
+    "imageUrl": "https://tcgplayer-cdn.tcgplayer.com/product/517045_in_200x200.jpg",
+    "needsDetailedScrape": false,
+    "dataCompleteness": "complete",
+    "lastScrapedAt": "2026-11-07T12:02:14.882Z",
+    "createdAt": "2026-01-19T14:47:36.126Z",
+    "updatedAt": "2026-11-07T12:02:23.747Z",
+    "variants": {
+      "Holofoil": {
+        "printing": "Holofoil",
+        "marketPrice": 296.24,
+        "lowPrice": 168.5,
+        "conditionUsed": "Near Mint Holofoil"
+      }
+    },
+    "printingsAvailable": ["Holofoil"],
+    "externalCatalogId": "sv03.5-199",
+    "priceHistory": {
+      "conditions": {
+        "Near Mint": {
+          "history": [
+            {
+              "date": "2026-11-04T00:00:00.000Z",
+              "market": 295.98,
+              "volume": 3,
+              "marketRaw": 298.2
+            },
+            {
+              "date": "2026-11-05T00:00:00.000Z",
+              "market": 296.98,
+              "volume": 3,
+              "marketRaw": 295.98
+            },
+            {
+              "date": "2026-11-06T00:00:00.000Z",
+              "market": 296.24,
+              "volume": 4,
+              "marketRaw": 296.82
+            },
+            {
+              "date": "2026-11-07T00:00:00.000Z",
+              "market": 296.24,
+              "volume": null
+            }
+          ],
+          "dataPoints": 4,
+          "latestPrice": 296.24,
+          "latestDate": "2026-11-07T00:00:00.000Z",
+          "priceRange": {
+            "min": 295.98,
+            "max": 296.98
+          },
+          "suspectStreak": 0
+        }
+      },
+      "variants": {},
+      "totalDataPoints": 20,
+      "lastUpdated": "2026-11-07T12:17:33.508Z"
+    }
+  },
+  "metadata": {
+    "total": 1,
+    "count": 1,
+    "limit": 1,
+    "offset": 0,
+    "hasMore": false,
+    "language": "english",
+    "includes": {
+      "priceHistory": true,
+      "ebayData": false,
+      "cardmarketData": false
+    },
+    "historyWindow": {
+      "days": 5,
+      "from": "2026-11-03",
+      "to": "2026-11-08",
+      "maxDataPoints": 180,
+      "granularityNote": "Data points limited to 180. Use ?maxDataPoints=N for higher granularity (plan limits apply)."
+    },
+    "apiCallsConsumed": {
+      "total": 2,
+      "breakdown": {
+        "cards": 1,
+        "history": 1,
+        "ebay": 0,
+        "cardmarket": 0
+      },
+      "costPerCard": 2
+    }
+  }
+}

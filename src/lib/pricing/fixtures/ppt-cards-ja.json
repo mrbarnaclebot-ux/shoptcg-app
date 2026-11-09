@@ -1,0 +1,136 @@
+{
+  "data": [
+    {
+      "id": "6970f104f4413863cc2a4a71",
+      "tcgPlayerId": "655886",
+      "setId": 24459,
+      "setName": "M2: Inferno X",
+      "name": "Mega Charizard X ex - 110/080",
+      "cardNumber": "110/080",
+      "totalSetNumber": null,
+      "rarity": "Special Art Rare",
+      "cardType": "Pokemon",
+      "hp": "360",
+      "stage": "Stage 2",
+      "weakness": "Water x2",
+      "resistance": null,
+      "retreatCost": "2",
+      "artist": null,
+      "pokemonType": null,
+      "energyType": null,
+      "tcgPlayerUrl": "https://www.tcgplayer.com/product/655886",
+      "prices": {
+        "market": 686.26,
+        "low": 0,
+        "sellers": 28,
+        "listings": 33,
+        "recentSales": 0,
+        "primaryPrinting": "Holofoil",
+        "lastUpdated": "2026-11-07T20:03:56.276Z",
+        "variants": {
+          "Holofoil": {
+            "Near Mint Holofoil - Japanese": {
+              "price": 686.26,
+              "listings": null,
+              "priceString": "$686.26",
+              "lastUpdated": "2026-11-07T20:03:56.276Z"
+            }
+          }
+        }
+      },
+      "imageCdnUrl": "https://tcgplayer-cdn.tcgplayer.com/product/655886_in_800x800.jpg",
+      "imageCdnUrl200": "https://tcgplayer-cdn.tcgplayer.com/product/655886_in_200x200.jpg",
+      "imageCdnUrl400": "https://tcgplayer-cdn.tcgplayer.com/product/655886_in_400x400.jpg",
+      "imageCdnUrl800": "https://tcgplayer-cdn.tcgplayer.com/product/655886_in_800x800.jpg",
+      "imageUrl": "https://tcgplayer-cdn.tcgplayer.com/product/655886_in_200x200.jpg",
+      "needsDetailedScrape": false,
+      "dataCompleteness": "complete",
+      "lastScrapedAt": "2026-11-07T20:03:56.276Z",
+      "createdAt": "2026-01-21T15:30:12.744Z",
+      "updatedAt": "2026-11-07T20:04:09.913Z",
+      "variants": {
+        "Holofoil": {
+          "printing": "Holofoil",
+          "marketPrice": 686.26,
+          "lowPrice": 0,
+          "conditionUsed": "Near Mint Holofoil - Japanese"
+        }
+      },
+      "printingsAvailable": ["Holofoil"],
+      "externalCatalogId": null
+    },
+    {
+      "id": "6a679f42dc6cd137ecb829f5",
+      "tcgPlayerId": "708234",
+      "setId": 23870,
+      "setName": "smL: Sun & Moon Family Pokemon Card Game",
+      "name": "Basic Grass Energy (Charizard Stamped)",
+      "cardNumber": "GRA",
+      "totalSetNumber": null,
+      "rarity": "None",
+      "cardType": "Energy",
+      "hp": null,
+      "stage": null,
+      "weakness": null,
+      "resistance": null,
+      "retreatCost": null,
+      "artist": null,
+      "pokemonType": null,
+      "energyType": null,
+      "tcgPlayerUrl": "https://www.tcgplayer.com/product/708234",
+      "prices": {
+        "market": null,
+        "low": null,
+        "sellers": 0,
+        "listings": 0,
+        "recentSales": null,
+        "primaryPrinting": "Normal",
+        "lastUpdated": "2026-11-07T20:09:13.130Z",
+        "variants": {}
+      },
+      "imageCdnUrl": "https://tcgplayer-cdn.tcgplayer.com/product/708234_in_800x800.jpg",
+      "imageCdnUrl200": "https://tcgplayer-cdn.tcgplayer.com/product/708234_in_200x200.jpg",
+      "imageCdnUrl400": "https://tcgplayer-cdn.tcgplayer.com/product/708234_in_400x400.jpg",
+      "imageCdnUrl800": "https://tcgplayer-cdn.tcgplayer.com/product/708234_in_800x800.jpg",
+      "imageUrl": "https://tcgplayer-cdn.tcgplayer.com/product/708234_in_200x200.jpg",
+      "needsDetailedScrape": false,
+      "dataCompleteness": "complete",
+      "lastScrapedAt": "2026-11-07T20:09:13.130Z",
+      "createdAt": "2026-07-27T18:11:14.372Z",
+      "updatedAt": "2026-11-07T20:09:24.375Z",
+      "variants": {},
+      "printingsAvailable": ["Normal"],
+      "externalCatalogId": null
+    }
+  ],
+  "metadata": {
+    "total": 85,
+    "count": 1,
+    "limit": 1,
+    "offset": 0,
+    "hasMore": true,
+    "language": "japanese",
+    "includes": {
+      "priceHistory": false,
+      "ebayData": false,
+      "cardmarketData": false
+    },
+    "historyWindow": {
+      "days": 30,
+      "from": "2026-10-09",
+      "to": "2026-11-08",
+      "maxDataPoints": 180,
+      "granularityNote": "Data points limited to 180. Use ?maxDataPoints=N for higher granularity (plan limits apply)."
+    },
+    "apiCallsConsumed": {
+      "total": 1,
+      "breakdown": {
+        "cards": 1,
+        "history": 0,
+        "ebay": 0,
+        "cardmarket": 0
+      },
+      "costPerCard": 1
+    }
+  }
+}
