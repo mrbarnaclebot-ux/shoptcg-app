@@ -34,5 +34,6 @@ export const changesInMs = sql<number | null>`(extract(epoch from case
   when ${storeState} = 'open' then ${openedFrom} + ${WINDOW}
   end - now()) * 1000)::bigint`.mapWith((v) => (v === null ? null : Number(v)));
 
-/** True when the vendor left it open and the 14-hour window closed it. */
-export const autoPaused = sql<boolean>`(${store.state} = 'open' and ${storeState} = 'paused')`;
+/** True when an open window (opened, or a timed pause that ran out) closed after 14 hours. */
+export const autoPaused = sql<boolean>`(${storeState} = 'paused' and (${store.state} = 'open'
+  or (${store.state} = 'paused' and ${store.pausedUntil} <= now())))`;

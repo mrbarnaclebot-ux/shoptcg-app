@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache, Suspense } from "react";
 import { HangTag } from "@/components/hang-tag";
+import { RefreshAt } from "@/components/refresh-at";
 import { Stamp } from "@/components/stamp";
 import { getDb } from "@/db";
 import { formatAlt, usdTag } from "@/lib/fx";
@@ -53,6 +54,11 @@ export default async function ItemPage({
   const days = parseRange(await searchParams);
   return (
     <main className="mx-auto grid w-full max-w-[1200px] flex-1 content-start gap-x-12 px-4 pt-4 pb-32 md:px-6 lg:grid-cols-[minmax(0,420px)_1fr] lg:px-8 lg:pt-8">
+      {/* Re-reads when a timer flips the state; closed pages also poll. */}
+      <RefreshAt
+        inMs={store.changesInMs}
+        everyMs={store.isOpen ? undefined : 60_000}
+      />
       <Link
         href={`/${slug}`}
         className="flex min-h-11 items-center gap-2 self-start font-semibold lg:col-span-2"

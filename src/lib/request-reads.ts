@@ -182,7 +182,11 @@ export async function waitingCount(db: Db, storeId: string) {
     .select({ n: sql<number>`count(*)::int` })
     .from(request)
     .where(
-      and(eq(request.storeId, storeId), sql`${effectiveStatus} = 'pending'`),
+      and(
+        eq(request.storeId, storeId),
+        eq(request.isTest, false),
+        sql`${effectiveStatus} = 'pending'`,
+      ),
     );
   return row?.n ?? 0;
 }

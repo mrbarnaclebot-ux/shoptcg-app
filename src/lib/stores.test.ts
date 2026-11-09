@@ -163,7 +163,7 @@ describe("store state", () => {
     });
     expect((await live()).live).toBe("open");
     await set({ pausedUntil: sql`now() - interval '15 hours'` });
-    expect((await live()).live).toBe("paused");
+    expect(await live()).toMatchObject({ live: "paused", autoPaused: true });
   });
 
   it("not vending ignores every timer", async () => {

@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { RefreshAt } from "@/components/refresh-at";
 import { getDb } from "@/db";
 import { MAX_LINES } from "@/lib/requests";
 import { getPublicItems } from "@/lib/storefront";
@@ -42,6 +43,11 @@ export default async function ListPage({
   );
   return (
     <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col px-4 pt-4 pb-16 md:pt-8">
+      {/* Re-reads when a timer flips the state; closed pages also poll. */}
+      <RefreshAt
+        inMs={store.changesInMs}
+        everyMs={store.isOpen ? undefined : 60_000}
+      />
       <Link
         href={`/${store.slug}`}
         className="flex min-h-11 items-center gap-2 self-start font-semibold"
