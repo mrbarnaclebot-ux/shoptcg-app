@@ -1,10 +1,25 @@
 name: CI
 
-on: [push, pull_request]
+# Railway's "Wait for CI" needs the push trigger on the branches it deploys.
+on:
+  push:
+    branches: [main, production]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  # Never cancel a deploy branch's run: Railway treats that as not passed.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# The secret scan lists a PR's commits.
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     # `pnpm start` runs in production mode, which refuses the PGlite fallback.
     services:
       postgres:
@@ -24,6 +39,12 @@ jobs:
       RESEND_API_KEY: ci-only-not-a-real-key
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the secret scan and the migration checks read history
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -32,6 +53,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
+      - name: Schema matches the migrations
+        run: |
+          pnpm exec drizzle-kit check
+          pnpm exec drizzle-kit generate
+          git diff --exit-code -- drizzle
+          test -z "$(git status --porcelain -- drizzle)"
+      - name: Upgrade the base branch's database, not just an empty one
+        if: github.event_name == 'pull_request'
+        run: node scripts/check-migrations.mjs "origin/${{ github.base_ref }}"
       - run: pnpm test
       - run: pnpm build
         # Compiles the test-only *.e2e.ts routes into this build; never on Railway.
@@ -40,3 +70,9 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm db:migrate
       - run: pnpm e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
