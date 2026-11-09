@@ -184,13 +184,17 @@ async function backfillHistory(
   return calls;
 }
 
-/** Writes today's price_point for every catalog item an active, in-stock listing references. */
-export async function syncPrices(
-  db: Db,
-  date = new Date().toISOString().slice(0, 10),
-  pick: (name: string) => PriceProvider | null = providerByName,
-  limits: SyncLimits = envLimits(),
-): Promise<SyncResult> {
+/** History calls still affordable: under maxBackfill and the credit budget. */
+function backfillBudget(limits: SyncLimits, result: SyncResult) {
+  const spent = result.items + result.backfilled * HISTORY_COST;
+  return Math.min(
+    limits.maxBackfill - result.backfilled,
+    Math.floor((limits.maxCalls - spent) / HISTORY_COST),
+  );
+}
+
+/** Up to `limit` catalog items behind an active, in-stock listing. */
+function listedItems(db: Db, limit: number) {
   // ponytail: least recently refreshed first, so a run that hits maxCalls rotates
   // through the rest tomorrow; per-store fairness if one store hogs the budget.
   const listed = db
@@ -198,7 +202,7 @@ export async function syncPrices(
     .from(listing)
     // Sold-out stock shows no price to buyers, so it costs no provider call.
     .where(and(eq(listing.active, true), gt(listing.qty, 0)));
-  const items = await db
+  return db
     .select()
     .from(catalogItem)
     .where(inArray(catalogItem.id, listed))
@@ -206,7 +210,17 @@ export async function syncPrices(
       sql`(select max(${pricePoint.date}) from ${pricePoint} where ${pricePoint.catalogItemId} = ${catalogItem.id}) asc nulls first`,
       asc(catalogItem.id),
     )
-    .limit(limits.maxCalls);
+    .limit(limit);
+}
+
+/** Writes today's price_point for every catalog item an active, in-stock listing references. */
+export async function syncPrices(
+  db: Db,
+  date = new Date().toISOString().slice(0, 10),
+  pick: (name: string) => PriceProvider | null = providerByName,
+  limits: SyncLimits = envLimits(),
+): Promise<SyncResult> {
+  const items = await listedItems(db, limits.maxCalls);
   const result: SyncResult = {
     items: items.length,
     written: 0,
@@ -229,11 +243,7 @@ export async function syncPrices(
     // Only items priced tonight: a failing provider gets no more calls, and an
     // item with no price has no history worth paying for either.
     const fresh = group.filter((it) => priced.has(it.id));
-    const spent = result.items + result.backfilled * HISTORY_COST;
-    const budget = Math.min(
-      limits.maxBackfill - result.backfilled,
-      Math.floor((limits.maxCalls - spent) / HISTORY_COST),
-    );
+    const budget = backfillBudget(limits, result);
     result.backfilled += await backfillHistory(db, provider, fresh, budget);
   }
   return result;
