@@ -1,1 +1,0 @@
-ALTER TABLE "store" DROP COLUMN "is_open";
