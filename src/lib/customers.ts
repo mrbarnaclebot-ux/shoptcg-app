@@ -1,6 +1,6 @@
-import { and, count, desc, eq, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, or, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
-import { customer } from "@/db/schema";
+import { customer, request } from "@/db/schema";
 import { appUrl } from "@/lib/deployed";
 import { localDate } from "@/lib/reports";
 
@@ -58,13 +58,30 @@ export async function promoRows(db: Db, storeId: string, timeZone: string) {
   ];
 }
 
-/** Erases a buyer's customer record. Sales keep their snapshot: receipts are financial records. */
+/**
+ * Erases a buyer's customer record and their details on requests that are over.
+ * Sales keep their snapshot: receipts are financial records. Pending and lapsed
+ * requests keep theirs, because confirming one reads them; the 30-day purge clears those.
+ */
 export async function removeCustomer(db: Db, storeId: string, id: string) {
-  const gone = await db
-    .delete(customer)
-    .where(and(eq(customer.id, id), eq(customer.storeId, storeId)))
-    .returning({ id: customer.id });
-  return gone.length > 0;
+  return db.transaction(async (tx) => {
+    const [gone] = await tx
+      .delete(customer)
+      .where(and(eq(customer.id, id), eq(customer.storeId, storeId)))
+      .returning({ email: customer.email });
+    if (!gone) return false;
+    await tx
+      .update(request)
+      .set({ buyerName: null, buyerEmail: null, ipHash: null })
+      .where(
+        and(
+          eq(request.storeId, storeId),
+          eq(request.buyerEmail, gone.email),
+          inArray(request.status, ["confirmed", "declined", "cancelled"]),
+        ),
+      );
+    return true;
+  });
 }
 
 /** For the row: enough to recognise a buyer, not enough for a bystander to read off. */

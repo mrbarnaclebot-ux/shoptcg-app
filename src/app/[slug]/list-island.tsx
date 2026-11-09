@@ -7,7 +7,8 @@ import { useSyncExternalStore } from "react";
 // The buyer's list lives on this phone only, per store, for 24 hours
 // (SCREENS 7). It is the one client island on the public pages.
 
-export type Line = { qty: number; price: number | null };
+// The name is only for a row whose item has since gone; older lists lack it.
+export type Line = { qty: number; price: number | null; name?: string };
 type List = { at: number; lines: Record<string, Line> };
 
 const TTL_MS = 24 * 60 * 60 * 1000;
@@ -30,6 +31,8 @@ function parse(raw: string): List["lines"] {
     return {};
   }
 }
+
+export const listOn = (slug: string) => parse(read(slug));
 
 export function writeList(slug: string, lines: List["lines"]) {
   try {
@@ -75,7 +78,7 @@ export function AddButton(props: {
   const toggle = () => {
     const next = { ...lines };
     if (on) delete next[props.id];
-    else next[props.id] = { qty: 1, price: props.price };
+    else next[props.id] = { qty: 1, price: props.price, name: props.name };
     writeList(props.slug, next);
   };
   const Icon = on ? Check : Plus;

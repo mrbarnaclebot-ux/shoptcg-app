@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useLayoutEffect, useRef, useState, useTransition } from "react";
 import { CardThumb } from "@/components/card-thumb";
 import { Segmented } from "@/components/segmented";
 import { Stepper } from "@/components/stepper";
@@ -58,6 +58,15 @@ function LineRow(props: {
   onChange: (patch: Partial<Edit>) => void;
 }) {
   const { line: l, edit: e } = props;
+  const price = useRef<HTMLInputElement>(null);
+  // A price typed before hydration sits in the field but reaches no handler, and
+  // the next render would undo it. Adopt it, like Segmented does for a tap.
+  useLayoutEffect(() => {
+    const typed = price.current?.value;
+    if (typed !== undefined && typed !== e.price)
+      props.onChange({ price: typed });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, at hydration
+  }, []);
   if (e.removed)
     return (
       <li className="flex min-h-11 items-center justify-between gap-3 border-t border-border py-2 text-muted-foreground">
@@ -128,6 +137,7 @@ function LineRow(props: {
           </div>
           <Input
             id={priceId}
+            ref={price}
             inputMode="decimal"
             autoComplete="off"
             value={e.price}

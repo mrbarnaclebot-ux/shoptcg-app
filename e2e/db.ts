@@ -9,10 +9,7 @@ export const hasDb = Boolean(process.env.DATABASE_URL);
  * a sale can't be updated. Test-only: refuses to run against a deployed service.
  */
 export async function addPastSale(slug: string, total: string, daysAgo = 7) {
-  const host = new URL(process.env.DATABASE_URL!).hostname;
-  if (isDeployed() || !["localhost", "127.0.0.1"].includes(host))
-    throw new Error("e2e/db.ts only runs against a local database");
-  const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
+  const sql = localDb();
   try {
     const at = new Date(Date.now() - daysAgo * 86_400_000);
     const [{ id: storeId }] =
@@ -29,6 +26,36 @@ export async function addPastSale(slug: string, total: string, daysAgo = 7) {
       insert into sale_line (sale_id, line_no, listing_id, name, language, qty, unit_price, quoted_price)
       values (${saleId}, 1, ${randomUUID()}, 'Old stock', 'en', 1, ${total}, ${total})`;
     return at.toISOString().slice(0, 10);
+  } finally {
+    await sql.end();
+  }
+}
+
+function localDb() {
+  const host = new URL(process.env.DATABASE_URL!).hostname;
+  if (isDeployed() || !["localhost", "127.0.0.1"].includes(host))
+    throw new Error("e2e/db.ts only runs against a local database");
+  return postgres(process.env.DATABASE_URL!, { max: 1 });
+}
+
+/** A push row for a vendor: real subscribing needs a push service. */
+export async function addPushRow(email: string, endpoint: string) {
+  const sql = localDb();
+  try {
+    const [{ id }] = await sql`select id from "user" where email = ${email}`;
+    await sql`insert into push_subscription (endpoint, user_id, p256dh, auth)
+      values (${endpoint}, ${id}, 'k', 'a')`;
+  } finally {
+    await sql.end();
+  }
+}
+
+export async function pushRowExists(endpoint: string) {
+  const sql = localDb();
+  try {
+    const rows =
+      await sql`select 1 from push_subscription where endpoint = ${endpoint}`;
+    return rows.length > 0;
   } finally {
     await sql.end();
   }

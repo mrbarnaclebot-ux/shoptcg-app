@@ -106,70 +106,79 @@ export async function salesReport(
 ) {
   const where = inRange(storeId, r);
   const revenueOf = sql`sum(${saleLine.qty} * ${saleLine.unitPrice})`;
-  const [[totals], [items], methods, bestSellers, sales] = await Promise.all([
-    db
-      .select({
-        sales: count(),
-        revenue: sum(sale.total),
-        discounts: sum(sale.discount),
-      })
-      .from(sale)
-      .where(where),
-    db
-      .select({ items: sum(saleLine.qty) })
-      .from(saleLine)
-      .innerJoin(sale, eq(sale.id, saleLine.saleId))
-      .where(where),
-    db
-      .select({
-        method: sale.paymentMethod,
-        sales: count(),
-        total: sum(sale.total),
-      })
-      .from(sale)
-      .where(where)
-      .groupBy(sale.paymentMethod),
-    db
-      .select({
-        name: saleLine.name,
-        gradeLabel: saleLine.gradeLabel,
-        language: saleLine.language,
-        setName: sql<string | null>`max(${saleLine.setName})`,
-        number: sql<string | null>`max(${saleLine.number})`,
-        imageUrl: sql<string | null>`max(${saleLine.imageUrl})`,
-        qty: sum(saleLine.qty).mapWith(Number),
-        revenue: sql<string>`${revenueOf}`,
-      })
-      .from(saleLine)
-      .innerJoin(sale, eq(sale.id, saleLine.saleId))
-      .where(where)
-      .groupBy(
-        sql`coalesce(${saleLine.catalogItemId}::text, ${saleLine.name})`,
-        saleLine.name,
-        saleLine.gradeLabel,
-        saleLine.language,
-      )
-      .orderBy(sql`${revenueOf} desc`, saleLine.name)
-      .limit(10),
-    db
-      .select()
-      .from(sale)
-      .where(where)
-      .orderBy(desc(sale.createdAt))
-      .limit(SALES_SHOWN),
-  ]);
-  const lines = sales.length
-    ? await db
-        .select()
-        .from(saleLine)
-        .where(
-          inArray(
-            saleLine.saleId,
-            sales.map((s) => s.id),
-          ),
-        )
-        .orderBy(saleLine.lineNo)
-    : [];
+  // One snapshot, so a sale landing mid-read can't split the count from the cash.
+  const { totals, items, methods, bestSellers, sales, lines } =
+    await db.transaction(
+      async (tx) => {
+        const [[totals], [items], methods, bestSellers, sales] =
+          await Promise.all([
+            tx
+              .select({
+                sales: count(),
+                revenue: sum(sale.total),
+                discounts: sum(sale.discount),
+              })
+              .from(sale)
+              .where(where),
+            tx
+              .select({ items: sum(saleLine.qty) })
+              .from(saleLine)
+              .innerJoin(sale, eq(sale.id, saleLine.saleId))
+              .where(where),
+            tx
+              .select({
+                method: sale.paymentMethod,
+                sales: count(),
+                total: sum(sale.total),
+              })
+              .from(sale)
+              .where(where)
+              .groupBy(sale.paymentMethod),
+            tx
+              .select({
+                name: saleLine.name,
+                gradeLabel: saleLine.gradeLabel,
+                language: saleLine.language,
+                setName: sql<string | null>`max(${saleLine.setName})`,
+                number: sql<string | null>`max(${saleLine.number})`,
+                imageUrl: sql<string | null>`max(${saleLine.imageUrl})`,
+                qty: sum(saleLine.qty).mapWith(Number),
+                revenue: sql<string>`${revenueOf}`,
+              })
+              .from(saleLine)
+              .innerJoin(sale, eq(sale.id, saleLine.saleId))
+              .where(where)
+              .groupBy(
+                sql`coalesce(${saleLine.catalogItemId}::text, ${saleLine.name})`,
+                saleLine.name,
+                saleLine.gradeLabel,
+                saleLine.language,
+              )
+              .orderBy(sql`${revenueOf} desc`, saleLine.name)
+              .limit(10),
+            tx
+              .select()
+              .from(sale)
+              .where(where)
+              .orderBy(desc(sale.createdAt))
+              .limit(SALES_SHOWN),
+          ]);
+        const lines = sales.length
+          ? await tx
+              .select()
+              .from(saleLine)
+              .where(
+                inArray(
+                  saleLine.saleId,
+                  sales.map((s) => s.id),
+                ),
+              )
+              .orderBy(saleLine.lineNo)
+          : [];
+        return { totals, items, methods, bestSellers, sales, lines };
+      },
+      { isolationLevel: "repeatable read", accessMode: "read only" },
+    );
   const byId = Map.groupBy(lines, (l) => l.saleId);
   const revenue = totals.revenue ?? "0";
   return {

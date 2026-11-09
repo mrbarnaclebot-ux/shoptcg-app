@@ -96,6 +96,29 @@ test("a payment tap before the page wakes up still counts", async ({
   ).toBeChecked();
 });
 
+test("a price typed before the page wakes up still counts", async ({
+  page,
+  browser,
+}) => {
+  const slug = await openVendor(page);
+  await reviewSale(page, browser, slug, ["Gengar"]);
+  let wake = () => {};
+  const asleep = new Promise<void>((resolve) => (wake = resolve));
+  await page.route("**/_next/static/**/*.js", async (route) => {
+    await asleep;
+    await route.continue();
+  });
+  const load = page.goto(page.url(), { waitUntil: "commit" });
+  const price = page.getByLabel("Price each for Gengar");
+  await price.fill("7");
+  wake();
+  await load;
+  await pay(page, "Cash");
+  await expect(price).toHaveValue("7");
+  await expect(confirm(page)).toHaveText(/\$7\.00/);
+  await expect(page.getByText("was")).toBeVisible();
+});
+
 test.describe("a seller in Tokyo", () => {
   test.use({ timezoneId: "Asia/Tokyo" });
 

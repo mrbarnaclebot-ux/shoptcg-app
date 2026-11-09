@@ -58,8 +58,9 @@ export function ListReview(props: {
   store: ReviewStore;
   items: ReviewItem[];
   loaded: string[];
+  maxLines: number;
 }) {
-  const { store, items, loaded } = props;
+  const { store, items, loaded, maxLines } = props;
   const router = useRouter();
   const hydrated = useHydrated();
   const lines = useLines(store.slug);
@@ -69,7 +70,11 @@ export function ListReview(props: {
 
   // The list lives on the phone, so a bare or stale URL asks for what's on it.
   const ids = Object.keys(lines).join(",");
-  const stale = Object.keys(lines).some((id) => !loaded.includes(id));
+  // Against what the server read, not the URL: it reads only the first maxLines.
+  const read = loaded.slice(0, maxLines);
+  const stale = Object.keys(lines)
+    .slice(0, maxLines)
+    .some((id) => !read.includes(id));
   useEffect(() => {
     startBuyerSession().catch(() => {});
   }, []);
@@ -88,9 +93,15 @@ export function ListReview(props: {
         ...it,
         gone,
         qty: gone ? 0 : Math.min(lines[it.id].qty, it.available),
+        cut: !gone && lines[it.id].qty > it.available,
       };
     });
-  if (!rows.length)
+  // On the phone but not in this read: hidden, deleted, or past the request's limit.
+  const missing = stale
+    ? []
+    : Object.keys(lines).filter((id) => !items.some((it) => it.id === id));
+  const overLimit = (id: string) => Object.keys(lines).indexOf(id) >= maxLines;
+  if (!rows.length && !missing.length)
     return (
       <p className="text-lg">
         Your list is empty. Tap the plus on any card to add it.
@@ -163,6 +174,11 @@ export function ListReview(props: {
                     max={r.available}
                     onStep={(d) => setQty(r.id, r.qty + d)}
                   />
+                  {r.cut && (
+                    <p role="status" className="mt-2 font-semibold">
+                      Only {r.available} left, so we lowered this.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -179,6 +195,27 @@ export function ListReview(props: {
                 {usd(r.gone ? 0 : r.price! * r.qty)}
               </span>
             </div>
+          </li>
+        ))}
+        {missing.map((id) => (
+          <li
+            key={id}
+            className="flex items-start justify-between gap-3 border-b border-border py-3 first:pt-0"
+          >
+            <p className="font-semibold">
+              {lines[id].name ?? "An item on your list"}
+              {overLimit(id)
+                ? ` won't be sent. A request holds ${maxLines} cards.`
+                : " is no longer for sale."}
+            </p>
+            <button
+              type="button"
+              aria-label={`Remove ${lines[id].name ?? "this item"}`}
+              onClick={() => remove(id)}
+              className="-mt-2 -mr-2 grid size-11 shrink-0 place-items-center"
+            >
+              <X aria-hidden className="size-5" />
+            </button>
           </li>
         ))}
       </ul>
@@ -271,7 +308,7 @@ export function ListReview(props: {
           >
             {pending
               ? "Sending"
-              : sendable.length < rows.length
+              : sendable.length < rows.length + missing.length
                 ? "Send without it"
                 : "Send to seller"}
           </TicketButton>

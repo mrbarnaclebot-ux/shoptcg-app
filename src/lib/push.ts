@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import webpush from "web-push";
 import type { Db } from "@/db/open";
 import { pushSubscription, store } from "@/db/schema";
@@ -9,6 +9,59 @@ import { shortName } from "@/lib/requests";
 // (iOS only once the dashboard is installed to the home screen).
 
 type Env = Record<string, string | undefined>;
+
+export const MAX_PUSH_DEVICES = 10;
+
+/** One browser's subscription, only if it belongs to this vendor. */
+export async function removePush(db: Db, userId: string, endpoint: string) {
+  await db
+    .delete(pushSubscription)
+    .where(
+      and(
+        eq(pushSubscription.endpoint, endpoint),
+        eq(pushSubscription.userId, userId),
+      ),
+    );
+}
+
+/**
+ * Upserts a browser's endpoint and keeps a vendor's newest devices only.
+ * ponytail: upsert and prune aren't one transaction, so concurrent saves can
+ * leave 11 rows for a moment; never a newer device deleted.
+ */
+export async function savePush(
+  db: Db,
+  row: typeof pushSubscription.$inferInsert,
+) {
+  await db
+    .insert(pushSubscription)
+    .values(row)
+    // Dashboards re-save on load, so the date means "last seen".
+    .onConflictDoUpdate({
+      target: pushSubscription.endpoint,
+      // The database's clock, as on insert, so devices order correctly.
+      set: { ...row, createdAt: sql`now()` },
+    });
+  await db
+    .delete(pushSubscription)
+    .where(
+      and(
+        eq(pushSubscription.userId, row.userId),
+        inArray(
+          pushSubscription.endpoint,
+          db
+            .select({ endpoint: pushSubscription.endpoint })
+            .from(pushSubscription)
+            .where(eq(pushSubscription.userId, row.userId))
+            .orderBy(
+              desc(pushSubscription.createdAt),
+              pushSubscription.endpoint,
+            )
+            .offset(MAX_PUSH_DEVICES),
+        ),
+      ),
+    );
+}
 
 /** VAPID settings, or null when push is off (dev, e2e). */
 export function vapid(env: Env = process.env) {

@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { getAuth } from "@/lib/auth";
+import { removePush } from "@/lib/push";
 import { getCurrentUser, requireUser } from "@/lib/session";
 import {
   createStore,
@@ -34,8 +35,16 @@ export async function createStoreAction(
   redirect("/dashboard?created=1");
 }
 
-export async function signOutAction() {
-  await getAuth().api.signOut({ headers: await headers() });
+export async function signOutAction(form: FormData) {
+  const h = await headers();
+  const endpoint = form.get("endpoint");
+  const user = await getCurrentUser();
+  // This device stops getting alerts; a failed delete never blocks sign-out.
+  if (user && typeof endpoint === "string" && endpoint)
+    await removePush(getDb(), user.id, endpoint).catch((err) =>
+      console.error("[push] remove on sign-out failed", err),
+    );
+  await getAuth().api.signOut({ headers: h });
   redirect("/");
 }
 

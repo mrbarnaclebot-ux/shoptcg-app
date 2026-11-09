@@ -2,6 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getDb } from "@/db";
+import { MAX_LINES } from "@/lib/requests";
 import { getPublicItems } from "@/lib/storefront";
 import { storeOr404 } from "../store-lookup";
 import { metaLine } from "../tile";
@@ -59,6 +60,7 @@ export default async function ListPage({
         }}
         items={items}
         loaded={ids}
+        maxLines={MAX_LINES}
       />
     </main>
   );

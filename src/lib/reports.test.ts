@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/db/open";
 import * as schema from "@/db/schema";
 import {
@@ -175,6 +175,16 @@ describe("salesReport", () => {
   const storeOf = () => addStore(db, randomUUID().slice(0, 8));
   const count = async (id: string, r: ReturnType<typeof day>) =>
     (await salesReport(db, id, r)).summary.sales;
+
+  it("reads every number from one snapshot", async () => {
+    const spy = vi.spyOn(db, "transaction");
+    await count(await storeOf(), day("2026-11-08"));
+    expect(spy).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: "repeatable read",
+      accessMode: "read only",
+    });
+    spy.mockRestore();
+  });
 
   it("a sale lands on its own zone's day across midnight", async () => {
     const syd = await storeOf();
