@@ -1,0 +1,85 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+
+const POLL_MS = 10_000;
+const RETRY_MS = 5_000;
+
+export type LiveMessage = { t: string; r?: string };
+
+/**
+ * Re-reads the page on every server-sent event, and polls while the stream is
+ * down (venue WiFi). EventSource retries by itself except after an HTTP error,
+ * so that case reconnects here. Returns whether the stream is up.
+ */
+export function useLive(
+  url: string | null,
+  onEvent?: (e: LiveMessage) => void,
+) {
+  const router = useRouter();
+  const [up, setUp] = useState(true);
+  const handler = useRef(onEvent);
+  useEffect(() => {
+    handler.current = onEvent;
+  });
+  useEffect(() => {
+    if (!url) return;
+    let es: EventSource;
+    let poll: ReturnType<typeof setInterval> | undefined;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    let down = false;
+    const connect = () => {
+      es = new EventSource(url);
+      es.onopen = () => {
+        clearInterval(poll);
+        setUp(true);
+        // Anything sent during the gap was missed.
+        if (down) router.refresh();
+        down = false;
+      };
+      es.onmessage = (m) => {
+        router.refresh();
+        handler.current?.(JSON.parse(m.data) as LiveMessage);
+      };
+      es.onerror = () => {
+        down = true;
+        setUp(false);
+        clearInterval(poll);
+        poll = setInterval(() => router.refresh(), POLL_MS);
+        if (es.readyState === EventSource.CLOSED)
+          retry = setTimeout(connect, RETRY_MS);
+      };
+    };
+    connect();
+    return () => {
+      es.close();
+      clearInterval(poll);
+      clearTimeout(retry);
+    };
+  }, [url, router]);
+  return up;
+}
+
+const tick = (cb: () => void) => {
+  const t = setInterval(cb, 1000);
+  return () => clearInterval(t);
+};
+
+/**
+ * The clock, whole seconds; 0 until hydrated, so server and client agree.
+ * ponytail: trusts the phone's clock; send a server offset if skew shows up.
+ */
+export const useNow = () =>
+  useSyncExternalStore(
+    tick,
+    () => Math.floor(Date.now() / 1000) * 1000,
+    () => 0,
+  );
+
+/** "14:32" until `at`, "--:--" before hydration. */
+export function clock(at: number, now: number) {
+  if (!now) return "--:--";
+  const s = Math.max(0, Math.ceil((at - now) / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}

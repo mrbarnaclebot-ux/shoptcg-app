@@ -89,9 +89,15 @@ function put(t: Input, id: string = crypto.randomUUID()) {
 // Escape dismisses only these; sticky errors and offline stay until resolved.
 const transient = new Set<string>();
 
-function show(tone: Tone, title: string, body: string, duration: number) {
+function show(
+  tone: Tone,
+  title: string,
+  body: string,
+  duration: number,
+  button?: ToastItem["button"],
+) {
   announce(`${title}. ${body}`);
-  const id = put({ tone, title, body, duration });
+  const id = put({ tone, title, body, duration, button });
   transient.add(id);
   return id;
 }
@@ -233,6 +239,51 @@ export const toast = {
         id,
       );
     };
+  },
+
+  // Buyer: the page changes too; these name the change for anyone looking away.
+  holdEnding: (table: string | null) =>
+    show(
+      "warn",
+      "3 minutes left",
+      table ? `Find the seller at table ${table}.` : "Find the seller soon.",
+      8000,
+    ),
+  holdOver: (sendAgain: () => void) =>
+    show("warn", "Hold's over", "Those cards are back on the table.", 6000, {
+      title: "Send again",
+      onClick: sendAgain,
+    }),
+  requestDeclined: (back: () => void) =>
+    show(
+      "info",
+      "Not this time",
+      "Ask the seller at the table, or pick something else.",
+      8000,
+      { title: "Back to the table", onClick: back },
+    ),
+
+  // Seller.
+  newRequest: (review: () => void) =>
+    show("ok", "New request", "A buyer just sent a list.", 10000, {
+      title: "Review",
+      onClick: review,
+    }),
+  holdLapsed: () =>
+    show("info", "Hold ended", "Those items are back in stock.", 6000),
+  requestCancelled: () =>
+    show("info", "Request cancelled", "Those items are back in stock.", 6000),
+  /** Sticky until the stream is back; returns the toast id to dismiss. */
+  liveDropped: (check: () => void) => {
+    const body = "New requests may be late.";
+    announce(`Lost the live line. ${body}`, true);
+    return put({
+      tone: "warn",
+      title: "Lost the live line",
+      body,
+      duration: null,
+      button: { title: "Check for requests", onClick: check },
+    });
   },
 
   dismiss,
