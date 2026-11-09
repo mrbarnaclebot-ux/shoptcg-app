@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { ToastRoot } from "@/components/toast-root";
 import { JoinPage } from "../join-page";
 
+// The code comes from the URL, so this page renders per request.
+export const instant = false;
+
 export const metadata: Metadata = {
   title: "Join - shoptcg",
   robots: { index: false },

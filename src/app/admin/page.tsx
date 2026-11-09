@@ -6,6 +6,7 @@ import { lineButton } from "@/components/ticket-button";
 import { getDb } from "@/db";
 import {
   canRevoke,
+  SHOWN,
   inviteStatus,
   listAccounts,
   listInvites,
@@ -81,6 +82,7 @@ async function Admin() {
             ))}
           </ul>
         )}
+        {invites.length === SHOWN && <Capped />}
       </section>
       <section
         aria-labelledby="accounts"
@@ -117,10 +119,17 @@ async function Admin() {
             </li>
           ))}
         </ul>
+        {accounts.length === SHOWN && <Capped />}
       </section>
       <Link href="/dashboard" className={`${lineButton} self-start`}>
         Back to dashboard
       </Link>
     </>
+  );
+}
+
+function Capped() {
+  return (
+    <p className="text-sm text-muted-foreground">Showing the newest {SHOWN}.</p>
   );
 }

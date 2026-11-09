@@ -6,7 +6,8 @@ import { invite, store, user } from "@/db/schema";
 const VALID_MS = 14 * 86_400_000;
 // Crockford base32: 32 symbols, so 16 characters are 80 bits.
 const ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
-const SHOWN = 500;
+/** Rows drawn per list on the admin page, newest first. */
+export const SHOWN = 100;
 
 export function generateCode() {
   const chars = Array.from(
