@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { altPrice, formatAlt } from "@/lib/fx";
 import { usd } from "@/lib/format";
 import { useLines, writeList } from "../list-island";
-import { sendRequest } from "./actions";
+import { sendRequest, startBuyerSession } from "./actions";
 
 export type ReviewItem = {
   id: string;
@@ -70,6 +70,9 @@ export function ListReview(props: {
   // The list lives on the phone, so a bare or stale URL asks for what's on it.
   const ids = Object.keys(lines).join(",");
   const stale = Object.keys(lines).some((id) => !loaded.includes(id));
+  useEffect(() => {
+    startBuyerSession().catch(() => {});
+  }, []);
   useEffect(() => {
     if (stale) router.replace(`/${store.slug}/list?ids=${ids}`);
   }, [stale, ids, store.slug, router]);

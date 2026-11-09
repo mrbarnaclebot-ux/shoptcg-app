@@ -147,6 +147,34 @@ export async function storeQueue(db: Db, storeId: string) {
   };
 }
 
+/** This phone's still-held request with exactly these lines: a retry, not a new send. */
+export async function pendingDuplicate(
+  db: Db,
+  k: { sessionId: string; storeId: string },
+  wanted: { listingId: string; qty: number }[],
+) {
+  const rows = await db
+    .select({ id: request.id, code: request.code })
+    .from(request)
+    .where(
+      and(
+        eq(request.sessionId, k.sessionId),
+        eq(request.storeId, k.storeId),
+        sql`${effectiveStatus} = 'pending'`,
+      ),
+    );
+  const held = await linesFor(
+    db,
+    rows.map((r) => r.id),
+  );
+  const key = (ls: { listingId: string; qty: number }[]) =>
+    ls
+      .map((l) => `${l.listingId}:${l.qty}`)
+      .sort()
+      .join();
+  return rows.find((r) => key(held.get(r.id) ?? []) === key(wanted)) ?? null;
+}
+
 export type QueueTicket = Awaited<
   ReturnType<typeof storeQueue>
 >["pending"][number];

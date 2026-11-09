@@ -8,7 +8,7 @@ import { ensureBuyerSid, readBuyerSid } from "@/lib/buyer-session";
 import { outboxPath } from "@/lib/email";
 import { seedAllowed } from "@/lib/e2e-seed";
 import { pushNewRequest } from "@/lib/push";
-import { ipHash, requestLimited } from "@/lib/request-limit";
+import { ipHash } from "@/lib/request-limit";
 import {
   cancelRequest,
   createRequest,
@@ -90,19 +90,40 @@ export async function sendRequest(
   if (!store?.isOpen) return { closed: true };
   const sessionId = await ensureBuyerSid();
   const ip = await addressHash();
-  const key = { sessionId, storeId: store.id, ipHash: ip };
-  if (await requestLimited(db, key)) return { limited: true };
-  const r = await createRequest(db, {
-    ...key,
-    lines: lines.data,
-    buyerName: fields.data.name,
-    buyerEmail: fields.data.email,
-    promo: fields.data.promo === "on",
-    holdMs: await holdMs(),
-  });
-  if (!r.ok) return "closed" in r ? { closed: true } : { taken: r.taken };
-  after(() => pushNewRequest(db, store.id, { ...r, name: fields.data.name }));
+  const hold = await holdMs();
+  let r;
+  try {
+    r = await createRequest(db, {
+      sessionId,
+      storeId: store.id,
+      ipHash: ip,
+      lines: lines.data,
+      buyerName: fields.data.name,
+      buyerEmail: fields.data.email,
+      promo: fields.data.promo === "on",
+      holdMs: hold,
+    });
+  } catch (err) {
+    // A failed query's message carries its params: the buyer's name and email.
+    const code = (err as { cause?: { code?: string } }).cause?.code;
+    console.error("[request] send failed", code);
+    throw new Error("Request not sent");
+  }
+  if (!r.ok) {
+    if ("closed" in r) return { closed: true };
+    return "limited" in r ? { limited: true } : { taken: r.taken };
+  }
+  if (!r.retry)
+    after(() => pushNewRequest(db, store.id, { ...r, name: fields.data.name }));
   return { ok: true, id: r.id };
+}
+
+/**
+ * Mints the cookie before the send: if a send's response is lost, the retry
+ * still has the session that owns the request.
+ */
+export async function startBuyerSession() {
+  await ensureBuyerSid();
 }
 
 /** The buyer lets their hold go. False when it was not theirs or already over. */

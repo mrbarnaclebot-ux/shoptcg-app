@@ -4,7 +4,12 @@ import type { Db } from "@/db/open";
 import { listing, request, requestLine, store } from "@/db/schema";
 import { listStock } from "@/lib/listings";
 import { notifyLive } from "@/lib/live";
-import { effectiveStatus, heldByListing } from "@/lib/request-reads";
+import { lockSender, requestLimited } from "@/lib/request-limit";
+import {
+  effectiveStatus,
+  heldByListing,
+  pendingDuplicate,
+} from "@/lib/request-reads";
 import { uniqueViolation } from "@/lib/stores";
 import { vendorPrice } from "@/lib/vendor-price";
 
@@ -38,9 +43,17 @@ export type NewRequest = {
 };
 
 export type CreateResult =
-  | { ok: true; id: string; code: string; items: number; total: number }
+  | {
+      ok: true;
+      id: string;
+      code: string;
+      items: number;
+      total: number;
+      retry?: true;
+    }
   | { ok: false; taken: string[] }
-  | { ok: false; closed: true };
+  | { ok: false; closed: true }
+  | { ok: false; limited: true };
 
 type StoreRow = { id: string; priceRulePct: number; rounding: string };
 
@@ -73,6 +86,13 @@ async function quote(tx: Db, s: StoreRow, lines: LineInput[]) {
 }
 
 async function insertRequest(tx: Db, input: NewRequest): Promise<CreateResult> {
+  if (!input.isTest) {
+    await lockSender(tx, input);
+    // A lost response must not leave the buyer blocked by their own hold.
+    const dup = await pendingDuplicate(tx, input, input.lines);
+    if (dup) return { ok: true, ...dup, items: 0, total: 0, retry: true };
+    if (await requestLimited(tx, input)) return { ok: false, limited: true };
+  }
   // Lock order is always store, then listings by id, so two sends never deadlock.
   const [s] = await tx
     .select({

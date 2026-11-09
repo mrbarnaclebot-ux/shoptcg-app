@@ -40,12 +40,17 @@ const showQueue = () =>
 export function QueueLive({ pending }: { pending: number }) {
   const router = useRouter();
   const up = useLive("/api/live/store", (e) => {
-    if (e.t === "new") {
+    if (e.t === "cancelled") toast.requestCancelled();
+  });
+  // On the count, not the event, so one found by a re-read still chimes.
+  const seen = useRef(pending);
+  useEffect(() => {
+    if (pending > seen.current) {
       if (soundOn()) chime();
       toast.newRequest(showQueue);
     }
-    if (e.t === "cancelled") toast.requestCancelled();
-  });
+    seen.current = pending;
+  }, [pending]);
   const online = useSyncExternalStore(
     onlineSub,
     () => navigator.onLine,

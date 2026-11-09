@@ -5,6 +5,9 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 const POLL_MS = 10_000;
 const RETRY_MS = 5_000;
+// Postgres drops notifications while LISTEN reconnects, and the stream can't
+// tell, so an up stream still re-reads now and then.
+const HEARTBEAT_MS = 60_000;
 
 export type LiveMessage = { t: string; r?: string };
 
@@ -52,8 +55,10 @@ export function useLive(
       };
     };
     connect();
+    const heartbeat = setInterval(() => router.refresh(), HEARTBEAT_MS);
     return () => {
       es.close();
+      clearInterval(heartbeat);
       clearInterval(poll);
       clearTimeout(retry);
     };

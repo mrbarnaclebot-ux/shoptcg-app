@@ -23,15 +23,23 @@ function base64urlBytes(s: string) {
 }
 
 // ponytail: one switch for sound and push; split them if vendors want silent push.
+// Safe to repeat: subscribe returns the existing one and the save is an upsert.
 async function subscribePush(publicKey: string) {
-  if ((await Notification.requestPermission()) !== "granted") return;
+  if ((await Notification.requestPermission()) !== "granted") return "denied";
   const sw = await swReady();
   const sub = await sw.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: base64urlBytes(publicKey),
   });
-  await savePushSubscription(sub.toJSON());
+  return (await savePushSubscription(sub.toJSON())) ? null : "failed";
 }
+
+const PUSH_NOTE = {
+  denied:
+    "Alerts on a locked phone are off. Allow notifications for this site in your phone's settings.",
+  failed:
+    "Couldn't turn on alerts for a locked phone. Check your connection, then switch sound off and on.",
+};
 
 async function unsubscribePush() {
   const sub = await (await swReady()).pushManager.getSubscription();
@@ -43,10 +51,26 @@ async function unsubscribePush() {
 /** "Sound on" and "Test alert". Push is off, silently, without VAPID keys. */
 export function AlertsRow({ publicKey }: { publicKey: string | null }) {
   const on = useSyncExternalStore(onSoundChange, soundOn, () => false);
+  const [note, setNote] = useState<keyof typeof PUSH_NOTE | null>(null);
+  const canPush = () =>
+    publicKey && "serviceWorker" in navigator && "PushManager" in window;
+  const resubscribe = (key: string) =>
+    subscribePush(key)
+      .then(setNote)
+      .catch((err) => {
+        console.error("[push] subscribe failed", err);
+        setNote("failed");
+      });
   useEffect(() => {
     if (publicKey && "serviceWorker" in navigator)
       navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, [publicKey]);
+  // A subscription can be rotated or cleaned up while the switch stays on.
+  useEffect(() => {
+    if (on && canPush() && Notification.permission === "granted")
+      void resubscribe(publicKey!);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per switch state
+  }, [on, publicKey]);
   useEffect(() => {
     if (!on) return;
     addEventListener("pointerdown", unlockAudio, { once: true });
@@ -55,10 +79,13 @@ export function AlertsRow({ publicKey }: { publicKey: string | null }) {
   const toggle = () => {
     setSoundOn(!on);
     if (!on) chime();
-    if (publicKey && "serviceWorker" in navigator && "PushManager" in window)
-      (on ? unsubscribePush() : subscribePush(publicKey)).catch((err) =>
-        console.error("[push] subscribe failed", err),
+    if (!canPush()) return;
+    setNote(null);
+    if (on)
+      unsubscribePush().catch((err) =>
+        console.error("[push] unsubscribe failed", err),
       );
+    else void resubscribe(publicKey!);
   };
   return (
     <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -81,6 +108,11 @@ export function AlertsRow({ publicKey }: { publicKey: string | null }) {
       >
         Test alert
       </button>
+      {note && (
+        <p role="status" className="basis-full text-muted-foreground">
+          {PUSH_NOTE[note]}
+        </p>
+      )}
     </div>
   );
 }

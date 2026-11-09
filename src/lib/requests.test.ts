@@ -79,6 +79,34 @@ function suite(name: string, open: () => Promise<Db>) {
       expect(held.get(s.listingId)?.qty).toBe(1);
     });
 
+    test("a burst from one phone can't get past the limits", async () => {
+      const s = await shop(db, 20);
+      const sessionId = randomUUID();
+      const results = await Promise.all(
+        [1, 2, 3, 4, 5].map((qty) =>
+          createRequest(
+            db,
+            ask(s, { sessionId, lines: [{ listingId: s.listingId, qty }] }),
+          ),
+        ),
+      );
+      expect(results.filter((r) => r.ok)).toHaveLength(2);
+      expect(results.filter((r) => !r.ok)).toEqual(
+        Array(3).fill({ ok: false, limited: true }),
+      );
+    });
+
+    test("resending the same list returns the same request, even on the last copy", async () => {
+      const s = await shop(db);
+      const sessionId = randomUUID();
+      const first = await createRequest(db, ask(s, { sessionId }));
+      const again = await createRequest(db, ask(s, { sessionId }));
+      expect(first.ok && again.ok && again.retry).toBe(true);
+      expect(first.ok && again.ok && again.id === first.id).toBe(true);
+      const held = await heldByListing(db, s.storeId);
+      expect(held.get(s.listingId)?.qty).toBe(1);
+    });
+
     test("the trigger refuses a line that would overdraw stock", async () => {
       const s = await shop(db, 1);
       const r = await createRequest(db, ask(s));

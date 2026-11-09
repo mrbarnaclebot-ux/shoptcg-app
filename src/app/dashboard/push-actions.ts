@@ -11,8 +11,11 @@ const key = z
   .string()
   .regex(/^[A-Za-z0-9_-]+=*$/)
   .max(200);
+// Browser push services only: the server POSTs to this URL on "Test alert".
+const PUSH_HOST =
+  /^(fcm\.googleapis\.com|([a-z0-9-]+\.)*push\.apple\.com|([a-z0-9-]+\.)*push\.services\.mozilla\.com|([a-z0-9-]+\.)*notify\.windows\.com)$/;
 const subSchema = z.object({
-  endpoint: z.url({ protocol: /^https$/ }).max(2048),
+  endpoint: z.url({ protocol: /^https$/, hostname: PUSH_HOST }).max(2048),
   keys: z.object({ p256dh: key, auth: key }),
 });
 

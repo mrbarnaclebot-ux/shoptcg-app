@@ -16,6 +16,16 @@ export function ipHash(ip: string, secret: string) {
   return createHmac("sha256", secret).update(ip).digest("hex");
 }
 
+/** Serialises sends from one phone and one address, always in that order. */
+export async function lockSender(
+  tx: Db,
+  k: { sessionId: string; ipHash: string | null },
+) {
+  for (const key of [k.sessionId, k.ipHash])
+    if (key)
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${key}))`);
+}
+
 async function countWhere(db: Db, where: ReturnType<typeof and>) {
   const [{ n }] = await db.select({ n: count() }).from(request).where(where);
   return n;
@@ -25,7 +35,8 @@ const since = (ms: number) => gt(request.createdAt, new Date(Date.now() - ms));
 
 /**
  * True when this phone or address must wait before sending another request.
- * ponytail: count-then-insert lets two simultaneous sends overshoot by one; fine for spam control.
+ * Run it in the send's transaction, after lockSender, so a burst can't all
+ * count the same rows.
  */
 export async function requestLimited(
   db: Db,

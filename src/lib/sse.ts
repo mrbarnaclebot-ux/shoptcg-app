@@ -40,18 +40,27 @@ export function sseResponse(
         clearInterval(ping);
         clearTimeout(timeout);
         stop();
-        open.set(cap.key, (open.get(cap.key) ?? 1) - 1);
+        const left = (open.get(cap.key) ?? 1) - 1;
+        if (left > 0) open.set(cap.key, left);
+        else open.delete(cap.key);
         try {
           ctl.close();
         } catch {
           // The client cancelled first; the stream is already closed.
         }
       };
+      if (signal.aborted) return finish();
       signal.addEventListener("abort", () => finish());
       write("retry: 3000\n: open\n\n");
-      const unsubscribe = await start((d) =>
-        write(`data: ${JSON.stringify(d)}\n\n`),
-      );
+      let unsubscribe: () => void;
+      try {
+        unsubscribe = await start((d) =>
+          write(`data: ${JSON.stringify(d)}\n\n`),
+        );
+      } catch {
+        // LISTEN failed: free the slot so the client's retry can get one.
+        return finish();
+      }
       if (closed) unsubscribe();
       else stop = unsubscribe;
     },
