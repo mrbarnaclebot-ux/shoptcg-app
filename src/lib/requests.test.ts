@@ -21,7 +21,10 @@ import { addStore, migratedDb } from "@/lib/test-fixtures";
 /** An open store with one custom listing at a fixed price. */
 async function shop(db: Db, qty = 1, price = "10.00") {
   const storeId = await addStore(db, randomUUID().slice(0, 8));
-  await db.update(store).set({ isOpen: true }).where(eq(store.id, storeId));
+  await db
+    .update(store)
+    .set({ state: "open", openedAt: new Date() })
+    .where(eq(store.id, storeId));
   const [l] = await db
     .insert(listing)
     .values({
@@ -169,12 +172,42 @@ test("prices are recomputed server side and taken lines are reported", async () 
   expect(again).toEqual({ ok: false, taken: [s.listingId, missing] });
 });
 
-test("a closed store takes no requests, but a test request still works", async () => {
+test.each([
+  ["paused", { state: "paused" as const }],
+  [
+    "paused for a while",
+    {
+      state: "paused" as const,
+      pausedUntil: sql`now() + interval '15 minutes'`,
+    },
+  ],
+  ["not vending", { state: "off" as const }],
+  [
+    "left open past 14 hours",
+    { state: "open" as const, openedAt: sql`now() - interval '15 hours'` },
+  ],
+])(
+  "a %s store takes no requests, but a test request still works",
+  async (_, set) => {
+    const db = await migratedDb();
+    const s = await shop(db);
+    await db.update(store).set(set).where(eq(store.id, s.storeId));
+    expect(await createRequest(db, ask(s))).toEqual({
+      ok: false,
+      closed: true,
+    });
+    expect((await createRequest(db, ask(s, { isTest: true }))).ok).toBe(true);
+  },
+);
+
+test("a timed pause that ran out takes requests again", async () => {
   const db = await migratedDb();
   const s = await shop(db);
-  await db.update(store).set({ isOpen: false }).where(eq(store.id, s.storeId));
-  expect(await createRequest(db, ask(s))).toEqual({ ok: false, closed: true });
-  expect((await createRequest(db, ask(s, { isTest: true }))).ok).toBe(true);
+  await db
+    .update(store)
+    .set({ state: "paused", pausedUntil: sql`now() - interval '1 second'` })
+    .where(eq(store.id, s.storeId));
+  expect((await createRequest(db, ask(s))).ok).toBe(true);
 });
 
 test("available is qty minus active holds and never below zero", async () => {
