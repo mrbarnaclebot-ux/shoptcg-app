@@ -5,6 +5,7 @@ import type { Db } from "@/db/open";
 import { listing, store } from "@/db/schema";
 import {
   listCustomers,
+  maskEmail,
   promoRows,
   promoStatus,
   removeCustomer,
@@ -38,7 +39,7 @@ async function shop() {
 }
 
 /** A purchase through the real flow, so consent follows the real upsert. */
-async function buy(
+async function ask(
   s: Awaited<ReturnType<typeof shop>>,
   email: string,
   promo: boolean,
@@ -55,13 +56,26 @@ async function buy(
     holdMs: 15 * 60_000,
   });
   if (!r.ok) throw new Error("request failed");
+  return r.id;
+}
+
+async function sell(s: Awaited<ReturnType<typeof shop>>, requestId: string) {
   const done = await confirmSale(db, s.storeId, {
-    requestId: r.id,
+    requestId,
     lines: [{ listingId: s.listingId, qty: 1, unitPrice: "10" }],
     discount: { kind: "none" },
     method: "cash",
   });
   if (!("ok" in done)) throw new Error("sale failed");
+}
+
+async function buy(
+  s: Awaited<ReturnType<typeof shop>>,
+  email: string,
+  promo: boolean,
+  name = "Maya Robinson",
+) {
+  await sell(s, await ask(s, email, promo, name));
 }
 
 const emails = async (storeId: string) =>
@@ -95,6 +109,22 @@ it("an unticked purchase after opting out keeps them out", async () => {
   await optOut(db, c.unsubscribeToken);
   await buy(s, "maya@example.test", false);
   expect(await emails(s.storeId)).toEqual([]);
+});
+
+it("a sale confirmed after an opt-out can't undo it, but a later tick can", async () => {
+  const s = await shop();
+  await buy(s, "maya@example.test", true);
+  const [c] = await listCustomers(db, s.storeId);
+  const ticked = await ask(s, "maya@example.test", true);
+  await optOut(db, c.unsubscribeToken);
+  await sell(s, ticked);
+  expect(await emails(s.storeId)).toEqual([]);
+  const [after] = await listCustomers(db, s.storeId);
+  expect(after.optedOutAt).not.toBeNull();
+  expect(after.purchases).toBe(2);
+
+  await buy(s, "maya@example.test", true);
+  expect(await emails(s.storeId)).toEqual(["maya@example.test"]);
 });
 
 it("after erasure, a purchase with no tick doesn't re-subscribe them", async () => {
@@ -137,11 +167,19 @@ it("filters by subscribed and searches name or email, wildcards literal", async 
 it("the status says where consent stands", () => {
   const at = new Date("2026-11-09T12:00:00Z");
   const row = { promoOptIn: false, optedInAt: null, optedOutAt: null };
-  expect(promoStatus(row, "UTC")).toBe("Receipts only");
-  expect(promoStatus({ ...row, promoOptIn: true, optedInAt: at }, "UTC")).toBe(
-    "Subscribed since Nov 9",
-  );
-  expect(promoStatus({ ...row, optedOutAt: at }, "UTC")).toBe(
-    "Unsubscribed Nov 9",
-  );
+  expect(promoStatus(row, "UTC")).toEqual({
+    state: "receipts",
+    text: "Receipts only. No promos.",
+  });
+  expect(
+    promoStatus({ ...row, promoOptIn: true, optedInAt: at }, "UTC"),
+  ).toEqual({ state: "subscribed", text: "Subscribed since Nov 9" });
+  expect(promoStatus({ ...row, optedOutAt: at }, "UTC")).toEqual({
+    state: "unsubscribed",
+    text: "Unsubscribed Nov 9. Don't email.",
+  });
+});
+
+it("an email is masked to its first letter and domain", () => {
+  expect(maskEmail("maya@example.test")).toBe("m•••@example.test");
 });

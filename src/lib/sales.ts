@@ -228,7 +228,12 @@ async function confirmTx(
     .select({
       status: effectiveStatus,
       isTest: request.isTest,
-      promo: request.promoOptIn,
+      // Ticked before they opted out, and confirmed after: the opt-out wins.
+      promo: sql<boolean>`${request.promoOptIn} and not exists (
+        select 1 from ${customer}
+        where ${customer.storeId} = ${request.storeId}
+          and ${customer.email} = ${request.buyerEmail}
+          and ${customer.optedOutAt} > ${request.createdAt})`,
       name: request.buyerName,
       email: request.buyerEmail,
     })
@@ -286,7 +291,7 @@ export function confirmSale(db: Db, storeId: string, input: ConfirmInput) {
 
 export const UNSUB_TOKEN = /^[A-Za-z0-9_-]{43}$/;
 
-/** Opts a buyer out by token. Silent on an unknown token, so it can't be probed. */
+/** Opts a buyer out by token. An unknown token writes nothing. */
 export async function optOut(db: Db, token: string) {
   if (!UNSUB_TOKEN.test(token)) return;
   await db

@@ -67,7 +67,11 @@ export async function removeCustomer(db: Db, storeId: string, id: string) {
   return gone.length > 0;
 }
 
-/** "Subscribed since Nov 9", "Unsubscribed Nov 12" or "Receipts only". */
+/** For the row: enough to recognise a buyer, not enough for a bystander to read off. */
+export const maskEmail = (email: string) =>
+  `${email[0]}•••${email.slice(email.indexOf("@"))}`;
+
+/** Where consent stands, in words a seller about to email someone can't misread. */
 export function promoStatus(
   c: Pick<
     typeof customer.$inferSelect,
@@ -82,6 +86,14 @@ export function promoStatus(
       timeZone,
     });
   if (c.promoOptIn)
-    return c.optedInAt ? `Subscribed since ${day(c.optedInAt)}` : "Subscribed";
-  return c.optedOutAt ? `Unsubscribed ${day(c.optedOutAt)}` : "Receipts only";
+    return {
+      state: "subscribed",
+      text: c.optedInAt ? `Subscribed since ${day(c.optedInAt)}` : "Subscribed",
+    } as const;
+  return c.optedOutAt
+    ? ({
+        state: "unsubscribed",
+        text: `Unsubscribed ${day(c.optedOutAt)}. Don't email.`,
+      } as const)
+    : ({ state: "receipts", text: "Receipts only. No promos." } as const);
 }

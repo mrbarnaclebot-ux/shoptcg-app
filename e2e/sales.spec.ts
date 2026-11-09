@@ -4,7 +4,6 @@ import { newVendor } from "./auth";
 import {
   buyerEmail,
   confirm,
-  newBuyer,
   openVendor,
   outboxLine,
   pay,
@@ -243,15 +242,14 @@ test("unsubscribe works from the email's link, and only by pressing the button",
   ).toBeVisible();
   await expect(reader.getByText("You'll still get receipts")).toBeVisible();
 
-  // An unknown token reads the same, and a junk token is no error.
+  // An unknown token never claims it worked, as that buyer may still be subscribed.
   await reader.goto(`/u/${randomBytes(32).toString("base64url")}`);
   await expect(
-    reader.getByRole("heading", { name: "Stop emails from this seller?" }),
+    reader.getByRole("heading", { name: "This link has expired." }),
   ).toBeVisible();
-  await reader.getByRole("button", { name: "Unsubscribe" }).click();
-  await expect(
-    reader.getByRole("heading", { name: "You're off this seller's list." }),
-  ).toBeVisible();
+  await expect(reader.getByRole("button", { name: "Unsubscribe" })).toHaveCount(
+    0,
+  );
 });
 
 test("another vendor can't see a sale or review a request", async ({

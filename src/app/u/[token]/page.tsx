@@ -34,17 +34,26 @@ export default async function UnsubscribePage({
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pt-16 pb-16">
       <div className="paper flex flex-col items-start gap-4 p-6">
-        {done ? (
+        {!name ? (
+          <>
+            <h1 className="font-display text-[2.5rem] leading-[0.9] font-black">
+              This link has expired.
+            </h1>
+            <p>
+              Use the unsubscribe link in your latest email from the seller.
+            </p>
+          </>
+        ) : done ? (
           <>
             <h1 className="font-display text-[2.5rem] leading-[0.9] font-black [overflow-wrap:anywhere]">
-              You&apos;re off {name ?? "this seller"}&apos;s list.
+              You&apos;re off {name}&apos;s list.
             </h1>
             <p>You&apos;ll still get receipts for things you buy.</p>
           </>
         ) : (
           <>
             <h1 className="font-display text-[2.5rem] leading-[0.9] font-black [overflow-wrap:anywhere]">
-              Stop emails from {name ?? "this seller"}?
+              Stop emails from {name}?
             </h1>
             <form action={unsubscribe}>
               <input type="hidden" name="token" value={token} />

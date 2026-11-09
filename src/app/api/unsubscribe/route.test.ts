@@ -16,7 +16,7 @@ const url = (t: string) => `https://x.test/api/unsubscribe?t=${t}`;
 const post = (t: string, body: BodyInit = oneClick()) =>
   POST(new Request(url(t), { method: "POST", body }));
 
-test("one-click unsubscribes, and an unknown token looks the same", async () => {
+test("one-click unsubscribes, and an unknown token is a 200 that writes nothing", async () => {
   const db: Db = await migratedDb();
   holder.db = db;
   const storeId = await addStore(db, randomUUID().slice(0, 8));
