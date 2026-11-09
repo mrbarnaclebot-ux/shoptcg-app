@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import { slugSchema } from "@/lib/slug";
-import { createStore, getStoreBySlug } from "@/lib/stores";
+import { createStore, getStoreBySlug, setStoreOpen } from "@/lib/stores";
 
 let db: Db;
 
@@ -102,5 +102,14 @@ describe("createStore", () => {
         .values({ ownerUserId: "u2", name: "Z", slug });
       await expect(bad).rejects.toThrow();
     }
+  });
+});
+
+describe("setStoreOpen", () => {
+  it("flips only the owner's store", async () => {
+    expect(await setStoreOpen(db, "u1", true)).toBe(true);
+    expect((await getStoreBySlug(db, "pika"))?.isOpen).toBe(true);
+    expect(await setStoreOpen(db, "nobody", false)).toBe(false);
+    expect((await getStoreBySlug(db, "pika"))?.isOpen).toBe(true);
   });
 });

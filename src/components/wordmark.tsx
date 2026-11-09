@@ -1,13 +1,13 @@
 import Link from "next/link";
 
-// Brand wordmark: plain Archivo expanded 800, ".app" in muted (UI-SPEC section 9).
+// Wordmark in the poster face; the dot is the one lamp-lit character.
 export function Wordmark() {
   return (
     <Link
       href="/"
-      className="inline-flex min-h-11 items-center text-lg font-extrabold wdth-118"
+      className="font-display inline-flex min-h-11 items-center text-[1.625rem] leading-none font-extrabold tracking-[0.01em]"
     >
-      shoptcg<span className="text-muted-foreground">.app</span>
+      shoptcg<span className="text-brand">.</span>app
     </Link>
   );
 }

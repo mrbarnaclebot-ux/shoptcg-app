@@ -1,6 +1,11 @@
-import { desc, gt, sql } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
-import { catalogItem, pricePoint, type CatalogItem } from "@/db/schema";
+import {
+  catalogItem,
+  listing,
+  pricePoint,
+  type CatalogItem,
+} from "@/db/schema";
 import { PartialPricesError } from "@/lib/pricing/errors";
 import {
   providerByName,
@@ -14,10 +19,10 @@ const CHUNK = 25;
 const MAX_FAILED_CHUNKS = 3;
 
 export interface SyncLimits {
-  /** Items priced per run; each costs at most one provider call. */
+  /** Credits per run: one per item priced, HISTORY_COST per history backfill. */
   maxCalls: number;
-  /** Only items a search returned within this many days. */
-  seenDays: number;
+  /** History backfills per run, so a burst of new listings cannot eat the night. */
+  maxBackfill: number;
 }
 
 function envLimits(): SyncLimits {
@@ -25,7 +30,7 @@ function envLimits(): SyncLimits {
     Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : d;
   return {
     maxCalls: int(process.env.SYNC_MAX_CALLS, 5000),
-    seenDays: int(process.env.SYNC_SEEN_DAYS, 30),
+    maxBackfill: int(process.env.SYNC_MAX_BACKFILL, 200),
   };
 }
 
@@ -35,6 +40,8 @@ export interface SyncResult {
   unpriced: number;
   skipped: number;
   failed: number;
+  /** Provider history calls made for items with too few points to chart. */
+  backfilled: number;
 }
 
 function money(v: number | null) {
@@ -79,6 +86,7 @@ async function syncProvider(
   date: string,
   result: SyncResult,
 ) {
+  const priced = new Set<string>();
   let failedInRow = 0;
   for (let i = 0; i < items.length; i += CHUNK) {
     const chunk = items.slice(i, i + CHUNK);
@@ -87,7 +95,7 @@ async function syncProvider(
       console.error(
         `[sync] ${provider.name}: ${failedInRow} chunks failed in a row, stopping`,
       );
-      return;
+      return priced;
     }
     // A partial failure still carries the quotes that were paid for.
     let [quotes, failed] = [[] as Quote<CatalogItem>[], 0];
@@ -100,35 +108,126 @@ async function syncProvider(
       console.error(`[sync] ${provider.name} chunk ${i / CHUNK} failed:`, err);
     }
     await writeQuotes(db, date, provider.name, quotes);
+    for (const q of quotes) priced.add(q.ref.id);
     result.written += quotes.length;
     result.failed += failed;
     // No price means keep yesterday's row; never write a 0.
     result.unpriced += chunk.length - quotes.length - failed;
     failedInRow = failed ? failedInRow + 1 : 0;
   }
+  return priced;
 }
 
-/** Writes today's price_point for recently searched items whose provider is configured. */
+// The item page needs 3 points to draw a chart.
+const MIN_POINTS = 3;
+const BACKFILL_DAYS = 90;
+// PPT bills 1 credit per card plus 1 for history (or for eBay on graded).
+const HISTORY_COST = 2;
+
+/** Items among these with fewer than MIN_POINTS rows of history. */
+async function thinItems(db: Db, items: CatalogItem[]) {
+  if (!items.length) return [];
+  const rows = await db
+    .select({ id: pricePoint.catalogItemId, n: count() })
+    .from(pricePoint)
+    .where(
+      inArray(
+        pricePoint.catalogItemId,
+        items.map((i) => i.id),
+      ),
+    )
+    .groupBy(pricePoint.catalogItemId);
+  const n = new Map(rows.map((r) => [r.id, r.n]));
+  return items.filter((i) => (n.get(i.id) ?? 0) < MIN_POINTS);
+}
+
+/**
+ * One history call per thin item, so new listings get a chart on day one
+ * instead of after three nightly runs. Takes at most `budget` items.
+ * An item with no provider history is asked again each night until our own
+ * daily rows reach MIN_POINTS, so at most twice more.
+ */
+async function backfillHistory(
+  db: Db,
+  provider: PriceProvider,
+  items: CatalogItem[],
+  budget: number,
+) {
+  let calls = 0;
+  for (const item of (await thinItems(db, items)).slice(
+    0,
+    Math.max(0, budget),
+  )) {
+    calls++;
+    try {
+      const points = await provider.getHistory(item, BACKFILL_DAYS);
+      if (!points.length) continue;
+      await db
+        .insert(pricePoint)
+        .values(
+          points.map((p) => ({
+            catalogItemId: item.id,
+            date: p.date,
+            marketUsd: p.marketUsd.toFixed(2),
+            source: provider.name,
+          })),
+        )
+        .onConflictDoNothing();
+    } catch (err) {
+      // A chart can wait a night; prices already written stay written.
+      console.error(
+        `[sync] ${provider.name} history for ${item.id} failed:`,
+        err,
+      );
+    }
+  }
+  return calls;
+}
+
+/** History calls still affordable: under maxBackfill and the credit budget. */
+function backfillBudget(limits: SyncLimits, result: SyncResult) {
+  const spent = result.items + result.backfilled * HISTORY_COST;
+  return Math.min(
+    limits.maxBackfill - result.backfilled,
+    Math.floor((limits.maxCalls - spent) / HISTORY_COST),
+  );
+}
+
+/** Up to `limit` catalog items behind an active, in-stock listing. */
+function listedItems(db: Db, limit: number) {
+  // ponytail: least recently refreshed first, so a run that hits maxCalls rotates
+  // through the rest tomorrow; per-store fairness if one store hogs the budget.
+  const listed = db
+    .select({ id: listing.catalogItemId })
+    .from(listing)
+    // Sold-out stock shows no price to buyers, so it costs no provider call.
+    .where(and(eq(listing.active, true), gt(listing.qty, 0)));
+  return db
+    .select()
+    .from(catalogItem)
+    .where(inArray(catalogItem.id, listed))
+    .orderBy(
+      sql`(select max(${pricePoint.date}) from ${pricePoint} where ${pricePoint.catalogItemId} = ${catalogItem.id}) asc nulls first`,
+      asc(catalogItem.id),
+    )
+    .limit(limit);
+}
+
+/** Writes today's price_point for every catalog item an active, in-stock listing references. */
 export async function syncPrices(
   db: Db,
   date = new Date().toISOString().slice(0, 10),
   pick: (name: string) => PriceProvider | null = providerByName,
   limits: SyncLimits = envLimits(),
 ): Promise<SyncResult> {
-  // ponytail: prices recently searched items, newest first, up to maxCalls; switch to items referenced by a listing in Phase 3.
-  const since = new Date(Date.now() - limits.seenDays * 86_400_000);
-  const items = await db
-    .select()
-    .from(catalogItem)
-    .where(gt(catalogItem.lastSeenAt, since))
-    .orderBy(desc(catalogItem.lastSeenAt))
-    .limit(limits.maxCalls);
+  const items = await listedItems(db, limits.maxCalls);
   const result: SyncResult = {
     items: items.length,
     written: 0,
     unpriced: 0,
     skipped: 0,
     failed: 0,
+    backfilled: 0,
   };
   const byProvider = Map.groupBy(items, (it) => it.provider);
   for (const [name, group] of byProvider) {
@@ -140,7 +239,12 @@ export async function syncPrices(
       );
       continue;
     }
-    await syncProvider(db, provider, group, date, result);
+    const priced = await syncProvider(db, provider, group, date, result);
+    // Only items priced tonight: a failing provider gets no more calls, and an
+    // item with no price has no history worth paying for either.
+    const fresh = group.filter((it) => priced.has(it.id));
+    const budget = backfillBudget(limits, result);
+    result.backfilled += await backfillHistory(db, provider, fresh, budget);
   }
   return result;
 }

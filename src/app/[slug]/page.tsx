@@ -1,46 +1,177 @@
-import { notFound } from "next/navigation";
-import { connection } from "next/server";
+import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
+import { TableNumber } from "@/components/table-number";
+import { lineButton } from "@/components/ticket-button";
 import { getDb } from "@/db";
-import { slugSchema } from "@/lib/slug";
-import { getStoreBySlug } from "@/lib/stores";
+import { shortDate } from "@/lib/format";
+import {
+  listPublicStock,
+  storeSummary,
+  type PublicFilter,
+  type PublicStore,
+} from "@/lib/storefront";
+import { Controls, SortMenu } from "./controls";
+import { ListBar } from "./list-island";
+import { filterHref, parseFilter } from "./params";
+import { storeOr404 } from "./store-lookup";
+import { Tile, TileSkeleton } from "./tile";
 
-// Stub: the real public store page arrives in phase 4.
-export default function StorePage({ params }: PageProps<"/[slug]">) {
+// The store lookup runs before any Suspense boundary so an unknown slug is a
+// real 404 (streaming would have committed a 200). That blocks the shell on
+// one indexed query, which this opts out of instant-navigation validation for.
+export const instant = false;
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/[slug]">): Promise<Metadata> {
+  const store = await storeOr404((await params).slug);
+  return { title: `${store.name} - shoptcg` };
+}
+
+export default async function StorePage({
+  params,
+  searchParams,
+}: PageProps<"/[slug]">) {
+  const store = await storeOr404((await params).slug);
+  const f = parseFilter(await searchParams);
+  const summary = await storeSummary(getDb(), store.id);
   return (
-    <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col px-4 pt-6 md:px-6 lg:px-8">
-      <Suspense
-        fallback={
-          <div className="h-12 w-64 animate-pulse rounded-md bg-surface" />
-        }
-      >
-        <StoreName params={params} />
+    <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col px-4 md:px-6 lg:px-8">
+      <StoreHeader store={store} {...summary} />
+      {!store.isOpen && (
+        <p className="-mx-4 mb-3 bg-surface-2 px-4 py-3 text-sm md:mx-0">
+          <span className="font-semibold">Browsing only.</span> {store.name}{" "}
+          isn&apos;t taking requests right now.
+        </p>
+      )}
+      <Controls slug={store.slug} f={f} />
+      <Suspense fallback={<GridSkeleton />}>
+        <Grid store={store} f={f} />
       </Suspense>
+      <footer className="mt-10 border-t border-border pt-4 pb-32 text-xs text-muted-foreground">
+        Prices are this seller&apos;s asking prices. Market prices from public
+        sales data, updated daily.{" "}
+        <Link href="/terms" className="underline underline-offset-2">
+          Terms
+        </Link>
+      </footer>
+      {store.isOpen && <ListBar slug={store.slug} />}
     </main>
   );
 }
 
-// ponytail: notFound() inside Suspense streams after the 200 status is sent, so
-// unknown slugs are a soft 404. Phase 4 moves the lookup above the boundary.
-async function StoreName({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  // Skip the DB for anything that could never be a store slug.
-  if (!slugSchema.safeParse(slug).success) notFound();
-  // Store data is live (open state, later stock), so never prerender it.
-  await connection();
-  const store = await getStoreBySlug(getDb(), slug);
-  if (!store) notFound();
+function StoreHeader(props: {
+  store: PublicStore;
+  items: number;
+  updatedOn: string | null;
+}) {
+  const { store } = props;
   return (
-    <div className="flex flex-col gap-1">
-      <h1 className="text-2xl font-bold wdth-112">{store.name}</h1>
-      <p
-        className={`flex items-center gap-1.5 text-sm font-semibold ${store.isOpen ? "text-success" : "text-subtle"}`}
-      >
-        <span
-          className={`size-2 rounded-full ${store.isOpen ? "bg-success" : "bg-subtle"}`}
+    <header className="grid grid-cols-[1fr_auto] items-start gap-x-4 gap-y-2 pt-6 pb-4 md:pt-10">
+      <h1 className="font-display text-[2.5rem] leading-[0.9] font-black text-balance md:text-[4rem]">
+        {store.name}
+      </h1>
+      {store.tableLabel && (
+        <TableNumber
+          label="Table"
+          value={store.tableLabel}
+          className="row-span-2"
         />
-        {store.isOpen ? "Open now" : "Closed"}
+      )}
+      <p className="text-sm leading-snug text-muted-foreground">
+        <span
+          className={`inline-flex items-center gap-1.5 font-semibold ${store.isOpen ? "text-success" : "text-text"}`}
+        >
+          <span aria-hidden className="size-[7px] rounded-full bg-current" />
+          {store.isOpen ? "Open" : "Closed"}
+        </span>
+        <br />
+        <span className="num">{props.items}</span>{" "}
+        {props.items === 1 ? "item" : "items"}.
+        {props.updatedOn && ` Prices updated ${shortDate(props.updatedOn)}.`}
       </p>
+    </header>
+  );
+}
+
+const GRID =
+  "grid grid-cols-2 gap-x-3 gap-y-7 md:grid-cols-3 lg:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] lg:gap-x-5";
+
+function GridSkeleton() {
+  return (
+    <div className={`${GRID} mt-12`}>
+      {Array.from({ length: 6 }, (_, i) => (
+        <TileSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
+async function Grid({ store, f }: { store: PublicStore; f: PublicFilter }) {
+  const items = await listPublicStock(getDb(), store, f);
+  const filtered = Boolean(f.type || f.langs?.length || f.q);
+  if (!items.length) return <Empty store={store} f={f} filtered={filtered} />;
+  return (
+    <section aria-label="Stock">
+      <div className="flex items-center justify-between py-2 text-sm text-muted-foreground">
+        <p>
+          <span className="num font-semibold text-text">{items.length}</span>{" "}
+          {items.length === 1 ? "item" : "items"}
+        </p>
+        <SortMenu slug={store.slug} f={f} />
+      </div>
+      <div className={GRID}>
+        {items.map((it, i) => (
+          <Tile
+            key={it.id}
+            it={it}
+            slug={store.slug}
+            currency={store.secondCurrency}
+            canAdd={store.isOpen}
+            // One row on desktop, two on phones: the art above the fold.
+            eager={i < 4}
+          />
+        ))}
+      </div>
+      {store.secondCurrency && store.fxRate !== null && (
+        <p className="mt-10 text-xs text-muted-foreground">
+          {store.secondCurrency} shown at the seller&apos;s rate: 1 USD ={" "}
+          {store.fxRate} {store.secondCurrency}. You pay in whatever the seller
+          accepts at the table.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function Empty(props: {
+  store: PublicStore;
+  f: PublicFilter;
+  filtered: boolean;
+}) {
+  if (!props.filtered)
+    return (
+      <p className="py-16 text-lg">
+        This store hasn&apos;t added stock yet. Ask at the table.
+      </p>
+    );
+  return (
+    <div className="flex flex-col items-start gap-3 py-16">
+      <p className="text-lg font-semibold">
+        {props.f.q
+          ? `No matches for "${props.f.q}".`
+          : "Nothing matches these filters."}
+      </p>
+      <p className="text-muted-foreground">
+        Try the card number, or clear filters.
+      </p>
+      <Link
+        href={filterHref(props.store.slug, { sort: props.f.sort })}
+        className={lineButton}
+      >
+        Clear filters
+      </Link>
     </div>
   );
 }

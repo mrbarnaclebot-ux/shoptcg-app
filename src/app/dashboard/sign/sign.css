@@ -1,0 +1,116 @@
+/* The table sign (SCREENS 11). Sizes are in --u (1mm on A5) so A4 is the same layout, larger. */
+.table-sign {
+  --ink: #090911;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: calc(var(--u) * 148);
+  height: calc(var(--u) * 210);
+  padding: calc(var(--u) * 10);
+  background: oklch(0.985 0.004 82);
+  color: var(--ink);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.table-sign::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: calc(var(--u) * 6);
+  background: var(--sun);
+}
+.ts-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: calc(var(--u) * 4);
+  margin-top: calc(var(--u) * 5);
+}
+.ts-name {
+  font: 900 calc(var(--u) * var(--name-mm)) / 0.92 var(--font-display);
+  font-variation-settings: "opsz" 72;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ts-table {
+  flex: none;
+  text-align: right;
+  font: 600 calc(var(--u) * 3.6) / 1 var(--font-body);
+}
+.ts-table b {
+  display: block;
+  font: 900 calc(var(--u) * 17) / 0.85 var(--font-display);
+  font-variation-settings: "opsz" 72;
+}
+.ts-line {
+  font: 600 calc(var(--u) * 5) / 1.2 var(--font-body);
+  margin: calc(var(--u) * 6) 0 calc(var(--u) * 3);
+}
+.ts-qr {
+  width: var(--qr);
+  height: var(--qr);
+  align-self: center;
+}
+.ts-url {
+  text-align: center;
+  font: 800 calc(var(--u) * 7) / 1 var(--font-display);
+  font-variation-settings: "opsz" 72;
+  letter-spacing: 0.02em;
+  margin-top: calc(var(--u) * 2);
+  overflow-wrap: anywhere;
+}
+.ts-facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: auto;
+  border-top: calc(var(--u) * 0.5) solid var(--ink);
+  padding-top: calc(var(--u) * 3);
+  font: 600 calc(var(--u) * 3.6) / 1.2 var(--font-body);
+}
+.ts-facts span:nth-child(2) {
+  text-align: center;
+}
+.ts-facts span:nth-child(3) {
+  text-align: right;
+}
+.ts-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  margin-top: calc(var(--u) * 4);
+  font: 500 calc(var(--u) * 3) / 1 var(--font-body);
+  color: #55585e;
+}
+.ts-nfc {
+  display: flex;
+  gap: calc(var(--u) * 2);
+  align-items: center;
+  font: 600 calc(var(--u) * 3.4) / 1 var(--font-body);
+  color: var(--ink);
+}
+.ts-nfc svg {
+  width: calc(var(--u) * 6);
+  height: calc(var(--u) * 6);
+}
+
+/* Only the sign prints, as the one box on the page: everything else is
+   dropped and its ancestors collapse, so their padding cannot add a page. */
+@media print {
+  body *:not(:has(.table-sign), .table-sign, .table-sign *) {
+    display: none !important;
+  }
+  body *:has(.table-sign) {
+    display: contents !important;
+  }
+  body {
+    margin: 0;
+    background: none;
+  }
+  .table-sign {
+    zoom: 1 !important;
+    break-inside: avoid;
+  }
+}

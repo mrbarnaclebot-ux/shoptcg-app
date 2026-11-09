@@ -1,76 +1,79 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Button } from "@/components/ui/button";
-import { Wordmark } from "@/components/wordmark";
+import { TableNumber } from "@/components/table-number";
+import { Ticket } from "@/components/ticket";
 import { getDb } from "@/db";
 import type { Store } from "@/db/schema";
+import { appUrl } from "@/lib/deployed";
 import { requireUser } from "@/lib/session";
 import { getStoreByOwner } from "@/lib/stores";
-import { signOutAction } from "./actions";
 import { CreateStoreForm } from "./create-store-form";
+import { CopyLink } from "./copy-link";
+import { OpenSwitch } from "./open-switch";
+import { RequestQueue } from "./requests/queue";
+import { StoreCreated } from "./store-created";
 
 export const metadata: Metadata = { title: "Dashboard - shoptcg" };
 
-export default function DashboardPage() {
+export default function DashboardPage({
+  searchParams,
+}: PageProps<"/dashboard">) {
   return (
     <div className="flex flex-1 flex-col">
       {/* Session reads are request-time, so they stream in behind a boundary. */}
       <Suspense
         fallback={
-          <div className="mx-auto mt-20 h-48 w-full max-w-lg animate-pulse rounded-lg bg-surface" />
+          <div className="mx-auto mt-20 h-48 w-full max-w-lg animate-pulse bg-surface" />
         }
       >
-        <Dashboard />
+        <Dashboard searchParams={searchParams} />
       </Suspense>
     </div>
   );
 }
 
-async function Dashboard() {
+async function Dashboard({
+  searchParams,
+}: Pick<PageProps<"/dashboard">, "searchParams">) {
   const user = await requireUser();
+  const created = "created" in (await searchParams);
   const store = await getStoreByOwner(getDb(), user.id);
   return (
-    <>
-      <header className="border-b border-border">
-        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-4 px-4 py-2 md:px-6 lg:px-8">
-          <Wordmark />
-          <div className="flex min-w-0 items-center gap-2">
-            <p className="hidden truncate text-sm text-subtle sm:block">
-              {user.email}
-            </p>
-            <form action={signOutAction}>
-              <Button type="submit" variant="ghost" size="lg">
-                Sign out
-              </Button>
-            </form>
-          </div>
-        </div>
-      </header>
-      <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-8 px-4 pt-10 pb-16">
-        {store ? <StoreSummary store={store} /> : <NewStore />}
-      </main>
-    </>
+    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-10 px-4 pt-8 pb-16">
+      {store ? (
+        <>
+          {created && <StoreCreated slug={store.slug} />}
+          <StoreSummary store={store} />
+          <RequestQueue storeId={store.id} />
+        </>
+      ) : (
+        <NewStore />
+      )}
+    </main>
   );
 }
 
 function NewStore() {
   return (
     <>
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold wdth-112">Name your store</h1>
+      <div className="flex flex-col gap-3">
+        <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
+          Name your store
+        </h1>
         <p className="text-muted-foreground">
           The link is what buyers reach from your table QR code.
         </p>
       </div>
-      <CreateStoreForm />
+      <Ticket as="div" className="[--stub:2rem]">
+        <CreateStoreForm />
+      </Ticket>
     </>
   );
 }
 
 function StoreSummary({ store }: { store: Store }) {
-  // Request headers are client-controlled; the configured origin is not.
-  const origin = (process.env.BETTER_AUTH_URL ?? "").replace(/\/$/, "");
+  const origin = appUrl().origin;
   const initials = store.name
     .split(/\s+/)
     .map((w) => w[0])
@@ -78,33 +81,28 @@ function StoreSummary({ store }: { store: Store }) {
     .slice(0, 2)
     .toUpperCase();
   return (
-    <section className="flex flex-col gap-6 rounded-lg bg-surface p-5 shadow-1 ring-1 ring-border">
-      <div className="flex items-center gap-4">
-        <div className="grid size-12 shrink-0 place-items-center rounded-md bg-surface-2 text-lg font-extrabold text-sunrise-300 shadow-2 wdth-118">
-          {initials}
-        </div>
+    <section className="flex flex-col gap-5">
+      <div className="grid grid-cols-[1fr_auto] items-start gap-x-4">
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-bold wdth-112">{store.name}</h1>
-          <p
-            className={`flex items-center gap-1.5 text-sm font-semibold ${store.isOpen ? "text-success" : "text-subtle"}`}
-          >
-            <span
-              className={`size-2 rounded-full ${store.isOpen ? "bg-success" : "bg-subtle"}`}
-            />
-            {store.isOpen ? "Open" : "Closed"}
-          </p>
+          <h1 className="font-display text-[2.75rem] leading-[0.88] font-black break-words">
+            {store.name}
+          </h1>
         </div>
+        <TableNumber label="Store" value={initials} />
       </div>
-      <div className="flex flex-col gap-1 border-t border-border pt-5">
-        <p className="text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
-          Public page
-        </p>
-        <Link
-          href={`/${store.slug}`}
-          className="inline-flex min-h-11 items-center break-all text-brand-text underline underline-offset-4"
-        >
-          {origin}/{store.slug}
-        </Link>
+      <OpenSwitch open={store.isOpen} />
+      <div className="flex flex-col gap-1 border-t border-border pt-4">
+        <p className="text-sm text-muted-foreground">Your public page</p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {/* Shown like the table sign: no protocol, in the poster face. */}
+          <Link
+            href={`/${store.slug}`}
+            className="font-display inline-flex min-h-11 items-center text-2xl font-extrabold break-all underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+          >
+            {origin.replace(/^https?:\/\//, "")}/{store.slug}
+          </Link>
+          <CopyLink url={`${origin}/${store.slug}`} />
+        </div>
       </div>
     </section>
   );

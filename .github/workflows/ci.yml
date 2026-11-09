@@ -34,6 +34,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+        # Compiles the test-only *.e2e.ts routes into this build; never on Railway.
+        env:
+          E2E_SEED: "1"
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm db:migrate
       - run: pnpm e2e

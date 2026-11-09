@@ -50,3 +50,12 @@ next-env.d.ts
 
 # Claude Code local state and worktrees
 .claude/
+
+# Design exploration: only the chosen variation (v3) is tracked
+.planning/design/variations/v1-editorial/
+.planning/design/variations/v2-tactile/
+.planning/design/variations/v4-board/
+.planning/design/variations/*/shots/
+
+# Critique captures: 10 MB of working screenshots, named in CRITIQUE.md
+.planning/phases/show-floor/critique/

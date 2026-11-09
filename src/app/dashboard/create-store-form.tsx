@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useActionState, useEffect, useState } from "react";
+import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { slugSchema } from "@/lib/slug";
+import { toast } from "@/lib/toast";
 import { createStoreAction, type CreateStoreState } from "./actions";
 
 // Nudges typed text toward a valid slug; the zod schema still has the final say.
@@ -28,6 +29,9 @@ export function CreateStoreForm() {
     {},
   );
   const [slug, setSlug] = useState("");
+  useEffect(() => {
+    if (state.taken) toast.slugTaken(state.taken);
+  }, [state]);
   const check = slug ? slugSchema.safeParse(slug) : null;
   const slugError =
     check?.success === false
@@ -49,8 +53,8 @@ export function CreateStoreForm() {
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="slug">Store link</Label>
-        <div className="flex h-12 items-center rounded-md border border-input bg-surface-2 pl-3.5 focus-within:ring-2 focus-within:ring-ring has-aria-invalid:border-destructive">
-          <span className="text-base text-subtle select-none">
+        <div className="flex h-12 items-center bg-bg pl-3.5 shadow-[inset_0_0_0_1.5px_var(--border-strong)] focus-within:shadow-[inset_0_0_0_2.5px_var(--focus)] has-aria-invalid:shadow-[inset_0_0_0_2px_var(--danger)]">
+          <span className="text-base text-muted-foreground select-none">
             shoptcg.app/
           </span>
           <Input
@@ -63,26 +67,28 @@ export function CreateStoreForm() {
             onChange={(e) => setSlug(toSlug(e.target.value))}
             aria-invalid={slugError ? true : undefined}
             aria-describedby="slug-hint slug-error"
-            className="h-full rounded-none border-0 bg-transparent pl-0.5 focus-visible:ring-0 aria-invalid:ring-0"
+            className="h-full bg-transparent pl-0.5 shadow-none focus-visible:shadow-none aria-invalid:shadow-none"
           />
         </div>
-        <p id="slug-hint" className="text-sm text-subtle">
+        <p id="slug-hint" className="text-sm text-muted-foreground">
           Lowercase letters, numbers and dashes.
         </p>
         <FieldError id="slug-error" message={slugError} />
       </div>
       <FieldError id="form-error" message={state.errors?.form} />
-      <Button
+      <TicketButton
         type="submit"
-        size="lg"
         disabled={pending || check?.success === false}
         aria-busy={pending}
       >
         {pending ? "Creating store" : "Create store"}
-      </Button>
-      <p className="text-sm text-subtle">
+      </TicketButton>
+      <p className="text-sm text-muted-foreground">
         By creating a store you agree to the{" "}
-        <Link href="/terms" className="text-brand-text underline">
+        <Link
+          href="/terms"
+          className="text-text underline decoration-brand-text decoration-[1.5px] underline-offset-4"
+        >
           Terms
         </Link>
         .

@@ -1,0 +1,1 @@
+ALTER TABLE "listing" ADD CONSTRAINT "listing_qty_max" CHECK ("listing"."qty" <= 9999);

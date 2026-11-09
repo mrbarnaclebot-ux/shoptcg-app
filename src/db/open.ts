@@ -18,3 +18,13 @@ export function openDb(): Db {
   mkdirSync(".data", { recursive: true });
   return drizzlePglite(new PGlite(".data/pglite"), { schema });
 }
+
+// Next bundles route handlers, server actions and instrumentation separately,
+// so a module-level singleton would give each its own PGlite copy.
+const g = globalThis as { shoptcgDb?: Db };
+
+/** The process-wide database, opened lazily so build workers never touch PGlite. */
+export function sharedDb(): Db {
+  g.shoptcgDb ??= openDb();
+  return g.shoptcgDb;
+}

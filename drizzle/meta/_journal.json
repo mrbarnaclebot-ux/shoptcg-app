@@ -36,6 +36,69 @@
       "when": 1794114747777,
       "tag": "0004_catalog_review",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794115600929,
+      "tag": "0005_inventory",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794160454054,
+      "tag": "0006_listing_qty_max",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794162376631,
+      "tag": "0007_sign_in_send",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794196294348,
+      "tag": "0008_store_page",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794197771744,
+      "tag": "0009_drop_listing_public_idx",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794198257951,
+      "tag": "0010_requests",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794215338834,
+      "tag": "0011_sales",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794219319520,
+      "tag": "0012_sale_snapshots",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794220620638,
+      "tag": "0013_reports",
+      "breakpoints": true
     }
   ]
 }

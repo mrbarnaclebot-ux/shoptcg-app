@@ -7,7 +7,10 @@ import { store } from "@/db/schema";
 export async function GET() {
   await connection(); // never prerender: must hit the live database
   try {
-    await getDb().select({ one: sql`1` }).from(store).limit(1);
+    await getDb()
+      .select({ one: sql`1` })
+      .from(store)
+      .limit(1);
     return Response.json({ ok: true });
   } catch {
     return Response.json({ ok: false }, { status: 503 });

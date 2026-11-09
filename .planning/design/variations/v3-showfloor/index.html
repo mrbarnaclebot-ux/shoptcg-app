@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Show floor, after dark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Schibsted+Grotesk:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* the hall */
+  --night:#090911;                         /* galaxy black */
+  --night-2:oklch(0.19 0.014 285);
+  --night-3:oklch(0.25 0.014 285);
+  --seal:#7E848B;                          /* seal grey */
+  --on-night:oklch(0.94 0.012 80);
+  --on-night-2:oklch(0.76 0.01 250);
+  /* the lamp */
+  --sun:#F77C10;                           /* sunrise orange */
+  --sun-ink:oklch(0.54 0.16 48);           /* orange that passes on paper */
+  --sun-wash:oklch(0.72 0.17 55 / .14);
+  /* the ticket stock */
+  --paper:oklch(0.955 0.013 82);
+  --paper-2:oklch(0.91 0.016 82);
+  --paper-3:oklch(0.84 0.016 82);
+  --ink:oklch(0.19 0.014 285);
+  --ink-2:oklch(0.43 0.012 270);
+  --ok:oklch(0.52 0.13 150);
+  --ok-night:oklch(0.78 0.14 150);
+  --bad:oklch(0.55 0.19 27);
+  --bad-night:oklch(0.72 0.17 27);
+
+  --display:"Big Shoulders Display", "Arial Narrow", sans-serif;
+  --body:"Schibsted Grotesk", system-ui, sans-serif;
+  --expo:cubic-bezier(.16,1,.3,1);
+  --grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 .9 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+*{box-sizing:border-box;margin:0}
+html{background:var(--night)}
+body{background:var(--night);color:var(--on-night);font:400 16px/1.55 var(--body);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img{display:block;max-width:100%}
+button{font:inherit;color:inherit;cursor:pointer}
+.num{font-variant-numeric:tabular-nums lining-nums}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--sun);outline-offset:3px}
+
+/* showcase scaffolding: hall-sign wayfinding instead of micro-labels */
+.marker{display:flex;align-items:baseline;gap:18px;padding:72px 56px 28px;max-width:1440px;margin:0 auto}
+.marker b{font:800 64px/0.8 var(--display);color:var(--sun)}
+.marker h2{font:600 22px/1.2 var(--body);letter-spacing:-.01em}
+.marker p{color:var(--on-night-2);font-size:15px;margin-left:auto;max-width:44ch;text-align:right}
+.marker.on-paper b{color:var(--sun-ink)}
+.marker.on-paper p{color:var(--ink-2)}
+.paper{background:var(--paper);color:var(--ink)}
+
+/* photos get film grain, not the page */
+.grain{position:relative;isolation:isolate}
+.grain::after{content:"";position:absolute;inset:0;background:var(--grain);opacity:.16;mix-blend-mode:overlay;pointer-events:none;z-index:2}
+
+/* ===== tickets: the signature shape ===== */
+.btn{display:inline-flex;align-items:center;min-height:48px;border:0;font-weight:600;font-size:16px;text-decoration:none;white-space:nowrap;transition:transform .25s var(--expo),background-color .2s}
+.btn-ticket{
+  --r:7px;background:var(--sun);color:var(--night);padding:0;
+  -webkit-mask:radial-gradient(circle var(--r) at 0 50%,#0000 97%,#000) left/51% 100% no-repeat,radial-gradient(circle var(--r) at 100% 50%,#0000 97%,#000) right/51% 100% no-repeat;
+          mask:radial-gradient(circle var(--r) at 0 50%,#0000 97%,#000) left/51% 100% no-repeat,radial-gradient(circle var(--r) at 100% 50%,#0000 97%,#000) right/51% 100% no-repeat;
+}
+.btn-ticket .main{padding:0 22px 0 24px}
+.btn-ticket .stub{align-self:stretch;display:grid;place-items:center;padding:0 16px 0 14px;background:radial-gradient(circle,var(--night) 1.4px,#0000 1.9px) left center/3px 7px repeat-y}
+.btn-ticket .stub svg{width:18px;height:18px}
+.btn-ticket:hover{background:oklch(0.76 0.17 57)}
+.btn-ticket:active{transform:translateY(1px)}
+.btn-line{padding:0 20px;background:transparent;color:inherit;box-shadow:inset 0 0 0 1.5px currentColor}
+.btn-line:hover{background:oklch(1 0 0 / .06)}
+.paper .btn-line:hover{background:oklch(0 0 0 / .05)}
+.btn-text{min-height:44px;padding:0 2px;background:none;text-decoration:underline;text-underline-offset:5px;text-decoration-thickness:1.5px;text-decoration-color:var(--sun)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+
+/* ===== 01 LANDING DESKTOP ===== */
+.hero{position:relative;height:880px;overflow:hidden;background:var(--night)}
+.hero-media{position:absolute;inset:0;overflow:hidden}
+.hero-media img,.hero-media video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 40%}
+.hero-media video{animation:pushin 22s linear infinite alternate;transform-origin:62% 45%}
+@keyframes pushin{from{transform:scale(1.02)}to{transform:scale(1.12)}}
+.hero-shade{position:absolute;inset:0;background:
+  linear-gradient(90deg,oklch(0.12 0.015 285 / .94) 0%,oklch(0.12 0.015 285 / .78) 32%,oklch(0.12 0.015 285 / 0) 60%),
+  linear-gradient(0deg,oklch(0.12 0.015 285 / .95) 0%,oklch(0.12 0.015 285 / 0) 45%);z-index:1}
+.hero nav{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:28px 56px;z-index:3}
+.wordmark{font:800 26px/1 var(--display);letter-spacing:.01em}
+.wordmark i{font-style:normal;color:var(--sun)}
+.hero nav a{font-weight:500;font-size:15px;text-decoration:none;border-bottom:1.5px solid oklch(1 0 0 / .35);padding-bottom:2px}
+.hero-copy{position:absolute;left:56px;bottom:0;z-index:3;width:860px}
+.hero-copy .lede{font-size:19px;line-height:1.5;max-width:44ch;color:var(--on-night)}
+.hero-copy .lede em{font-style:normal;color:var(--sun)}
+.hero-actions{display:flex;gap:28px;align-items:center;margin:28px 0 36px}
+.hero h1{font:900 236px/.8 var(--display);letter-spacing:-.012em;margin-left:-14px;margin-bottom:-6px;white-space:nowrap;color:var(--on-night)}
+.hero h1 span{display:block}
+.hero h1 .lit{color:var(--sun)}
+.hero-caption{position:absolute;right:56px;bottom:30px;z-index:3;font-size:13px;color:var(--on-night-2);text-align:right;max-width:30ch}
+
+/* floating request ticket over the photo */
+.req-float{position:absolute;right:120px;top:230px;z-index:3;transform:rotate(-2.5deg);filter:drop-shadow(0 22px 40px oklch(0 0 0 / .55))}
+
+/* request ticket component (paper stock, perforated stub) */
+.rticket{--bg:var(--night);display:grid;grid-template-columns:1fr 128px;background:var(--paper);color:var(--ink);width:430px;position:relative}
+.rticket .body{padding:18px 20px 18px 22px}
+.rticket .stub{position:relative;padding:18px 16px;border-left:0;background:radial-gradient(circle,var(--paper-3) 1.5px,#0000 2px) left top/4px 9px repeat-y;display:flex;flex-direction:column;justify-content:space-between;gap:10px}
+.rticket .stub::before,.rticket .stub::after{content:"";position:absolute;left:-9px;width:18px;height:18px;border-radius:50%;background:var(--bg)}
+.rticket .stub::before{top:-9px}.rticket .stub::after{bottom:-9px}
+.rt-top{display:flex;justify-content:space-between;align-items:baseline}
+.rt-name{font:800 30px/1 var(--display)}
+.rt-when{font-size:13px;color:var(--ink-2)}
+.rt-lines{list-style:none;padding:0;margin:14px 0 12px;font-size:14px}
+.rt-lines li{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--paper-2)}
+.rt-lines img{width:34px;height:46px;object-fit:cover}
+.rt-lines small{display:block;color:var(--ink-2);font-size:12.5px}
+.rt-total{display:flex;justify-content:space-between;align-items:baseline;border-top:1.5px solid var(--ink);padding-top:8px;font-weight:600}
+.rt-total .num{font:800 30px/1 var(--display)}
+.stub-k{font-size:11.5px;color:var(--ink-2);line-height:1.2}
+.stub-v{font:800 30px/1 var(--display);letter-spacing:.02em}
+.stub-v.code{font-size:34px}
+.stub-v.hold{color:var(--sun-ink)}
+.stub-no{font:600 13px/1 var(--display);letter-spacing:.06em;color:var(--ink-2);writing-mode:vertical-rl;position:absolute;right:8px;bottom:14px}
+
+/* ===== paper program section ===== */
+.program{position:relative}
+.program-grid{max-width:1440px;margin:0 auto;padding:40px 56px 96px;display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:auto 1fr;gap:0 32px}
+.program-photo{grid-column:1 / span 5;grid-row:1 / span 2}
+.program-photo img{width:100%;height:720px;object-fit:cover}
+.cap{font-size:13px;color:var(--ink-2);margin-top:10px;max-width:52ch}
+.cap b{font-weight:600;color:var(--ink)}
+.program h3{grid-column:7 / span 6;font:900 112px/.82 var(--display);letter-spacing:-.01em;margin:8px 0 48px}
+.program h3 span{color:var(--sun-ink)}
+.steps{grid-column:7 / span 6;list-style:none;padding:0;display:grid;gap:34px;align-self:start}
+.steps li{display:grid;grid-template-columns:88px 1fr;align-items:start;border-top:1.5px solid var(--ink);padding-top:16px}
+.steps .n{font:900 76px/.78 var(--display);color:var(--sun-ink)}
+.steps h4{font:700 21px/1.25 var(--body);letter-spacing:-.01em}
+.steps p{color:var(--ink-2);max-width:46ch;margin-top:4px}
+.strip{grid-column:1 / -1;margin-top:96px;display:grid;grid-template-columns:7fr 5fr;gap:32px;align-items:end}
+.strip img{width:100%;height:440px;object-fit:cover;object-position:50% 60%}
+.proof{font:800 46px/1.02 var(--display);letter-spacing:.005em}
+.proof span{color:var(--sun-ink)}
+.foot{grid-column:1 / -1;margin-top:72px;padding-top:20px;border-top:1px solid var(--paper-3);display:flex;gap:28px;font-size:13.5px;color:var(--ink-2)}
+.foot p{margin-left:auto}
+
+/* ===== phone frames ===== */
+.phones{max-width:1440px;margin:0 auto;padding:0 56px 40px;display:grid;grid-template-columns:auto 1fr;gap:72px;align-items:start}
+.phone{width:410px;border-radius:52px;padding:10px;background:oklch(0.27 0.01 285);box-shadow:0 0 0 1px oklch(1 0 0 / .08),0 40px 80px oklch(0 0 0 / .5)}
+.screen{width:390px;border-radius:42px;overflow:hidden;background:var(--night);position:relative}
+.sbar{height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 30px;font:600 15px/1 var(--body)}
+.sbar i{width:120px;height:30px;border-radius:20px;background:#000;display:block}
+.notes{padding-top:40px;max-width:520px}
+.notes h3{font:800 46px/.95 var(--display);margin-bottom:22px}
+.notes ol{padding-left:0;list-style:none;display:grid;gap:18px;counter-reset:n}
+.notes li{display:grid;grid-template-columns:34px 1fr;color:var(--on-night-2);font-size:15.5px}
+.notes li::before{counter-increment:n;content:counter(n);font:800 22px/1 var(--display);color:var(--sun);padding-top:2px}
+.notes li b{color:var(--on-night);font-weight:600}
+
+/* mobile landing */
+.m-hero{position:relative;height:560px;margin-top:-44px}
+.m-hero img{width:100%;height:100%;object-fit:cover;object-position:50% 60%}
+.m-hero::before{content:"";position:absolute;inset:0;background:linear-gradient(0deg,var(--night) 4%,oklch(0.12 0.015 285 / 0) 55%),linear-gradient(180deg,oklch(0.12 0.015 285 / .7),oklch(0.12 0.015 285 / 0) 20%);z-index:1}
+.m-nav{position:absolute;top:44px;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:8px 20px;z-index:3}
+.m-nav .wordmark{font-size:22px}
+.m-nav a{font-size:14px;font-weight:500;min-height:44px;display:flex;align-items:center;text-decoration:none;border-bottom:0}
+.m-h1{position:absolute;left:-6px;bottom:-14px;z-index:3;font:900 92px/.8 var(--display);white-space:nowrap}
+.m-h1 .lit{color:var(--sun)}
+.m-body{padding:34px 20px 28px}
+.m-body .lede{font-size:16.5px;line-height:1.5}
+.m-body .btn-ticket{width:100%;margin-top:22px}
+.m-body .btn-ticket .main{flex:1;text-align:center}
+.m-body .btn-text{margin-top:10px}
+.m-steps{list-style:none;padding:0;margin-top:30px;display:grid;gap:0}
+.m-steps li{display:grid;grid-template-columns:44px 1fr;padding:14px 0;border-top:1px solid var(--night-3)}
+.m-steps .n{font:900 40px/.85 var(--display);color:var(--sun)}
+.m-steps b{display:block;font-weight:600}
+.m-steps span{color:var(--on-night-2);font-size:14.5px}
+
+/* ===== 02 STORE PAGE ===== */
+.st-head{padding:4px 20px 16px;display:grid;grid-template-columns:1fr auto;gap:4px 14px;align-items:start}
+.tableno{grid-row:1 / span 2;grid-column:2;background:var(--sun);color:var(--night);padding:6px 10px 8px;text-align:center;min-width:72px}
+.tableno small{display:block;font:600 12px/1 var(--body)}
+.tableno b{font:900 38px/.9 var(--display)}
+.st-name{font:900 40px/.9 var(--display);letter-spacing:.005em}
+.st-meta{font-size:13.5px;color:var(--on-night-2);line-height:1.45}
+.st-meta .open{color:var(--ok-night);font-weight:600}
+.st-meta .open::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok-night);margin-right:6px;vertical-align:1px}
+.controls{position:sticky;top:0;background:var(--night-2);padding:12px 20px 10px;z-index:4;border-bottom:1px solid var(--night-3)}
+.search{display:flex;align-items:center;gap:10px;height:46px;padding:0 14px;background:var(--night);box-shadow:inset 0 0 0 1px var(--night-3)}
+.search svg{width:18px;height:18px;color:var(--on-night-2)}
+.search input{flex:1;background:none;border:0;color:var(--on-night);font:inherit;font-size:16px;outline:0}
+.search input::placeholder{color:var(--on-night-2)}
+.chips{display:flex;gap:6px;margin-top:10px;overflow-x:auto;scrollbar-width:none;align-items:center}
+.chip{height:36px;padding:0 13px;border:0;background:transparent;color:var(--on-night-2);font-size:14.5px;font-weight:500;box-shadow:inset 0 0 0 1px var(--night-3);flex:none}
+.chip[aria-pressed="true"]{background:var(--on-night);color:var(--night);box-shadow:none;font-weight:600}
+.chips .div{width:1px;height:22px;background:var(--night-3);flex:none;margin:0 4px}
+.curr{display:flex;flex:none;margin-left:auto;font-size:13px}
+.curr button{height:36px;padding:0 9px;border:0;background:transparent;color:var(--on-night-2);box-shadow:inset 0 0 0 1px var(--night-3)}
+.curr button[aria-pressed="true"]{color:var(--sun);box-shadow:inset 0 -2px 0 var(--sun),inset 0 0 0 1px var(--night-3)}
+.count{display:flex;justify-content:space-between;padding:14px 20px 8px;font-size:14px;color:var(--on-night-2)}
+.count b{color:var(--on-night);font-weight:600}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:28px 12px;padding:6px 20px 24px}
+.tile{position:relative;display:flex;flex-direction:column}
+.art{position:relative;aspect-ratio:63/88;overflow:hidden;background:var(--night-2)}
+.art img{width:100%;height:100%;object-fit:cover}
+.art.slab{aspect-ratio:3/5}
+.art.sealed{aspect-ratio:1/1;display:grid;place-items:center;padding:14px;background:var(--night-2)}
+.art.sealed img{object-fit:contain}
+.slablabel{position:absolute;left:12.5%;right:11.5%;top:6.4%;height:11.4%;display:flex;flex-direction:column;justify-content:center;padding:0 6px;color:var(--ink);font:700 9px/1.15 var(--body);z-index:3}
+.slablabel b{font:800 13px/1 var(--display);letter-spacing:.03em}
+.lang{position:absolute;top:8px;left:8px;z-index:3;background:var(--night);color:var(--on-night);font:800 14px/1 var(--display);padding:4px 6px 3px;letter-spacing:.06em}
+.stamp{align-self:flex-start;margin:10px 0 2px;font:800 14px/1 var(--display);letter-spacing:.04em;color:var(--sun);padding:4px 7px 3px;box-shadow:inset 0 0 0 1.5px var(--sun);transform:rotate(-2deg)}
+.t-name{font-weight:600;font-size:15.5px;line-height:1.25;margin-top:9px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.stamp + .t-name{margin-top:6px}
+.t-meta{font-size:13px;color:var(--on-night-2);margin-top:2px}
+.t-row{display:flex;justify-content:space-between;align-items:end;margin-top:8px;gap:8px}
+.t-price{font:800 30px/.9 var(--display)}
+.t-alt{font-size:12.5px;color:var(--on-night-2);margin-top:3px}
+.t-stock{font-size:13px;color:var(--on-night-2);margin-top:5px}
+.t-stock.last{color:var(--on-night);font-weight:600}
+.add{width:44px;height:44px;flex:none;border:0;background:var(--night-2);color:var(--on-night);display:grid;place-items:center;box-shadow:inset 0 0 0 1px var(--night-3);position:relative}
+.add svg{width:20px;height:20px}
+.add.on{background:var(--sun);color:var(--night);box-shadow:none}
+.add.on:has(.q){width:auto;padding:0 10px;display:flex;gap:4px}
+.add.on .q{font:800 20px/1 var(--display)}
+.add[disabled]{opacity:.4;cursor:not-allowed}
+.hold .art::after{content:"On hold";position:absolute;inset:0;display:grid;place-items:center;font:800 22px/1 var(--display);letter-spacing:.04em;color:var(--on-night);background:repeating-linear-gradient(-45deg,oklch(0.14 0.015 285 / .72) 0 8px,oklch(0.14 0.015 285 / .5) 8px 16px);z-index:3}
+.fine{padding:4px 20px 120px;font-size:12.5px;color:var(--on-night-2);border-top:1px solid var(--night-3);margin:0 20px;padding-left:0;padding-right:0;padding-top:16px}
+.fine p+p{margin-top:8px}
+
+/* list bar = wristband stub */
+.listbar{position:absolute;left:12px;right:12px;bottom:16px;z-index:6;display:grid;grid-template-columns:1fr auto;background:var(--paper);color:var(--ink);filter:drop-shadow(0 12px 24px oklch(0 0 0 / .6))}
+.listbar .lb-l{padding:11px 16px}
+.listbar .lb-l small{display:block;font-size:12.5px;color:var(--ink-2)}
+.listbar .lb-l b{font:800 26px/1 var(--display)}
+.listbar .btn-ticket{min-height:auto;-webkit-mask:none;mask:none}
+.listbar .btn-ticket .stub{background:radial-gradient(circle,var(--night) 1.4px,#0000 1.9px) left center/3px 7px repeat-y}
+.listbar .lb-perf{width:4px;background:radial-gradient(circle,var(--paper-3) 1.5px,#0000 2px) center top/4px 8px repeat-y}
+
+/* ===== 03 SELLER ===== */
+.seller{max-width:1440px;margin:0 auto;padding:0 56px 40px;display:grid;grid-template-columns:480px 1fr;gap:56px;align-items:start}
+.panel-k{font:600 14px/1.2 var(--body);color:var(--on-night-2);margin-bottom:14px}
+.rt-actions{display:flex;gap:10px;margin-top:16px;justify-content:flex-end}
+.inv{background:var(--night-2)}
+.inv-head,.inv-row{display:grid;grid-template-columns:52px 1.6fr 64px 132px 120px;gap:16px;align-items:center;padding:0 20px}
+.inv-head{height:42px;font-size:13px;color:var(--on-night-2);border-bottom:1px solid var(--night-3)}
+.inv-head span:last-child,.inv-row .pr{text-align:right}
+.inv-row{min-height:76px;border-bottom:1px solid var(--night-3)}
+.inv-row:last-child{border-bottom:0}
+.inv-row img{width:44px;height:60px;object-fit:cover}
+.inv-row .nm{font-weight:600}
+.inv-row .mt{font-size:13px;color:var(--on-night-2)}
+.inv-row .pr b{display:block;font:800 26px/1 var(--display)}
+.inv-row .pr small{font-size:12.5px;color:var(--on-night-2)}
+.inv-row .lg{font:800 15px/1 var(--display);letter-spacing:.06em;color:var(--on-night-2)}
+.badge{display:inline-flex;align-items:center;gap:5px;font:600 12px/1 var(--body);padding:4px 6px;vertical-align:2px;margin-left:6px}
+.b-fixed{background:var(--night-3);color:var(--on-night)}
+.b-stale{color:var(--sun);box-shadow:inset 0 0 0 1px currentColor}
+.stepper{display:inline-grid;grid-template-columns:40px 44px 40px;height:40px;box-shadow:inset 0 0 0 1px var(--night-3)}
+.stepper button{border:0;background:none;display:grid;place-items:center}
+.stepper button:hover{background:var(--night-3)}
+.stepper button svg{width:16px;height:16px}
+.stepper output{display:grid;place-items:center;font:800 22px/1 var(--display)}
+.paper .stepper{box-shadow:inset 0 0 0 1.5px var(--ink)}
+.paper .stepper button:hover{background:var(--paper-2)}
+
+.toaststage{position:relative;margin-top:28px;height:250px;background:linear-gradient(oklch(0.12 0.015 285 / .55),oklch(0.12 0.015 285 / .85)),url(../../../../public/media/table.jpg) center 60%/cover;overflow:hidden;padding:20px}
+.toaststage .replay{position:absolute;right:16px;bottom:16px;z-index:5}
+.toasts{display:grid;gap:12px;justify-items:start}
+.toast{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;width:470px;padding:14px 16px 14px 14px;font-size:15px;line-height:1.4;position:relative}
+.toast .ic{width:30px;height:30px;display:grid;place-items:center}
+.toast .ic svg{width:18px;height:18px}
+.toast b{font-weight:600}
+.t-ok{background:var(--paper);color:var(--ink)}
+.t-ok::before{content:"";position:absolute;left:0;right:0;top:-5px;height:6px;background:radial-gradient(circle at 5px 0,#0000 4.5px,var(--paper) 5px) 0 0/10px 6px repeat-x}
+.t-ok .ic{background:var(--ok);color:var(--paper);border-radius:50%}
+.t-bad{background:var(--night);color:var(--on-night);box-shadow:inset 0 0 0 1.5px var(--bad-night)}
+.t-bad .ic{color:var(--bad-night);box-shadow:inset 0 0 0 1.5px var(--bad-night);border-radius:50%}
+.t-bad .btn{min-height:40px;padding:0 14px;font-size:14px}
+.toast.in{animation:tear .7s var(--expo) both}
+.toast.in:nth-child(2){animation-delay:.42s}
+@keyframes tear{from{opacity:0;transform:translateY(-22px);clip-path:inset(0 0 100% 0)}to{opacity:1;transform:none;clip-path:inset(-10px 0 0 0)}}
+
+/* ===== 04 COMPONENTS (on paper) ===== */
+.sheet{max-width:1440px;margin:0 auto;padding:8px 56px 96px;display:grid;grid-template-columns:repeat(12,1fr);gap:56px 32px}
+.spec{grid-column:span 4}
+.spec.w6{grid-column:span 6}
+.spec.w8{grid-column:span 8}
+.spec h5{font:600 14px/1.2 var(--body);color:var(--ink-2);padding-bottom:10px;margin-bottom:20px;border-bottom:1px solid var(--paper-3)}
+.row{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.paper .btn-ticket .stub{background:radial-gradient(circle,var(--paper) 1.4px,#0000 1.9px) left center/3px 7px repeat-y}
+.paper .btn-dark{background:var(--ink);color:var(--paper)}
+.field{display:grid;gap:6px;max-width:360px}
+.field label{font-weight:600;font-size:14.5px}
+.field input{height:50px;border:0;border-radius:0;background:var(--paper);box-shadow:inset 0 0 0 1.5px var(--ink);padding:0 14px;font:inherit;font-size:16px;color:var(--ink)}
+.field input:focus{outline:0;box-shadow:inset 0 0 0 2.5px var(--sun-ink)}
+.field .help{font-size:13px;color:var(--ink-2)}
+.field.err input{box-shadow:inset 0 0 0 2px var(--bad)}
+.field.err .help{color:var(--bad);display:flex;gap:6px;align-items:center}
+.tabs{display:flex;gap:28px;border-bottom:1.5px solid var(--ink)}
+.tabs button{border:0;background:none;padding:0 0 10px;font-weight:500;color:var(--ink-2);position:relative;min-height:44px;display:flex;align-items:end;gap:7px}
+.tabs button[aria-selected="true"]{color:var(--ink);font-weight:700}
+.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:0;right:0;bottom:-1.5px;height:4px;background:var(--sun)}
+.tabs .cnt{font:800 14px/1 var(--display);background:var(--sun);color:var(--night);padding:3px 5px 2px}
+.bp{display:inline-flex;align-items:center;font:800 14px/1 var(--display);letter-spacing:.04em;padding:5px 7px 4px}
+.bp.stamp-p{color:var(--sun-ink);box-shadow:inset 0 0 0 1.5px var(--sun-ink);transform:rotate(-2deg)}
+.bp.lang-p{background:var(--ink);color:var(--paper);letter-spacing:.08em}
+.bp.last-p{font:600 13px/1 var(--body);letter-spacing:0;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.bp.hold-p{font:600 13px/1 var(--body);letter-spacing:0;background:repeating-linear-gradient(-45deg,var(--paper-2) 0 5px,var(--paper-3) 5px 10px)}
+.bp.ok-p{font:600 13px/1 var(--body);letter-spacing:0;color:var(--ok);box-shadow:inset 0 0 0 1.5px var(--ok)}
+.bp.ok-p::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:6px}
+/* hang tag price */
+.hangtag{position:relative;display:inline-grid;grid-template-columns:auto 1fr;align-items:center;background:var(--ink);color:var(--paper);padding:10px 18px 10px 30px;clip-path:polygon(16px 0,100% 0,100% 100%,16px 100%,0 50%)}
+.hangtag::before{content:"";position:absolute;left:12px;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:var(--paper)}
+.hangtag b{font:900 46px/.9 var(--display)}
+.hangtag small{display:block;font-size:12.5px;color:oklch(0.8 0.01 80);margin-left:12px;line-height:1.3}
+.hangtag small s{color:oklch(0.65 0.01 80)}
+.type-spec{display:grid;gap:8px}
+.type-spec .d{font:900 84px/.85 var(--display)}
+.type-spec .b{font-size:17px;max-width:48ch}
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.sw{height:120px;padding:12px;display:flex;flex-direction:column;justify-content:flex-end;font-size:13px}
+.sw b{font:800 20px/1 var(--display)}
+
+/* ===== 05 TABLE SIGN ===== */
+.signwrap{position:relative;padding:72px 56px 110px;display:grid;grid-template-columns:auto 1fr;gap:72px;max-width:1440px;margin:0 auto;align-items:center}
+.sign{width:148mm;height:210mm;background:oklch(0.985 0.004 82);color:var(--night);position:relative;padding:10mm;display:flex;flex-direction:column;box-shadow:0 30px 70px oklch(0 0 0 / .55);transform:rotate(1.2deg)}
+.sign::before{content:"";position:absolute;left:0;right:0;top:0;height:6mm;background:var(--sun)}
+.sg-top{display:flex;justify-content:space-between;align-items:start;margin-top:5mm}
+.sg-name{font:900 21mm/.82 var(--display);letter-spacing:-.005em;max-width:88mm}
+.sg-table{text-align:right;font:600 3.6mm/1 var(--body)}
+.sg-table b{display:block;font:900 17mm/.85 var(--display)}
+.sg-line{font:600 5mm/1.2 var(--body);margin:6mm 0 4mm}
+.sg-qr{width:80mm;height:80mm;align-self:center}
+.sg-url{text-align:center;font:800 7mm/1 var(--display);letter-spacing:.02em;margin-top:3mm}
+.sg-facts{display:grid;grid-template-columns:repeat(3,1fr);margin-top:auto;border-top:.5mm solid var(--night);padding-top:3mm;font:600 3.6mm/1.2 var(--body)}
+.sg-facts span:nth-child(2){text-align:center}.sg-facts span:nth-child(3){text-align:right}
+.sg-foot{display:flex;justify-content:space-between;align-items:end;margin-top:4mm;font-size:3mm;color:#55585e}
+.sg-nfc{display:flex;gap:2mm;align-items:center;font:600 3.4mm/1 var(--body);color:var(--night)}
+.sg-nfc svg{width:6mm;height:6mm}
+.sign-notes{max-width:440px}
+.sign-notes .btn{margin-top:26px}
+
+@media (max-width:1100px){
+  .hero h1{font-size:19vw}
+  .hero-copy{width:auto;right:24px}
+  .req-float{right:32px;top:120px;transform:rotate(-2.5deg) scale(.85);transform-origin:top right}
+  .seller{grid-template-columns:1fr}
+  .phones{grid-template-columns:minmax(0,1fr)}
+  .phones > *,.seller > *{min-width:0}
+  .seller{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:700px){
+  .marker{flex-wrap:wrap;padding:56px 16px 20px;gap:10px 14px}
+  .marker b{font-size:48px}
+  .marker p{margin-left:0;text-align:left;flex-basis:100%}
+  .hero{height:760px}
+  .hero nav{padding:18px 16px}
+  .hero nav a{font-size:14px}
+  .hero-copy{left:16px;right:16px}
+  .hero-copy .lede{font-size:16px}
+  .hero-actions{flex-direction:column;align-items:stretch;gap:6px;margin:20px 0 26px}
+  .hero-actions .btn-ticket .main{flex:1;text-align:center}
+  .hero h1{font-size:23vw;margin-left:-5px;margin-bottom:-2px}
+  .hero-caption{display:none}
+  .req-float{display:none}
+  .hero-media img,.hero-media video{object-position:30% 30%}
+  .hero-shade{background:linear-gradient(0deg,oklch(0.12 0.015 285 / .97) 0%,oklch(0.12 0.015 285 / .9) 52%,oklch(0.12 0.015 285 / 0) 80%)}
+  .program-grid,.sheet{padding-left:16px;padding-right:16px;display:flex;flex-direction:column;gap:32px}
+  .program-photo img{height:460px}
+  .program h3{font-size:68px;margin:12px 0 0}
+  .steps li{grid-template-columns:56px 1fr}
+  .steps .n{font-size:56px}
+  .strip{grid-template-columns:1fr;margin-top:24px}
+  .strip img{height:260px}
+  .proof{font-size:34px}
+  .foot{flex-wrap:wrap;gap:12px 20px;margin-top:24px}
+  .foot p{margin-left:0}
+  .phones,.seller{padding:0 0 32px;gap:32px}
+  .phone{width:100%;padding:0;border-radius:0;box-shadow:none;background:none}
+  .screen{width:100%;border-radius:0}
+  .notes{padding:0 16px}
+  .notes h3{font-size:38px}
+  .seller > div{padding:0 16px}
+  .rticket{grid-template-columns:1fr 104px}
+  .rt-lines li{grid-template-columns:30px 1fr;}
+  .rt-lines li > .num{grid-column:2}
+  .inv{margin:0 -16px}
+  .inv-head{display:none}
+  .inv-row{grid-template-columns:44px 1fr auto;gap:6px 12px;padding:12px 16px}
+  .inv-row .lg{display:none}
+  .inv-row .stepper{grid-column:2;grid-row:2}
+  .inv-row .pr{grid-column:3;grid-row:1 / span 2}
+  .toaststage{margin:24px -16px 0;height:300px;padding:16px}
+  .toast{width:100%}
+  .spec,.spec.w6,.spec.w8{grid-column:auto}
+  .type-spec .d{font-size:56px}
+  .signwrap{grid-template-columns:1fr;padding:24px 16px 72px;gap:32px;justify-items:center}
+  .sign{zoom:.62}
+}
+@media (prefers-reduced-motion: reduce){
+  .hero-media video{display:none}
+  .toast.in{animation:fadeonly .2s linear both}
+  @keyframes fadeonly{from{opacity:0}to{opacity:1}}
+  .btn{transition:none}
+}
+@media print{
+  body{background:#fff}
+  body > *:not(.print-area){display:none !important}
+  .print-area{display:block !important;padding:0}
+  .print-area .sign-notes{display:none}
+  .sign{transform:none;box-shadow:none;width:148mm;height:210mm}
+  @page{size:A5;margin:0}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ 01 LANDING, DESKTOP ============ -->
+<div class="marker"><b>01</b><h2>Landing, desktop at 1440</h2><p>The hall at night is the hero. Type sits in the shadow the lamps leave behind.</p></div>
+
+<section class="hero" aria-label="Landing hero">
+  <div class="hero-media grain">
+    <img src="../../../../public/media/hero-poster.jpg" alt="">
+    <video autoplay muted loop playsinline poster="../../../../public/media/hero-poster.jpg" aria-hidden="true"><source src="../../../../public/media/hero.mp4" type="video/mp4"></video>
+  </div>
+  <div class="hero-shade"></div>
+  <nav><span class="wordmark">shoptcg<i>.</i>app</span><a href="#">Vendor sign in</a></nav>
+
+  <div class="req-float">
+    <div class="rticket" style="--bg:transparent">
+      <div class="body">
+        <div class="rt-top"><span class="rt-name">Maya R.</span><span class="rt-when">just now</span></div>
+        <ul class="rt-lines">
+          <li><img src="media/card-sea.jpg" alt=""><span>Tidecaller<small>Driftwood Tide 031/165. NM</small></span><span class="num">1 x $42.00</span></li>
+          <li><img src="media/card-sunset.jpg" alt=""><span>Dune Lantern<small>Ember Coast 114/198. LP</small></span><span class="num">2 x $22.00</span></li>
+        </ul>
+        <div class="rt-total"><span>3 items</span><span class="num">$86.00</span></div>
+      </div>
+      <div class="stub">
+        <div><div class="stub-k">Table</div><div class="stub-v">B14</div></div>
+        <div><div class="stub-k">Hold</div><div class="stub-v hold num">14:32</div></div>
+        <span class="stub-no num">No. 0187</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-copy">
+    <p class="lede">List your Pokemon cards, slabs and sealed with market prices. Buyers scan your QR, pick what they want and ping you. <em>You confirm at the table.</em></p>
+    <div class="hero-actions">
+      <a class="btn btn-ticket" href="#"><span class="main">Create your store</span><span class="stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+      <a class="btn btn-text" href="#">See a demo store</a>
+    </div>
+    <h1><span>Your table,</span><span class="lit">priced live.</span></h1>
+  </div>
+  <p class="hero-caption">Saturday, 9:14 PM. Zone B, tables 42 and 43.</p>
+</section>
+
+<section class="paper program" aria-label="How it works">
+  <div class="program-grid">
+    <figure class="program-photo grain">
+      <img src="../../../../public/media/scan.jpg" alt="A buyer holds a phone over a small QR sign on an easel, lit by a clamp lamp at a card show table">
+      <figcaption class="cap"><b>Table 42.</b> One scan and the whole shelf is in their hand, prices included. Nobody has to ask "how much?" twenty times.</figcaption>
+    </figure>
+    <h3>Three things,<br><span>then sell.</span></h3>
+    <ol class="steps">
+      <li><span class="n">1</span><div><h4>Add your stock.</h4><p>Search by name or number, or import a CSV. Raw, graded and sealed, priced from last night's market.</p></div></li>
+      <li><span class="n">2</span><div><h4>Print your table sign.</h4><p>One QR, A5, any printer. Tape it to the case.</p></div></li>
+      <li><span class="n">3</span><div><h4>Sell at the table.</h4><p>Requests ping your phone; confirm and the receipt emails itself.</p></div></li>
+    </ol>
+    <div class="strip">
+      <figure class="grain"><img src="../../../../public/media/handoff.jpg" alt="Cash and a graded card in a clear slab change hands over a black tablecloth" loading="lazy"><figcaption class="cap"><b>9:31 PM.</b> Cash on the cloth, slab across the table, receipt already on its way.</figcaption></figure>
+      <p class="proof">Nightly price sync. Raw, graded <span>and</span> sealed. EN, JP <span>and</span> CN. Your own FX rate.</p>
+    </div>
+    <footer class="foot"><a href="#">Terms</a><a href="#">Contact</a><p>Not affiliated with Nintendo, Creatures, GAME FREAK or The Pokemon Company.</p></footer>
+  </div>
+</section>
+
+<div class="marker"><b>01</b><h2>Landing, phone at 390</h2><p>On a phone the aisle runs vertical, so the headline crops into it.</p></div>
+<div class="phones">
+  <div class="phone"><div class="screen">
+    <div class="sbar" style="position:relative;z-index:4"><span class="num">9:14</span><i></i><span class="num">87%</span></div>
+    <div class="m-hero grain">
+      <img src="../../../../public/media/aisle.jpg" alt="A crowded card show aisle at night, table lamps glowing, a handwritten Table 42 sign in front">
+      <div class="m-nav"><span class="wordmark">shoptcg<i>.</i>app</span><a href="#">Vendor sign in</a></div>
+      <h1 class="m-h1">Your table,<br><span class="lit">priced live.</span></h1>
+    </div>
+    <div class="m-body">
+      <p class="lede">List your Pokemon cards, slabs and sealed with market prices. Buyers scan your QR, pick what they want and ping you. You confirm at the table.</p>
+      <a class="btn btn-ticket" href="#"><span class="main">Create your store</span><span class="stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></a>
+      <a class="btn btn-text" href="#">See a demo store</a>
+      <ol class="m-steps">
+        <li><span class="n">1</span><span><b>Add your stock.</b>Search by name or number, or import a CSV.</span></li>
+        <li><span class="n">2</span><span><b>Print your table sign.</b>One QR, A5, any printer.</span></li>
+        <li><span class="n">3</span><span><b>Sell at the table.</b>Requests ping your phone; confirm and the receipt emails itself.</span></li>
+      </ol>
+    </div>
+  </div></div>
+  <div class="notes">
+    <h3>Why it reads as made by a person</h3>
+    <ol>
+      <li><span><b>Photographs, not gradients.</b> Every mood in this direction comes from a lamp in a real-feeling hall. The UI stays flat and crisp on top.</span></li>
+      <li><span><b>Two materials.</b> Galaxy black is the hall. Warm paper is what you hold: tickets, receipts, the sign. Nothing is glass.</span></li>
+      <li><span><b>Orange is lamplight.</b> It marks where to look: the table number, the hold timer, the one button. It is never a background wash.</span></li>
+      <li><span><b>Type like event signage.</b> A condensed poster face, set big enough to crop. Body copy in a plain newsprint grotesk, sentence case, no tracked caps.</span></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ============ 02 STORE PAGE ============ -->
+<div class="marker"><b>02</b><h2>Public store page, phone</h2><p>The table number is the anchor: it matches the cardboard sign the buyer just walked up to.</p></div>
+<div class="phones">
+  <div class="phone"><div class="screen" style="padding-bottom:0">
+    <div class="sbar"><span class="num">9:16</span><i></i><span class="num">86%</span></div>
+    <header class="st-head">
+      <h1 class="st-name">Ridgeline Cards</h1>
+      <div class="tableno"><small>Table</small><b>B14</b></div>
+      <p class="st-meta"><span class="open">Open</span><br><span class="num">214</span> items. Prices updated 6:00 AM today.</p>
+    </header>
+    <div class="controls">
+      <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" placeholder="Search name or number" aria-label="Search name or number"></label>
+      <div class="chips" role="group" aria-label="Filters">
+        <button class="chip" aria-pressed="true">All</button><button class="chip" aria-pressed="false">Raw</button><button class="chip" aria-pressed="false">Graded</button><button class="chip" aria-pressed="false">Sealed</button>
+        <span class="div"></span>
+        <button class="chip" aria-pressed="false">EN</button><button class="chip" aria-pressed="false">JP</button><button class="chip" aria-pressed="false">CN</button>
+      </div>
+    </div>
+    <div class="count"><span><b class="num">48</b> items</span><span>Sort: Price high to low</span></div>
+    <div class="grid">
+      <article class="tile">
+        <div class="art slab"><img src="media/card-slab.jpg" alt="Violet Hour, graded Gem Mint 10, in a clear slab"><div class="slablabel"><b>GEM MT 10</b><span class="num">Violet Hour 077/150</span></div></div>
+        <span class="stamp">8% under market</span>
+        <h3 class="t-name">Violet Hour</h3>
+        <p class="t-meta">Graded. Gem Mint 10</p>
+        <div class="t-row"><div><div class="t-price num">$310</div><div class="t-alt num">approx. A$471</div></div><button class="add" aria-label="Add Violet Hour to your list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <p class="t-stock last">Last one</p>
+      </article>
+      <article class="tile">
+        <div class="art sealed"><img src="media/card-box.jpg" alt="Ember Coast booster box, sealed in shrink wrap"></div>
+        <h3 class="t-name">Ember Coast booster box, 36 packs</h3>
+        <p class="t-meta">Sealed</p>
+        <div class="t-row"><div><div class="t-price num">$139</div><div class="t-alt num">approx. A$211</div></div><button class="add" aria-label="Add Ember Coast booster box to your list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <p class="t-stock">2 left</p>
+      </article>
+      <article class="tile">
+        <div class="art"><img src="media/card-sea.jpg" alt="Tidecaller card art, a dark sea"></div>
+        <span class="stamp">12% under market</span>
+        <h3 class="t-name">Tidecaller</h3>
+        <p class="t-meta num">Driftwood Tide 031/165. NM</p>
+        <div class="t-row"><div><div class="t-price num">$42</div><div class="t-alt num">approx. A$64</div></div><button class="add on" aria-label="Tidecaller added to your list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></button></div>
+        <p class="t-stock">3 left</p>
+      </article>
+      <article class="tile">
+        <div class="art"><span class="lang">JP</span><img src="media/card-forest.jpg" alt="Mori no Kage card art, a lit forest path"></div>
+        <h3 class="t-name" lang="ja">森の影 <span lang="en">(Mori no Kage)</span></h3>
+        <p class="t-meta num">Kodama 088/102. NM</p>
+        <div class="t-row"><div><div class="t-price num">$18.50</div><div class="t-alt num">approx. A$28</div></div><button class="add" aria-label="Add Mori no Kage to your list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <p class="t-stock">4 left</p>
+      </article>
+      <article class="tile">
+        <div class="art"><img src="media/card-sunset.jpg" alt="Dune Lantern card art, a desert at sunset"></div>
+        <span class="stamp">6% under market</span>
+        <h3 class="t-name">Dune Lantern</h3>
+        <p class="t-meta num">Ember Coast 114/198. LP</p>
+        <div class="t-row"><div><div class="t-price num">$22</div><div class="t-alt num">approx. A$33</div></div><button class="add on" aria-label="Dune Lantern added to your list, 2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg><span class="q num">2</span></button></div>
+        <p class="t-stock">2 left</p>
+      </article>
+      <article class="tile hold">
+        <div class="art"><img src="media/card-storm.jpg" alt="Squall Warden card art, storm clouds"></div>
+        <h3 class="t-name">Squall Warden</h3>
+        <p class="t-meta num">Driftwood Tide 140/165. NM</p>
+        <div class="t-row"><div><div class="t-price num">$64</div><div class="t-alt num">approx. A$97</div></div><button class="add" disabled aria-label="Squall Warden is on hold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <p class="t-stock">On hold. Back in about 12 min if not sold.</p>
+      </article>
+    </div>
+    <div class="fine"><p>AUD shown at the seller's rate: 1 USD = 1.52 AUD. You pay in whatever the seller accepts at the table.</p><p>Prices are this seller's asking prices. Market prices from public sales data, updated nightly. <a href="#">Terms</a></p></div>
+    <div class="listbar">
+      <div class="lb-l"><small>Your list</small><b class="num">3 items, $86.00</b></div>
+      <a class="btn btn-ticket" href="#"><span class="lb-perf"></span><span class="main">Review list</span></a>
+    </div>
+  </div></div>
+  <div class="notes">
+    <h3>Reading the table</h3>
+    <ol>
+      <li><span><b>Table B14 in orange, top right.</b> Same number as the cardboard on the case, so a buyer wandering off can find their way back.</span></li>
+      <li><span><b>"Under market" is a rubber stamp,</b> outlined and two degrees off true, like a sticker a vendor slapped on. It never fills with colour.</span></li>
+      <li><span><b>Prices are set in the poster face.</b> Big, condensed, tabular. The second currency whispers underneath.</span></li>
+      <li><span><b>The list bar is a ticket stub.</b> Paper, perforated, torn off the hall. It is the one light object on the page, so it reads as "yours".</span></li>
+      <li><span><b>On hold</b> gets a hatch, like tape across a case, plus plain words about when it comes back.</span></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ============ 03 SELLER ============ -->
+<div class="marker"><b>03</b><h2>Seller: request, inventory, toasts</h2><p>Requests arrive as tickets with a stub: the code and hold timer tear off the right, exactly what you check against the buyer's phone.</p></div>
+<div class="seller">
+  <div>
+    <p class="panel-k">Requests, newest first</p>
+    <div class="rticket" style="width:100%">
+      <div class="body">
+        <div class="rt-top"><span class="rt-name">Maya R.</span><span class="rt-when">4 min ago</span></div>
+        <ul class="rt-lines">
+          <li><img src="media/card-sea.jpg" alt=""><span>Tidecaller<small>Driftwood Tide 031/165. NM</small></span><span class="num">1 x $42.00</span></li>
+          <li><img src="media/card-sunset.jpg" alt=""><span>Dune Lantern<small>Ember Coast 114/198. LP</small></span><span class="num">2 x $22.00</span></li>
+        </ul>
+        <div class="rt-total"><span>3 items</span><span class="num">$86.00</span></div>
+      </div>
+      <div class="stub">
+        <div><div class="stub-k">Code</div><div class="stub-v code">K7Q2</div></div>
+        <div><div class="stub-k">Hold</div><div class="stub-v hold num">10:48</div></div>
+        <span class="stub-no num">No. 0187</span>
+      </div>
+    </div>
+    <div class="rt-actions">
+      <button class="btn btn-line">Decline</button>
+      <button class="btn btn-ticket"><span class="main">Review sale</span><span class="stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+    </div>
+  </div>
+  <div>
+    <p class="panel-k">Inventory</p>
+    <div class="inv" role="table" aria-label="Inventory">
+      <div class="inv-head" role="row"><span></span><span>Item</span><span>Lang</span><span>Qty</span><span>Your price</span></div>
+      <div class="inv-row" role="row"><img src="media/card-sea.jpg" alt=""><div><div class="nm">Tidecaller</div><div class="mt num">Driftwood Tide 031/165. Near Mint</div></div><span class="lg">EN</span>
+        <div class="stepper"><button aria-label="Decrease"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14"/></svg></button><output class="num">3</output><button aria-label="Increase"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <div class="pr"><b class="num">$42.00</b><small class="num">Mkt $48.10</small></div></div>
+      <div class="inv-row" role="row"><img src="media/card-slab.jpg" alt=""><div><div class="nm">Violet Hour <span class="badge b-fixed">Fixed</span></div><div class="mt num">Graded. Gem Mint 10</div></div><span class="lg">EN</span>
+        <div class="stepper"><button aria-label="Decrease"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14"/></svg></button><output class="num">1</output><button aria-label="Increase"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <div class="pr"><b class="num">$310.00</b><small class="num">Mkt $337.00</small></div></div>
+      <div class="inv-row" role="row"><img src="media/card-forest.jpg" alt=""><div><div class="nm" lang="ja">森の影 <span class="badge b-stale" lang="en">Price 3 days old</span></div><div class="mt num">Kodama 088/102. Near Mint</div></div><span class="lg">JP</span>
+        <div class="stepper"><button aria-label="Decrease"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14"/></svg></button><output class="num">4</output><button aria-label="Increase"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <div class="pr"><b class="num">$18.50</b><small class="num">Mkt $19.60</small></div></div>
+    </div>
+    <div class="toaststage" aria-live="polite">
+      <div class="toasts" id="toasts">
+        <div class="toast t-ok in" role="status"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span><span><b>Sale saved.</b> Receipt <span class="num">R-0042</span> sent to maya.r@example.com.</span><span></span></div>
+        <div class="toast t-bad in" role="alert"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 7v6M12 17h.01"/></svg></span><span><b>Sale not saved.</b> Nothing was charged or changed.</span><button class="btn btn-line">Try again</button></div>
+      </div>
+      <button class="btn btn-line replay" id="replay" style="color:var(--on-night);min-height:40px;font-size:14px">Replay toasts</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 04 COMPONENTS ============ -->
+<section class="paper" aria-label="Component sheet">
+  <div class="marker on-paper"><b>04</b><h2>Component sheet</h2><p>Paper stock for the parts you hold and press. Square corners: tickets are cut, not moulded.</p></div>
+  <div class="sheet">
+    <div class="spec w6"><h5>Buttons</h5>
+      <div class="row">
+        <button class="btn btn-ticket"><span class="main">Create your store</span><span class="stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+        <button class="btn btn-line">Print table sign</button>
+        <button class="btn btn-text">See a demo store</button>
+      </div>
+      <div class="row" style="margin-top:16px">
+        <button class="btn btn-ticket btn-dark"><span class="main">Confirm sale, $80.00</span><span class="stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span></button>
+        <button class="btn btn-ticket" disabled><span class="main">Send to seller</span><span class="stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span></button>
+      </div>
+    </div>
+    <div class="spec w6"><h5>Tabs</h5>
+      <div class="tabs" role="tablist"><button role="tab" aria-selected="true">Requests <span class="cnt num">3</span></button><button role="tab" aria-selected="false">Inventory</button><button role="tab" aria-selected="false">Sales</button><button role="tab" aria-selected="false">More</button></div>
+      <div class="tabs" role="tablist" style="margin-top:28px;width:max-content"><button role="tab" aria-selected="false">7 days</button><button role="tab" aria-selected="true">30 days</button><button role="tab" aria-selected="false">90 days</button></div>
+    </div>
+    <div class="spec"><h5>Input</h5>
+      <div class="field"><label for="f1">Email for your receipt</label><input id="f1" type="email" value="maya.r@example.com" autocomplete="email"><span class="help">We only use it for this receipt.</span></div>
+      <div class="field err" style="margin-top:20px"><label for="f2">Your name</label><input id="f2" type="text" aria-invalid="true" aria-describedby="f2e"><span class="help" id="f2e"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>Enter your name.</span></div>
+    </div>
+    <div class="spec"><h5>Badges</h5>
+      <div class="row" style="gap:12px">
+        <span class="bp stamp-p">12% under market</span><span class="bp lang-p">JP</span><span class="bp lang-p">CN</span>
+      </div>
+      <div class="row" style="gap:12px;margin-top:16px">
+        <span class="bp last-p">Last one</span><span class="bp hold-p">On hold</span><span class="bp ok-p">Open</span>
+      </div>
+    </div>
+    <div class="spec"><h5>Price tag and qty</h5>
+      <div class="hangtag"><b class="num">$42</b><small class="num">approx. A$64<br><s>Mkt $48.10</s></small></div>
+      <div style="margin-top:22px" class="stepper"><button aria-label="Decrease"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14"/></svg></button><output class="num">2</output><button aria-label="Increase"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg></button></div>
+    </div>
+    <div class="spec w6"><h5>Type</h5>
+      <div class="type-spec"><span class="d">Table B14, $310</span><p class="b">Big Shoulders Display for anything you would read from three metres away: table numbers, prices, store names. Schibsted Grotesk for everything you read up close.</p></div>
+    </div>
+    <div class="spec w6"><h5>Colour, by job</h5>
+      <div class="swatches">
+        <div class="sw" style="background:var(--night);color:var(--on-night)"><b>Hall</b>#090911</div>
+        <div class="sw" style="background:var(--seal);color:var(--night)"><b>Seal</b>#7E848B</div>
+        <div class="sw" style="background:var(--sun);color:var(--night)"><b>Lamp</b>#F77C10</div>
+        <div class="sw" style="background:var(--paper-2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--paper-3)"><b>Ticket</b>paper</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 05 TABLE SIGN ============ -->
+<div class="marker"><b>05</b><h2>Printable table sign, A5</h2><p>Works in pure black and white. The orange band prints as mid grey on a mono printer.</p></div>
+<section class="signwrap print-area" aria-label="Table sign">
+  <article class="sign">
+    <div class="sg-top"><h2 class="sg-name">Ridgeline Cards</h2><div class="sg-table">Table<b>B14</b></div></div>
+    <p class="sg-line">Scan to see prices and stock</p>
+    <svg class="sg-qr" id="qr" viewBox="0 0 33 33" role="img" aria-label="QR code placeholder for shoptcg.app/ridgeline-cards"></svg>
+    <p class="sg-url">shoptcg.app/ridgeline-cards</p>
+    <div class="sg-facts"><span>Live prices</span><span>Pick and send</span><span>Pay at the table</span></div>
+    <div class="sg-foot"><span>Powered by shoptcg.app</span><span class="sg-nfc">Or tap your phone here <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 8.5a5 5 0 0 1 0 7M12 6a8.5 8.5 0 0 1 0 12M15.5 3.5a12 12 0 0 1 0 17"/></svg></span></div>
+  </article>
+  <div class="sign-notes">
+    <h3 style="font:800 46px/.95 var(--display);margin-bottom:18px">Taped to the glass by 8&nbsp;AM.</h3>
+    <p style="color:var(--on-night-2)">Store name in the poster face so it reads from the aisle. QR at 80 mm, error correction M, the typed URL underneath for anyone without a scanner. The table number repeats what the show organiser wrote on the cardboard.</p>
+    <button class="btn btn-ticket" onclick="window.print()"><span class="main">Print</span><span class="stub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"/></svg></span></button>
+  </div>
+</section>
+
+<script>
+// Reduced motion: never load the clip, the poster stays.
+const rm = matchMedia('(prefers-reduced-motion: reduce)');
+const v = document.querySelector('.hero video');
+if (rm.matches && v) { v.pause(); v.removeAttribute('autoplay'); v.querySelector('source').remove(); v.load(); }
+
+// Replay toasts
+document.getElementById('replay').addEventListener('click', () => {
+  document.querySelectorAll('#toasts .toast').forEach(t => { t.classList.remove('in'); void t.offsetWidth; t.classList.add('in'); });
+});
+
+// Chip toggles (demo only)
+document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => c.setAttribute('aria-pressed', c.getAttribute('aria-pressed') !== 'true')));
+
+// QR placeholder: finder patterns + seeded modules. Not scannable; the real one comes from the app.
+(() => {
+  const n = 33, svg = document.getElementById('qr'); let s = 7, out = '';
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const inFinder = (x, y) => [[0,0],[n-7,0],[0,n-7]].some(([fx,fy]) => x>=fx-1 && x<=fx+7 && y>=fy-1 && y<=fy+7);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (!inFinder(x,y) && rnd() > .52) out += `M${x} ${y}h1v1h-1z`;
+  let f = '';
+  [[0,0],[n-7,0],[0,n-7]].forEach(([x,y]) => { f += `<rect x="${x+.5}" y="${y+.5}" width="6" height="6" fill="none" stroke="#090911"/><rect x="${x+2}" y="${y+2}" width="3" height="3" fill="#090911"/>`; });
+  svg.innerHTML = `<path d="${out}" fill="#090911"/>${f}`;
+})();
+</script>
+</body>
+</html>
