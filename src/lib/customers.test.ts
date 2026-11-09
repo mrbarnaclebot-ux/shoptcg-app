@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { beforeAll, expect, it } from "vitest";
 import type { Db } from "@/db/open";
-import { listing, store } from "@/db/schema";
+import { listing, request, sale, store } from "@/db/schema";
 import {
   listCustomers,
   maskEmail,
@@ -139,6 +139,34 @@ it("after erasure, a purchase with no tick doesn't re-subscribe them", async () 
   expect(back).toMatchObject({ promoOptIn: false, purchases: 1 });
   expect(back.unsubscribeToken).not.toBe(c.unsubscribeToken);
   expect(await emails(s.storeId)).toEqual([]);
+});
+
+it("removal clears the buyer from finished requests but not from one still open", async () => {
+  const s = await shop();
+  const other = await shop();
+  await buy(s, "maya@example.test", false);
+  await buy(other, "maya@example.test", false);
+  const open = await ask(s, "maya@example.test", false);
+  const [c] = await listCustomers(db, s.storeId);
+  expect(await removeCustomer(db, s.storeId, c.id)).toBe(true);
+
+  const rows = (storeId: string) =>
+    db.select().from(request).where(eq(request.storeId, storeId));
+  const mine = await rows(s.storeId);
+  expect(mine.find((r) => r.id === open)?.buyerEmail).toBe("maya@example.test");
+  const done = mine.find((r) => r.id !== open)!;
+  expect(done).toMatchObject({
+    buyerName: null,
+    buyerEmail: null,
+    ipHash: null,
+  });
+  // The receipt and the other seller's records don't move.
+  const [kept] = await db
+    .select()
+    .from(sale)
+    .where(eq(sale.storeId, s.storeId));
+  expect(kept.buyerEmail).toBe("maya@example.test");
+  expect((await rows(other.storeId))[0].buyerEmail).toBe("maya@example.test");
 });
 
 it("another store's customer can't be removed", async () => {
