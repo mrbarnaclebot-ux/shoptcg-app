@@ -1,53 +1,16 @@
 import { randomBytes } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { expect, test, type Browser, type Page } from "@playwright/test";
-import { OUTBOX } from "../playwright.config";
+import { expect, test } from "@playwright/test";
 import { newVendor } from "./auth";
-import { newBuyer, openVendor, sendList } from "./buyer";
-
-const buyerEmail = () =>
-  `buyer-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}@example.test`;
-
-/** Sends a list and opens it from the seller's queue. */
-async function reviewSale(
-  page: Page,
-  browser: Browser,
-  slug: string,
-  items: string[],
-  opts: { email?: string; promo?: boolean } = {},
-) {
-  const buyer = await newBuyer(browser, slug);
-  await sendList(buyer, slug, items, opts);
-  await page.goto("/dashboard");
-  await page.getByRole("link", { name: "Review sale" }).first().click();
-  await expect(page.getByRole("heading", { name: /^Sale for/ })).toBeVisible();
-  return buyer;
-}
-
-/** One tap, no retry: a tap before hydration has to count. */
-const pay = async (page: Page, method: string) => {
-  await page.getByText(method, { exact: true }).click();
-  await expect(
-    page.getByRole("radio", { name: method, exact: true }),
-  ).toBeChecked();
-};
-
-const confirm = (page: Page) =>
-  page.getByRole("button", { name: /^Confirm sale/ });
-
-async function outboxLine(email: string) {
-  let line: string | undefined;
-  await expect
-    .poll(async () => {
-      const text = await readFile(OUTBOX, "utf8").catch(() => "");
-      line = text
-        .split("\n")
-        .findLast((l) => l.startsWith(`${email} receipt:`));
-      return line;
-    })
-    .toBeTruthy();
-  return line!;
-}
+import {
+  buyerEmail,
+  confirm,
+  newBuyer,
+  openVendor,
+  outboxLine,
+  pay,
+  reviewSale,
+  sendList,
+} from "./buyer";
 
 test("a full table sale: edit, discount, confirm, receipt, stock, buyer", async ({
   page,
