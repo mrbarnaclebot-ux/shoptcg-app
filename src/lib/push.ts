@@ -21,7 +21,12 @@ export function vapid(env: Env = process.env) {
   };
 }
 
-export type PushMessage = { title: string; body: string; tag: string; url: string };
+export type PushMessage = {
+  title: string;
+  body: string;
+  tag: string;
+  url: string;
+};
 type Sub = { endpoint: string; p256dh: string; auth: string };
 export type Sender = (sub: Sub, payload: string) => Promise<unknown>;
 

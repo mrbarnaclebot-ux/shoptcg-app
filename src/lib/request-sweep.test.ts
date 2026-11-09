@@ -50,14 +50,12 @@ test("a lapsed hold reads as expired before the sweeper, which then flips and an
   const sid = randomUUID();
   const id = await past(db, s.storeId, { agoMin: 20, holdMin: 15, sid });
   await db.execute(sql`alter table request_line disable trigger user`);
-  await db
-    .insert(requestLine)
-    .values({
-      requestId: id,
-      listingId: s.listingId,
-      qty: 1,
-      quotedPrice: "1",
-    });
+  await db.insert(requestLine).values({
+    requestId: id,
+    listingId: s.listingId,
+    qty: 1,
+    quotedPrice: "1",
+  });
   await db.execute(sql`alter table request_line enable trigger user`);
 
   expect((await heldByListing(db, s.storeId)).size).toBe(0);

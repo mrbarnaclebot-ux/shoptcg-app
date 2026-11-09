@@ -9,6 +9,7 @@ import {
   store,
   type RequestStatus,
 } from "@/db/schema";
+import { safeImageUrl } from "@/lib/pricing/images";
 
 // Expiry is lazy: a pending row past its expires_at reads as expired whether
 // or not the sweeper has flipped it yet, so correctness never waits on a timer.
@@ -68,7 +69,11 @@ export async function linesFor(db: Db, requestIds: string[]) {
     .orderBy(requestLine.listingId);
   const by = new Map<string, Line[]>();
   for (const r of rows) {
-    const line = { ...r, price: Number(r.price) };
+    const line = {
+      ...r,
+      price: Number(r.price),
+      imageUrl: safeImageUrl(r.imageUrl),
+    };
     by.set(r.requestId, [...(by.get(r.requestId) ?? []), line]);
   }
   return by;

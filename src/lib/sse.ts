@@ -49,7 +49,9 @@ export function sseResponse(
       };
       signal.addEventListener("abort", () => finish());
       write("retry: 3000\n: open\n\n");
-      const unsubscribe = await start((d) => write(`data: ${JSON.stringify(d)}\n\n`));
+      const unsubscribe = await start((d) =>
+        write(`data: ${JSON.stringify(d)}\n\n`),
+      );
       if (closed) unsubscribe();
       else stop = unsubscribe;
     },

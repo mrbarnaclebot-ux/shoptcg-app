@@ -7,7 +7,10 @@ import { pushSubscription } from "@/db/schema";
 import { pushToUser } from "@/lib/push";
 import { requireUser } from "@/lib/session";
 
-const key = z.string().regex(/^[A-Za-z0-9_-]+=*$/).max(200);
+const key = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]+=*$/)
+  .max(200);
 const subSchema = z.object({
   endpoint: z.url({ protocol: /^https$/ }).max(2048),
   keys: z.object({ p256dh: key, auth: key }),

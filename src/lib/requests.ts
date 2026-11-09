@@ -17,7 +17,10 @@ export const MAX_LINES = 30;
 const CODE_CHARS = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
 
 export function requestCode() {
-  return Array.from({ length: 4 }, () => CODE_CHARS[randomInt(29)]).join("");
+  return Array.from(
+    { length: 4 },
+    () => CODE_CHARS[randomInt(CODE_CHARS.length)],
+  ).join("");
 }
 
 export type LineInput = { listingId: string; qty: number };
