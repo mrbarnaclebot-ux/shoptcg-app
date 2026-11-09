@@ -150,14 +150,10 @@ export const toast = {
         ),
   notSaved: (why: string) => error("Not saved", why),
   tableSaved: (label: string | null) => {
-    const description = label
+    const body = label
       ? `Table ${label} is on your sign and store page.`
       : "Your sign no longer shows a table number.";
-    return show("success", `Settings saved. ${description}`, {
-      title: "Settings saved",
-      description,
-      duration: 4000,
-    });
+    return show("ok", "Settings saved", body, 4000);
   },
 
   itemUpdated: (name: string, change: string) =>

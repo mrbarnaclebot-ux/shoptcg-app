@@ -14,19 +14,24 @@ async function seededVendor(page: Page) {
 /** Saves the settings form with the given changes. */
 async function saveSettings(
   page: Page,
-  set: { open?: boolean; currency?: [string, string]; nfc?: boolean },
+  set: { currency?: [string, string]; nfc?: boolean },
 ) {
   await page.goto("/dashboard/settings");
   if (set.currency) {
     await page.getByLabel("Code").fill(set.currency[0]);
     await page.getByLabel("Your rate for 1 USD").fill(set.currency[1]);
   }
-  if (set.open !== undefined)
-    await page.getByLabel("Store open").setChecked(set.open);
   if (set.nfc !== undefined)
     await page.getByLabel("I have an NFC tag on my table").setChecked(set.nfc);
   await page.getByRole("button", { name: "Save settings" }).click();
   await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+}
+
+async function openStore(page: Page) {
+  await page.goto("/dashboard");
+  const open = page.getByRole("switch", { name: "Store open" });
+  await open.click();
+  await expect(open).toHaveAttribute("aria-checked", "true");
 }
 
 const count = (page: Page) =>
@@ -46,7 +51,8 @@ test("a buyer browses, filters and opens an item", async ({
   browser,
 }) => {
   const { slug, ids } = await seededVendor(page);
-  await saveSettings(page, { open: true, currency: ["AUD", "1.52"] });
+  await openStore(page);
+  await saveSettings(page, { currency: ["AUD", "1.52"] });
 
   // A fresh context: buyers have no cookies.
   const buyer = await (await browser.newContext()).newPage();
@@ -114,7 +120,7 @@ test("a closed store can be browsed but not requested from", async ({
     0,
   );
 
-  await saveSettings(page, { open: true });
+  await openStore(page);
   await buyer.reload();
   await expect(buyer.getByText("Browsing only.")).toHaveCount(0);
   await expect(
@@ -124,7 +130,7 @@ test("a closed store can be browsed but not requested from", async ({
 
 test("the buyer's list survives a reload", async ({ page, browser }) => {
   const { slug } = await seededVendor(page);
-  await saveSettings(page, { open: true });
+  await openStore(page);
   const buyer = await (await browser.newContext()).newPage();
   await buyer.goto(`/${slug}`);
   await buyer
@@ -172,7 +178,7 @@ test("the table sign prints one A5 page with a QR that scans to the store", asyn
       ) => { data: string } | null;
       return (window as unknown as { jsQR: Decode }).jsQR(data, 400, 400)?.data;
     });
-  expect(decoded).toBe(`http://localhost:3000/${slug}?src=sign`);
+  expect(decoded).toBe(`${new URL(page.url()).origin}/${slug}?src=sign`);
 
   await page.getByLabel("Table number").fill("B14");
   await page.getByRole("button", { name: "Save", exact: true }).click();
