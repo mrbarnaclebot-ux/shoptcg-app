@@ -6,6 +6,14 @@ export type SignSize = "a5" | "a4";
 const UNIT = { a5: 1, a4: 210 / 148 } as const;
 const QR_MM = { a5: 80, a4: 110 } as const;
 
+/** Name size in mm on A5: shrinks for long names and long single words. */
+export function nameMm(name: string) {
+  const longest = Math.max(...name.split(/\s+/).map((w) => w.length));
+  if (name.length > 30 || longest > 11) return 13;
+  if (name.length > 18 || longest > 8) return 16;
+  return 19;
+}
+
 /**
  * The printed table sign. White stock and galaxy ink so it works in pure
  * black and white; the lamp band prints as mid grey on a mono printer.
@@ -28,6 +36,7 @@ export function TableSign(props: {
         {
           "--u": `${u}mm`,
           "--qr": `${QR_MM[props.size]}mm`,
+          "--name-mm": nameMm(props.name),
         } as React.CSSProperties
       }
     >
@@ -47,7 +56,6 @@ export function TableSign(props: {
         role="img"
         aria-label={`QR code for ${props.shownUrl}`}
       >
-        <rect width={code.size} height={code.size} fill="#fff" />
         <path d={code.d} fill="#090911" />
       </svg>
       <p className="ts-url" data-testid="sign-url">

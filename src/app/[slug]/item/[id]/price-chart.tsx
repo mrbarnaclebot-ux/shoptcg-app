@@ -1,10 +1,15 @@
 import { cn } from "cn";
 import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
+import { usdTag } from "@/lib/fx";
 import { shortDate, usd } from "@/lib/format";
 import { scale, trend, type Point } from "./chart-scale";
 
 const W = 320;
 const H = 160;
+// Whole dollars once the range is wide enough that cents are noise.
+const tick = (v: number, range: number) =>
+  range >= 10 ? usdTag(Math.round(v)) : usd(v);
+
 const ICON = { up: ArrowUpRight, down: ArrowDownRight, flat: ArrowRight };
 
 /**
@@ -49,7 +54,7 @@ export function PriceChart(props: {
           className="num flex flex-col justify-between text-xs text-muted-foreground"
         >
           {ticks.map((v) => (
-            <span key={v}>{usd(v)}</span>
+            <span key={v}>{tick(v, s.max - s.min)}</span>
           ))}
         </div>
         <svg

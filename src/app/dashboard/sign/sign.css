@@ -27,7 +27,7 @@
   margin-top: calc(var(--u) * 5);
 }
 .ts-name {
-  font: 900 calc(var(--u) * 19) / 0.84 var(--font-display);
+  font: 900 calc(var(--u) * var(--name-mm)) / 0.92 var(--font-display);
   font-variation-settings: "opsz" 72;
   overflow-wrap: anywhere;
   display: -webkit-box;

@@ -50,7 +50,7 @@ async function Sign({
       {/* @page cannot depend on a class, so the chosen size is written per render. */}
       <style>{`@page { size: ${size.toUpperCase()} portrait; margin: 0 }`}</style>
       <div className="max-w-full overflow-hidden">
-        <div className="origin-top-left max-md:[zoom:0.6] md:max-lg:[zoom:0.85]">
+        <div className="origin-top-left max-md:[zoom:0.6] md:max-lg:[zoom:0.85] print:[zoom:1]">
           <TableSign
             size={size}
             name={store.name}

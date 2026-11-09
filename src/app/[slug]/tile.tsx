@@ -15,6 +15,8 @@ export const ART_ASPECT = {
   sealed: "aspect-square",
 } as const;
 
+const PLACEHOLDER = { raw: "Card", graded: "Slab", sealed: "Sealed" };
+
 // Japanese and Chinese names get their own lang so the right glyphs render.
 export const HTML_LANG = { en: undefined, ja: "ja", zh: "zh" } as const;
 
@@ -64,10 +66,16 @@ export function Art(props: {
           }
         />
       ) : (
-        <span className="paper absolute inset-0 grid place-items-center p-2 text-center">
-          <span className="font-display num text-[1.75rem] leading-none font-black text-muted-foreground">
-            {it.number ?? LANGUAGE_LABEL[it.language]}
+        // No photo: an empty case well that still says which card it is.
+        <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-3 text-center shadow-[inset_0_0_0_1px_var(--border)]">
+          <span className="font-display num text-[2rem] leading-none font-black text-muted-foreground">
+            {it.number ?? PLACEHOLDER[it.kind]}
           </span>
+          {it.setName && (
+            <span className="line-clamp-2 text-xs text-subtle">
+              {it.setName}
+            </span>
+          )}
         </span>
       )}
       {it.language !== "en" && (
