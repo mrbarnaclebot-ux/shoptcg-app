@@ -2,6 +2,14 @@ import type { NextConfig } from "next";
 import { IMAGE_HOSTS } from "./src/lib/pricing/images";
 
 const nextConfig: NextConfig = {
+  // Test-only routes are named *.e2e.ts and exist only in E2E_SEED=1 builds.
+  pageExtensions: [
+    "tsx",
+    "ts",
+    "jsx",
+    "js",
+    ...(process.env.E2E_SEED === "1" ? ["e2e.ts"] : []),
+  ],
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,

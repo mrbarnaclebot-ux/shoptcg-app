@@ -1,12 +1,8 @@
 import "server-only";
 import { appendFile } from "node:fs/promises";
+import { isDeployed } from "@/lib/deployed";
 
 const FROM = process.env.EMAIL_FROM ?? "shoptcg <onboarding@resend.dev>";
-const DEPLOYED = [
-  "RAILWAY_ENVIRONMENT",
-  "RAILWAY_ENVIRONMENT_ID",
-  "RAILWAY_PROJECT_ID",
-];
 
 /**
  * E2E only: playwright.config.ts sets MAGIC_LINK_OUTBOX so tests read sign-in
@@ -15,7 +11,7 @@ const DEPLOYED = [
  */
 export function outboxPath(env: Record<string, string | undefined>) {
   const outbox = env.MAGIC_LINK_OUTBOX;
-  if (outbox && DEPLOYED.some((k) => env[k]))
+  if (outbox && isDeployed(env))
     throw new Error(
       "MAGIC_LINK_OUTBOX must never be set on a deployed service",
     );
