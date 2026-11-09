@@ -32,6 +32,8 @@ async function openStore(page: Page) {
   const open = page.getByRole("switch", { name: "Store open" });
   await open.click();
   await expect(open).toHaveAttribute("aria-checked", "true");
+  // It flips before the save lands; a buyer loading now could still see it closed.
+  await expect(open).toHaveAttribute("aria-busy", "false");
 }
 
 const count = (page: Page) =>

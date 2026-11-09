@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { newVendor } from "./auth";
 import {
   add,
@@ -18,7 +18,7 @@ test("happy path: the seller sees the ticket within 3 seconds", async ({
   await expect(page.getByText("Live", { exact: true })).toBeVisible();
   const buyer = await newBuyer(browser, slug);
   const code = await sendList(buyer, slug, ["Charizard ex", "Gengar"]);
-  await expect(buyer.getByText(/Held for \d+:\d\d/)).toBeVisible();
+  await expect(buyer.getByTestId("hold-clock")).toHaveText(/\d+:\d\d/);
   await expect(buyer.getByText("Show the seller this code")).toBeVisible();
 
   await expect(page.getByText(code, { exact: true })).toBeVisible({
@@ -236,6 +236,7 @@ test("a closed store: no list bar, and a stale list gets the closed copy", async
   const open = page.getByRole("switch", { name: "Store open" });
   await open.click();
   await expect(open).toHaveAttribute("aria-checked", "false");
+  await expect(open).toHaveAttribute("aria-busy", "false");
 
   await buyer.getByRole("button", { name: "Send to seller" }).click();
   await expect(

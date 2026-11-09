@@ -27,13 +27,19 @@ for (const width of [390, 768, 1280]) {
     await sendList(buyer, slug, ["Charizard ex", "Gengar", "Mew ex"], {
       promo: true,
     });
+    await shot(buyer, "waiting", width);
     await page.goto("/dashboard");
+    await expect(page.getByRole("link", { name: "Review sale" })).toBeVisible();
+    await shot(page, "queue", width);
     await page.getByRole("link", { name: "Review sale" }).click();
     await page.getByLabel("Price each for Charizard ex").fill("240");
     await page.getByText("%", { exact: true }).click();
     await page.getByLabel("Percent off").fill("10");
-    await shot(page, "confirm", width);
     await page.getByText("Cash").click();
+    await shot(page, "confirm", width);
+    // What the seller sees at the end of the form: the sticky Confirm over the total?
+    await page.evaluate(() => scrollTo(0, document.body.scrollHeight));
+    await page.screenshot({ path: `${OUT}/confirm-end-${width}.png` });
     await page.getByRole("button", { name: /^Confirm sale/ }).click();
     await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
     await expect(page.getByText(/^Emailed to/)).toBeVisible();

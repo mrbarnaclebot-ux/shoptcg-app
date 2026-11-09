@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { OUTBOX } from "../playwright.config";
@@ -23,14 +24,13 @@ async function reviewSale(
   return buyer;
 }
 
-/** Retries because a tap before hydration is dropped; the seller just taps again. */
-const pay = (page: Page, method: string) =>
-  expect(async () => {
-    await page.getByText(method, { exact: true }).click();
-    await expect(
-      page.getByRole("radio", { name: method, exact: true }),
-    ).toBeChecked({ timeout: 500 });
-  }).toPass();
+/** One tap, no retry: a tap before hydration has to count. */
+const pay = async (page: Page, method: string) => {
+  await page.getByText(method, { exact: true }).click();
+  await expect(
+    page.getByRole("radio", { name: method, exact: true }),
+  ).toBeChecked();
+};
 
 const confirm = (page: Page) =>
   page.getByRole("button", { name: /^Confirm sale/ });
@@ -75,8 +75,9 @@ test("a full table sale: edit, discount, confirm, receipt, stock, buyer", async 
   await expect(page.getByText("-$24.81")).toBeVisible();
   await confirm(page).click();
 
-  await expect(page.locator(".toasts")).toContainText("Sale R-0001 recorded");
   await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
+  // The receipt says it all, so the toast doesn't sit on top of it.
+  await expect(page.locator(".toasts")).not.toContainText("recorded");
   await expect(page.getByText("Paid by Cash")).toBeVisible();
   // The review route stays mounted but hidden, so only look at what shows.
   await expect(
@@ -108,6 +109,42 @@ test("a full table sale: edit, discount, confirm, receipt, stock, buyer", async 
   await page.goto("/dashboard");
   await expect(page.getByText("Today: 1 sale, $223.29")).toBeVisible();
   await expect(page.getByRole("link", { name: "Review sale" })).toHaveCount(0);
+});
+
+test("a payment tap before the page wakes up still counts", async ({
+  page,
+  browser,
+}) => {
+  const slug = await openVendor(page);
+  await reviewSale(page, browser, slug, ["Gengar"]);
+  // Hold back the scripts, so the tap lands on the server's HTML.
+  let wake = () => {};
+  const asleep = new Promise<void>((resolve) => (wake = resolve));
+  await page.route("**/_next/static/**/*.js", async (route) => {
+    await asleep;
+    await route.continue();
+  });
+  const load = page.goto(page.url(), { waitUntil: "commit" });
+  await pay(page, "Cash");
+  wake();
+  await load;
+  await expect(confirm(page)).toBeEnabled();
+  await expect(
+    page.getByRole("radio", { name: "Cash", exact: true }),
+  ).toBeChecked();
+});
+
+test.describe("a seller in Tokyo", () => {
+  test.use({ timezoneId: "Asia/Tokyo" });
+
+  test("sees the receipt in their own zone", async ({ page, browser }) => {
+    const slug = await openVendor(page);
+    await reviewSale(page, browser, slug, ["Gengar"]);
+    await pay(page, "Cash");
+    await confirm(page).click();
+    await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
+    await expect(page.getByText(/GMT\+9/)).toBeVisible();
+  });
 });
 
 test("a double tap makes one sale, and the stamp survives reduced motion", async ({
@@ -183,7 +220,9 @@ test("a lapsed hold can still sell, until stock is gone", async ({
   await expect(page.getByText("No longer in stock")).toBeVisible();
   await pay(page, "Cash");
   await expect(confirm(page)).toBeDisabled();
-  await expect(page.getByText("Remove what's no longer here.")).toBeVisible();
+  await expect(
+    page.getByText("Decline this request, or wait for stock."),
+  ).toBeVisible();
 
   // A confirmed request goes straight to its receipt.
   await page.goto(`/dashboard/requests/${firstUrl}`);
@@ -204,10 +243,11 @@ test("a failed receipt email keeps the sale and can be resent", async ({
       path: "/",
     },
   ]);
-  await reviewSale(page, browser, slug, ["Gengar"], { email });
+  const buyer = await reviewSale(page, browser, slug, ["Gengar"], { email });
   await pay(page, "Cash");
   await confirm(page).click();
   await expect(page.getByText("Email didn't send.")).toBeVisible();
+  await expect(buyer.getByText("We couldn't email it.")).toBeVisible();
   await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
   await page.getByRole("button", { name: "Resend" }).click();
   await expect(page.locator(".toasts")).toContainText("Email didn't send");
@@ -241,7 +281,7 @@ test("unsubscribe works from the email's link, and only by pressing the button",
   await expect(reader.getByText("You'll still get receipts")).toBeVisible();
 
   // An unknown token reads the same, and a junk token is no error.
-  await reader.goto("/u/not-a-real-token");
+  await reader.goto(`/u/${randomBytes(32).toString("base64url")}`);
   await expect(
     reader.getByRole("heading", { name: "Stop emails from this seller?" }),
   ).toBeVisible();
