@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/db/open";
 import * as schema from "@/db/schema";
 import { upsertHits } from "@/lib/catalog";
+import { PartialPricesError } from "@/lib/pricing/errors";
 import type { CatalogHit } from "@/lib/pricing/provider";
 import { syncPrices } from "@/lib/sync-prices";
 import { addStore, fakeProvider, hit, migratedDb } from "@/lib/test-fixtures";
@@ -65,6 +66,7 @@ describe("syncPrices", () => {
     const [never] = await list([hit({ providerId: "never" })]);
     const res = await syncPrices(db, "2026-11-09", only("fake"), {
       maxCalls: 1,
+      maxBackfill: 200,
     });
     expect(res).toMatchObject({ items: 1, written: 1 });
     const fresh = await db.select().from(schema.pricePoint);
@@ -133,5 +135,41 @@ describe("syncPrices", () => {
     expect(res.backfilled).toBe(1);
     const pts = await db.select().from(schema.pricePoint);
     expect(pts.filter((p) => p.catalogItemId === thin.id)).toHaveLength(3);
+  });
+
+  it("caps backfill, charges 2 credits each, skips items that failed to price", async () => {
+    await db.execute(sql`update listing set active = false`);
+    await list(
+      Array.from({ length: 6 }, (_, i) =>
+        hit({ provider: "cap", providerId: `c${i}` }),
+      ),
+    );
+    const provider = { ...fakeProvider([]), name: "cap" };
+    const asked: string[] = [];
+    provider.getHistory = vi.fn(async (ref) => {
+      asked.push((ref as { id: string }).id);
+      return [];
+    });
+    const pick = (n: string) => (n === "cap" ? provider : null);
+    // 6 credits priced, 4 left: two history calls fit, not three.
+    let res = await syncPrices(db, "2026-11-13", pick, {
+      maxCalls: 10,
+      maxBackfill: 200,
+    });
+    expect(res.backfilled).toBe(2);
+    res = await syncPrices(db, "2026-11-14", pick, {
+      maxCalls: 5000,
+      maxBackfill: 3,
+    });
+    expect(res.backfilled).toBe(3);
+    // Every price call fails tonight: no history call follows a failed price.
+    provider.getPrices = async () => {
+      throw new PartialPricesError([], 6, new Error("down"));
+    };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    asked.length = 0;
+    res = await syncPrices(db, "2026-11-15", pick);
+    expect(res).toMatchObject({ failed: 6, backfilled: 0 });
+    expect(asked).toEqual([]);
   });
 });

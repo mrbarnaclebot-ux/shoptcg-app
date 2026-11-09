@@ -19,14 +19,19 @@ const CHUNK = 25;
 const MAX_FAILED_CHUNKS = 3;
 
 export interface SyncLimits {
-  /** Items priced per run; each costs at most one provider call. */
+  /** Credits per run: one per item priced, HISTORY_COST per history backfill. */
   maxCalls: number;
+  /** History backfills per run, so a burst of new listings cannot eat the night. */
+  maxBackfill: number;
 }
 
 function envLimits(): SyncLimits {
   const int = (v: string | undefined, d: number) =>
     Number.isInteger(Number(v)) && Number(v) > 0 ? Number(v) : d;
-  return { maxCalls: int(process.env.SYNC_MAX_CALLS, 5000) };
+  return {
+    maxCalls: int(process.env.SYNC_MAX_CALLS, 5000),
+    maxBackfill: int(process.env.SYNC_MAX_BACKFILL, 200),
+  };
 }
 
 export interface SyncResult {
@@ -81,6 +86,7 @@ async function syncProvider(
   date: string,
   result: SyncResult,
 ) {
+  const priced = new Set<string>();
   let failedInRow = 0;
   for (let i = 0; i < items.length; i += CHUNK) {
     const chunk = items.slice(i, i + CHUNK);
@@ -89,7 +95,7 @@ async function syncProvider(
       console.error(
         `[sync] ${provider.name}: ${failedInRow} chunks failed in a row, stopping`,
       );
-      return;
+      return priced;
     }
     // A partial failure still carries the quotes that were paid for.
     let [quotes, failed] = [[] as Quote<CatalogItem>[], 0];
@@ -102,17 +108,21 @@ async function syncProvider(
       console.error(`[sync] ${provider.name} chunk ${i / CHUNK} failed:`, err);
     }
     await writeQuotes(db, date, provider.name, quotes);
+    for (const q of quotes) priced.add(q.ref.id);
     result.written += quotes.length;
     result.failed += failed;
     // No price means keep yesterday's row; never write a 0.
     result.unpriced += chunk.length - quotes.length - failed;
     failedInRow = failed ? failedInRow + 1 : 0;
   }
+  return priced;
 }
 
 // The item page needs 3 points to draw a chart.
 const MIN_POINTS = 3;
 const BACKFILL_DAYS = 90;
+// PPT bills 1 credit per card plus 1 for history (or for eBay on graded).
+const HISTORY_COST = 2;
 
 /** Items among these with fewer than MIN_POINTS rows of history. */
 async function thinItems(db: Db, items: CatalogItem[]) {
@@ -133,7 +143,7 @@ async function thinItems(db: Db, items: CatalogItem[]) {
 
 /**
  * One history call per thin item, so new listings get a chart on day one
- * instead of after three nightly runs. Spends only calls left under maxCalls.
+ * instead of after three nightly runs. Takes at most `budget` items.
  * An item with no provider history is asked again each night until our own
  * daily rows reach MIN_POINTS, so at most twice more.
  */
@@ -144,7 +154,10 @@ async function backfillHistory(
   budget: number,
 ) {
   let calls = 0;
-  for (const item of (await thinItems(db, items)).slice(0, budget)) {
+  for (const item of (await thinItems(db, items)).slice(
+    0,
+    Math.max(0, budget),
+  )) {
     calls++;
     try {
       const points = await provider.getHistory(item, BACKFILL_DAYS);
@@ -212,9 +225,16 @@ export async function syncPrices(
       );
       continue;
     }
-    await syncProvider(db, provider, group, date, result);
-    const budget = limits.maxCalls - result.items - result.backfilled;
-    result.backfilled += await backfillHistory(db, provider, group, budget);
+    const priced = await syncProvider(db, provider, group, date, result);
+    // Only items priced tonight: a failing provider gets no more calls, and an
+    // item with no price has no history worth paying for either.
+    const fresh = group.filter((it) => priced.has(it.id));
+    const spent = result.items + result.backfilled * HISTORY_COST;
+    const budget = Math.min(
+      limits.maxBackfill - result.backfilled,
+      Math.floor((limits.maxCalls - spent) / HISTORY_COST),
+    );
+    result.backfilled += await backfillHistory(db, provider, fresh, budget);
   }
   return result;
 }
