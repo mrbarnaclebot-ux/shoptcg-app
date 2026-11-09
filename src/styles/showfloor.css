@@ -163,6 +163,23 @@
     color: var(--text);
   }
 
+  /* ---------- A request that just landed: the lamp pulses twice ---------- */
+  .request-new {
+    outline: 2px solid var(--brand);
+    outline-offset: 3px;
+    animation: request-pulse 0.7s ease-in-out 2;
+  }
+  @keyframes request-pulse {
+    50% {
+      outline-color: transparent;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .request-new {
+      animation: none;
+    }
+  }
+
   /* ---------- Film grain on photographs, never on the page ---------- */
   .grain {
     position: relative;

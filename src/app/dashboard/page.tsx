@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { lineButton } from "@/components/ticket-button";
-import { SectionMark } from "@/components/section-mark";
 import { TableNumber } from "@/components/table-number";
 import { Ticket } from "@/components/ticket";
 import { getDb } from "@/db";
@@ -13,6 +11,7 @@ import { getStoreByOwner } from "@/lib/stores";
 import { CreateStoreForm } from "./create-store-form";
 import { CopyLink } from "./copy-link";
 import { OpenSwitch } from "./open-switch";
+import { RequestQueue } from "./requests/queue";
 import { StoreCreated } from "./store-created";
 
 export const metadata: Metadata = { title: "Dashboard - shoptcg" };
@@ -46,7 +45,7 @@ async function Dashboard({
         <>
           {created && <StoreCreated slug={store.slug} />}
           <StoreSummary store={store} />
-          <RequestsEmpty />
+          <RequestQueue storeId={store.id} />
         </>
       ) : (
         <NewStore />
@@ -103,34 +102,6 @@ function StoreSummary({ store }: { store: Store }) {
             {origin.replace(/^https?:\/\//, "")}/{store.slug}
           </Link>
           <CopyLink url={`${origin}/${store.slug}`} />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-// ponytail: static until the Phase 5 request queue exists.
-function RequestsEmpty() {
-  return (
-    <section aria-labelledby="requests-h" className="flex flex-col gap-3">
-      <SectionMark n={1} id="requests-h">
-        Requests
-      </SectionMark>
-      <div className="flex flex-col items-start gap-3 border-t border-dashed border-border-strong pt-5">
-        <p className="font-display text-[2rem] leading-none font-extrabold">
-          No requests yet.
-        </p>
-        <p className="max-w-[44ch] text-muted-foreground">
-          When a buyer scans your table sign and sends a list, it lands here and
-          your phone chimes. Stock your table first.
-        </p>
-        <div className="mt-1 flex flex-wrap gap-3">
-          <Link href="/dashboard/inventory" className={lineButton}>
-            Go to inventory
-          </Link>
-          <Link href="/dashboard/sign" className={lineButton}>
-            Print table sign
-          </Link>
         </div>
       </div>
     </section>
