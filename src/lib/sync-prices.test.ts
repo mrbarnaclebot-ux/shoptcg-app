@@ -103,4 +103,35 @@ describe("syncPrices", () => {
     expect(calls).toBe(3);
     expect(res).toMatchObject({ written: 0, failed: 80 });
   });
+
+  it("backfills history once per thin item and never for charted ones", async () => {
+    const [thin, full] = await list([
+      hit({ provider: "hist", providerId: "thin" }),
+      hit({ provider: "hist", providerId: "full" }),
+    ]);
+    await db.insert(schema.pricePoint).values(
+      ["2026-09-01", "2026-09-02", "2026-09-03"].map((date) => ({
+        catalogItemId: full.id,
+        date,
+        marketUsd: "5.00",
+        source: "hist",
+      })),
+    );
+    const provider = { ...fakeProvider([]), name: "hist" };
+    provider.getHistory = vi.fn(async () => [
+      { date: "2026-10-01", marketUsd: 4 },
+      { date: "2026-10-15", marketUsd: 4.5 },
+    ]);
+    const res = await syncPrices(db, "2026-11-12", (n) =>
+      n === "hist" ? provider : null,
+    );
+    expect(provider.getHistory).toHaveBeenCalledTimes(1);
+    expect(provider.getHistory).toHaveBeenCalledWith(
+      expect.objectContaining({ id: thin.id }),
+      90,
+    );
+    expect(res.backfilled).toBe(1);
+    const pts = await db.select().from(schema.pricePoint);
+    expect(pts.filter((p) => p.catalogItemId === thin.id)).toHaveLength(3);
+  });
 });

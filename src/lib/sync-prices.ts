@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import {
   catalogItem,
@@ -35,6 +35,8 @@ export interface SyncResult {
   unpriced: number;
   skipped: number;
   failed: number;
+  /** Provider history calls made for items with too few points to chart. */
+  backfilled: number;
 }
 
 function money(v: number | null) {
@@ -108,6 +110,67 @@ async function syncProvider(
   }
 }
 
+// The item page needs 3 points to draw a chart.
+const MIN_POINTS = 3;
+const BACKFILL_DAYS = 90;
+
+/** Items among these with fewer than MIN_POINTS rows of history. */
+async function thinItems(db: Db, items: CatalogItem[]) {
+  if (!items.length) return [];
+  const rows = await db
+    .select({ id: pricePoint.catalogItemId, n: count() })
+    .from(pricePoint)
+    .where(
+      inArray(
+        pricePoint.catalogItemId,
+        items.map((i) => i.id),
+      ),
+    )
+    .groupBy(pricePoint.catalogItemId);
+  const n = new Map(rows.map((r) => [r.id, r.n]));
+  return items.filter((i) => (n.get(i.id) ?? 0) < MIN_POINTS);
+}
+
+/**
+ * One history call per thin item, so new listings get a chart on day one
+ * instead of after three nightly runs. Spends only calls left under maxCalls.
+ * An item with no provider history is asked again each night until our own
+ * daily rows reach MIN_POINTS, so at most twice more.
+ */
+async function backfillHistory(
+  db: Db,
+  provider: PriceProvider,
+  items: CatalogItem[],
+  budget: number,
+) {
+  let calls = 0;
+  for (const item of (await thinItems(db, items)).slice(0, budget)) {
+    calls++;
+    try {
+      const points = await provider.getHistory(item, BACKFILL_DAYS);
+      if (!points.length) continue;
+      await db
+        .insert(pricePoint)
+        .values(
+          points.map((p) => ({
+            catalogItemId: item.id,
+            date: p.date,
+            marketUsd: p.marketUsd.toFixed(2),
+            source: provider.name,
+          })),
+        )
+        .onConflictDoNothing();
+    } catch (err) {
+      // A chart can wait a night; prices already written stay written.
+      console.error(
+        `[sync] ${provider.name} history for ${item.id} failed:`,
+        err,
+      );
+    }
+  }
+  return calls;
+}
+
 /** Writes today's price_point for every catalog item an active, in-stock listing references. */
 export async function syncPrices(
   db: Db,
@@ -137,6 +200,7 @@ export async function syncPrices(
     unpriced: 0,
     skipped: 0,
     failed: 0,
+    backfilled: 0,
   };
   const byProvider = Map.groupBy(items, (it) => it.provider);
   for (const [name, group] of byProvider) {
@@ -149,6 +213,8 @@ export async function syncPrices(
       continue;
     }
     await syncProvider(db, provider, group, date, result);
+    const budget = limits.maxCalls - result.items - result.backfilled;
+    result.backfilled += await backfillHistory(db, provider, group, budget);
   }
   return result;
 }
