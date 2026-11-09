@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, inArray, sql, sum } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { PAYMENT_METHODS, sale, saleLine } from "@/db/schema";
 import { LANGUAGE_LABEL } from "@/lib/format";
+import { fromCents, toCents } from "@/lib/money";
 import { METHOD_LABEL } from "@/lib/receipt-email";
 
 export const MAX_SPAN_DAYS = 366;
@@ -11,7 +12,6 @@ export const SALES_SHOWN = 500;
 export type Range = {
   from: string;
   to: string;
-  timeZone: string;
   preset: "today" | "weekend" | "custom";
 };
 
@@ -62,6 +62,12 @@ export function weekendOf(today: string) {
   return { from: sat, to: addDays(sat, 1) };
 }
 
+/** What the weekend chip is honestly called: on a weekday it's the one just gone. */
+export function weekendLabel(today: string) {
+  const { from, to } = weekendOf(today);
+  return today === from || today === to ? "This weekend" : "Last weekend";
+}
+
 /** Bad input falls back to today; a backwards range swaps; a long one is cut. */
 export function parseRange(params: Params, timeZone: string, now: Date): Range {
   const today = localDate(now, timeZone);
@@ -78,19 +84,26 @@ export function parseRange(params: Params, timeZone: string, now: Date): Range {
       : from === weekend.from && to === weekend.to
         ? "weekend"
         : "custom";
-  return { from, to, timeZone, preset };
+  return { from, to, preset };
 }
 
-// Which days a sale falls on is the seller's zone today. Its printed time stays
-// in the zone stored on the sale, so a receipt reads the same wherever they are.
-const inRange = (storeId: string, r: Range) =>
+// A sale belongs to the day on its receipt, in the zone it was sold in, so a past
+// show's report doesn't change when the seller travels. The expression can't use
+// the index; the UTC bounds, a day wider than any zone's offset, can.
+export const inRange = (storeId: string, r: Pick<Range, "from" | "to">) =>
   and(
     eq(sale.storeId, storeId),
-    sql`${sale.createdAt} >= (${r.from}::date)::timestamp at time zone ${r.timeZone}`,
-    sql`${sale.createdAt} < (${r.to}::date + 1)::timestamp at time zone ${r.timeZone}`,
+    sql`${sale.createdAt} >= (${r.from}::date - 1)::timestamp at time zone 'UTC'`,
+    sql`${sale.createdAt} < (${r.to}::date + 2)::timestamp at time zone 'UTC'`,
+    sql`${sale.createdAt} >= (${r.from}::date)::timestamp at time zone ${sale.timeZone}`,
+    sql`${sale.createdAt} < (${r.to}::date + 1)::timestamp at time zone ${sale.timeZone}`,
   );
 
-export async function salesReport(db: Db, storeId: string, r: Range) {
+export async function salesReport(
+  db: Db,
+  storeId: string,
+  r: Pick<Range, "from" | "to">,
+) {
   const where = inRange(storeId, r);
   const revenueOf = sql`sum(${saleLine.qty} * ${saleLine.unitPrice})`;
   const [[totals], [items], methods, bestSellers, sales] = await Promise.all([
@@ -189,13 +202,41 @@ export const REPORT_CSV_HEADER = [
   "language",
   "qty",
   "unit_price",
+  "line_total",
   "sale_discount",
   "sale_total",
   "payment_method",
+  "payment_note",
 ];
 
-/** One row per sold line; the buyer's first name only, never their email. */
-export async function reportCsvRows(db: Db, storeId: string, r: Range) {
+/** Each line's share of the sale's total, in cents; rounded so they sum to it exactly. */
+export function lineTotals(
+  lines: { qty: number; unitPrice: string }[],
+  total: number,
+) {
+  const gross = lines.map((l) => toCents(l.unitPrice) * l.qty);
+  const all = gross.reduce((a, b) => a + b, 0);
+  let sofar = 0;
+  let given = 0;
+  return gross.map((g) => {
+    sofar += g;
+    const upTo = all ? Math.round((sofar * total) / all) : total;
+    const share = upTo - given;
+    given = upTo;
+    return share;
+  });
+}
+
+/**
+ * One row per sold line; the buyer's first name only, never their email. So a sum
+ * matches the cash box, line_total adds up to revenue, and the sale's own amounts
+ * are on its first line only.
+ */
+export async function reportCsvRows(
+  db: Db,
+  storeId: string,
+  r: Pick<Range, "from" | "to">,
+) {
   const rows = await db
     .select({ sale, line: saleLine })
     .from(saleLine)
@@ -204,25 +245,32 @@ export async function reportCsvRows(db: Db, storeId: string, r: Range) {
     .orderBy(asc(sale.createdAt), asc(sale.seq), asc(saleLine.lineNo));
   return [
     REPORT_CSV_HEADER,
-    ...rows.map(({ sale: s, line: l }) => [
-      localDate(s.createdAt, s.timeZone),
-      formatter("en-US", s.timeZone, { timeStyle: "short" }).format(
-        s.createdAt,
-      ),
-      s.receiptNo,
-      s.buyerName.trim().split(/\s+/)[0],
-      l.name,
-      l.setName,
-      l.number,
-      l.gradeLabel,
-      LANGUAGE_LABEL[l.language as keyof typeof LANGUAGE_LABEL] ?? l.language,
-      l.qty,
-      l.unitPrice,
-      s.discount,
-      s.total,
-      s.paymentNote
-        ? `${METHOD_LABEL[s.paymentMethod]}: ${s.paymentNote}`
-        : METHOD_LABEL[s.paymentMethod],
-    ]),
+    ...[...Map.groupBy(rows, (x) => x.sale.id).values()].flatMap((group) => {
+      const s = group[0].sale;
+      const shares = lineTotals(
+        group.map((x) => x.line),
+        toCents(s.total),
+      );
+      return group.map(({ line: l }, i) => [
+        localDate(s.createdAt, s.timeZone),
+        formatter("en-US", s.timeZone, { timeStyle: "short" }).format(
+          s.createdAt,
+        ),
+        s.receiptNo,
+        s.buyerName.trim().split(/\s+/)[0],
+        l.name,
+        l.setName,
+        l.number,
+        l.gradeLabel,
+        LANGUAGE_LABEL[l.language as keyof typeof LANGUAGE_LABEL] ?? l.language,
+        l.qty,
+        l.unitPrice,
+        fromCents(shares[i]),
+        i === 0 ? s.discount : null,
+        i === 0 ? s.total : null,
+        METHOD_LABEL[s.paymentMethod],
+        s.paymentNote,
+      ]);
+    }),
   ];
 }

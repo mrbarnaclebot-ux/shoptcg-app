@@ -18,6 +18,12 @@ describe("csvCell", () => {
     expect(cells[0]).toBe(`'${v}`);
   });
 
+  it("neutralises a formula after a semicolon", () => {
+    expect(csvCell("x;=cmd|'/Ccalc'!A0;")).toBe("x;'=cmd|'/Ccalc'!A0;");
+    expect(csvCell("=1;+2")).toBe("'=1;'+2");
+    expect(csvCell("Maya; Theo")).toBe("Maya; Theo");
+  });
+
   it.each(["Maya", "12.50", "R-0001", "Pikachu ex", "a=b", "2026-11-09", ""])(
     "leaves %j alone",
     (v) => expect(csvCell(v)).toBe(v),

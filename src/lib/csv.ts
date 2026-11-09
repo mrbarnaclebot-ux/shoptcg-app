@@ -45,15 +45,19 @@ export function parseCsv(text: string): { line: number; cells: string[] }[] {
 }
 
 // A spreadsheet runs these as formulas, with or without leading spaces, and
-// some read the full-width forms too.
-const FORMULA = /^[\s　]*[=+\-@＝＋－＠]|^[\t\r]/;
+// some read the full-width forms too. Excel with a semicolon list separator
+// splits a line on ";", so what follows one is the start of a cell as well.
+const FORMULA = /(^|;)(?=[\s　]*[=+\-@＝＋－＠])/g;
 
 type Cell = string | number | null | undefined;
 
 /** One cell, safe to open in Excel: formulas neutralised, then RFC 4180 quoted. */
 export function csvCell(value: Cell) {
   const text = String(value ?? "");
-  const safe = FORMULA.test(text) ? `'${text}` : text;
+  const safe = (/^[\t\r]/.test(text) ? `'${text}` : text).replace(
+    FORMULA,
+    "$1'",
+  );
   return /[",\r\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
 }
 

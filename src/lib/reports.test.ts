@@ -16,12 +16,17 @@ import {
 import {
   MAX_SPAN_DAYS,
   addDays,
+  inRange,
+  lineTotals,
+  localDate,
   parseRange,
   reportCsvRows,
   salesReport,
+  weekendLabel,
   weekendOf,
-  type Range,
 } from "@/lib/reports";
+import { toCents } from "@/lib/money";
+import { METHOD_LABEL } from "@/lib/receipt-email";
 import { addStore, migratedDb } from "@/lib/test-fixtures";
 
 let seq = 0;
@@ -90,12 +95,7 @@ async function addSale(
   );
 }
 
-const day = (from: string, to: string, timeZone: string): Range => ({
-  from,
-  to,
-  timeZone,
-  preset: "custom",
-});
+const day = (from: string, to = from) => ({ from, to });
 
 describe("parseRange", () => {
   const now = new Date("2026-11-11T12:00:00Z"); // A Wednesday.
@@ -122,6 +122,13 @@ describe("parseRange", () => {
     expect(weekendOf("2026-11-09")).toEqual(sun); // Monday.
     expect(weekendOf("2026-11-13")).toEqual(sun); // Friday.
     expect(parseRange(sun, "UTC", now).preset).toBe("weekend");
+  });
+
+  it("calls a weekend gone by what it is", () => {
+    expect(weekendLabel("2026-11-07")).toBe("This weekend");
+    expect(weekendLabel("2026-11-08")).toBe("This weekend");
+    expect(weekendLabel("2026-11-09")).toBe("Last weekend");
+    expect(weekendLabel("2026-11-13")).toBe("Last weekend");
   });
 
   it("swaps a backwards range and cuts a long one", () => {
@@ -166,34 +173,67 @@ describe("salesReport", () => {
     db = await migratedDb();
   });
   const storeOf = () => addStore(db, randomUUID().slice(0, 8));
-  const count = async (id: string, r: Range) =>
+  const count = async (id: string, r: ReturnType<typeof day>) =>
     (await salesReport(db, id, r)).summary.sales;
 
-  it("a sale lands on the seller's day across midnight", async () => {
+  it("a sale lands on its own zone's day across midnight", async () => {
+    const syd = await storeOf();
+    const zone = "Australia/Sydney";
+    await addSale(db, syd, "2026-11-08T12:30:00Z", { zone }); // 23:30 Nov 8.
+    await addSale(db, syd, "2026-11-08T13:30:00Z", { zone }); // 00:30 Nov 9.
+    expect(await count(syd, day("2026-11-08"))).toBe(1);
+    expect(await count(syd, day("2026-11-09"))).toBe(1);
+    const utc = await storeOf();
+    await addSale(db, utc, "2026-11-08T12:30:00Z");
+    await addSale(db, utc, "2026-11-08T13:30:00Z");
+    expect(await count(utc, day("2026-11-08"))).toBe(2);
+  });
+
+  it("a past show's report doesn't change when the seller travels", async () => {
     const id = await storeOf();
-    await addSale(db, id, "2026-11-08T12:30:00Z"); // 23:30 Nov 8 in Sydney.
-    await addSale(db, id, "2026-11-08T13:30:00Z"); // 00:30 Nov 9 in Sydney.
-    expect(await count(id, day("2026-11-08", "2026-11-08", "UTC"))).toBe(2);
-    const syd = "Australia/Sydney";
-    expect(await count(id, day("2026-11-08", "2026-11-08", syd))).toBe(1);
-    expect(await count(id, day("2026-11-09", "2026-11-09", syd))).toBe(1);
+    // Saturday morning at a Tokyo show, still Friday at home in Los Angeles.
+    await addSale(db, id, "2026-11-07T01:00:00Z", { zone: "Asia/Tokyo" });
+    await addSale(db, id, "2026-11-07T14:30:00Z", { zone: "Asia/Tokyo" });
+    const weekend = day("2026-11-07", "2026-11-08");
+    expect(await count(id, weekend)).toBe(2);
+    expect(await count(id, day("2026-11-06"))).toBe(0);
+    const [, ...rows] = await reportCsvRows(db, id, weekend);
+    for (const r of rows)
+      expect(String(r[0]) >= weekend.from && String(r[0]) <= weekend.to).toBe(
+        true,
+      );
+    expect(localDate(new Date("2026-11-07T01:00:00Z"), "Asia/Tokyo")).toBe(
+      "2026-11-07",
+    );
+  });
+
+  it("the widest zones stay inside the index's bounds", async () => {
+    const id = await storeOf();
+    // First and last moments of Nov 7, at UTC+14 and UTC-11.
+    await addSale(db, id, "2026-11-06T10:00:00Z", {
+      zone: "Pacific/Kiritimati",
+    });
+    await addSale(db, id, "2026-11-08T10:59:00Z", {
+      zone: "Pacific/Pago_Pago",
+    });
+    expect(await count(id, day("2026-11-07"))).toBe(2);
   });
 
   it("a day stays whole when the clocks change", async () => {
     const id = await storeOf();
-    const la = "America/Los_Angeles";
+    const zone = "America/Los_Angeles";
     // Clocks go back on Nov 1: a 25 hour day.
-    await addSale(db, id, "2026-11-01T06:30:00Z"); // 23:30 Oct 31.
-    await addSale(db, id, "2026-11-01T07:30:00Z"); // 00:30 Nov 1.
-    await addSale(db, id, "2026-11-02T07:30:00Z"); // 23:30 Nov 1.
-    await addSale(db, id, "2026-11-02T08:30:00Z"); // 00:30 Nov 2.
-    expect(await count(id, day("2026-11-01", "2026-11-01", la))).toBe(2);
+    await addSale(db, id, "2026-11-01T06:30:00Z", { zone }); // 23:30 Oct 31.
+    await addSale(db, id, "2026-11-01T07:30:00Z", { zone }); // 00:30 Nov 1.
+    await addSale(db, id, "2026-11-02T07:30:00Z", { zone }); // 23:30 Nov 1.
+    await addSale(db, id, "2026-11-02T08:30:00Z", { zone }); // 00:30 Nov 2.
+    expect(await count(id, day("2026-11-01"))).toBe(2);
     // Clocks go forward on Mar 8: a 23 hour day.
-    await addSale(db, id, "2026-03-08T08:30:00Z"); // 00:30 Mar 8.
-    await addSale(db, id, "2026-03-09T06:30:00Z"); // 23:30 Mar 8.
-    await addSale(db, id, "2026-03-09T07:30:00Z"); // 00:30 Mar 9.
-    expect(await count(id, day("2026-03-08", "2026-03-08", la))).toBe(2);
-    expect(await count(id, day("2026-03-09", "2026-03-09", la))).toBe(1);
+    await addSale(db, id, "2026-03-08T08:30:00Z", { zone }); // 00:30 Mar 8.
+    await addSale(db, id, "2026-03-09T06:30:00Z", { zone }); // 23:30 Mar 8.
+    await addSale(db, id, "2026-03-09T07:30:00Z", { zone }); // 00:30 Mar 9.
+    expect(await count(id, day("2026-03-08"))).toBe(2);
+    expect(await count(id, day("2026-03-09"))).toBe(1);
   });
 
   it("matches a hand-counted show", async () => {
@@ -229,7 +269,8 @@ describe("salesReport", () => {
     await addSale(db, id, "2026-11-01T15:00:00Z", { total: "999.00" });
     await addSale(db, other, at, { total: "777.00" });
 
-    const r = await salesReport(db, id, day("2026-11-07", "2026-11-08", "UTC"));
+    const range = day("2026-11-07", "2026-11-08");
+    const r = await salesReport(db, id, range);
     expect(r.summary).toEqual({
       sales: 3,
       revenue: "165.75",
@@ -255,13 +296,41 @@ describe("salesReport", () => {
     expect(r.bestSellers[2].language).toBe("ja");
     expect(r.sales).toHaveLength(3);
     expect(r.sales.flatMap((s) => s.lines)).toHaveLength(4);
+
+    // The file adds up to the page, however it's summed.
+    const [head, ...rows] = await reportCsvRows(db, id, range);
+    const total = (name: string, method?: string) =>
+      rows
+        .filter((x) => !method || x[head.indexOf("payment_method")] === method)
+        .reduce((n, x) => n + toCents(String(x[head.indexOf(name)] ?? 0)), 0);
+    expect(total("line_total")).toBe(toCents(r.summary.revenue));
+    expect(total("sale_total")).toBe(toCents(r.summary.revenue));
+    expect(total("sale_discount")).toBe(toCents(r.summary.discounts));
+    for (const m of r.byMethod) {
+      const label = METHOD_LABEL[m.method];
+      expect(total("line_total", label)).toBe(toCents(m.total));
+      expect(total("sale_total", label)).toBe(toCents(m.total));
+    }
+  });
+
+  it("a discount splits across lines and still sums to the total", () => {
+    const lines = [
+      { qty: 1, unitPrice: "10.00" },
+      { qty: 1, unitPrice: "10.00" },
+      { qty: 1, unitPrice: "10.01" },
+    ];
+    const shares = lineTotals(lines, 2000);
+    expect(shares.reduce((a, b) => a + b)).toBe(2000);
+    expect(shares).toEqual([666, 667, 667]);
+    expect(lineTotals([{ qty: 1, unitPrice: "0.00" }], 0)).toEqual([0]);
+    expect(lineTotals([{ qty: 2, unitPrice: "5.00" }], 1000)).toEqual([1000]);
   });
 
   it("an empty range adds up to nothing", async () => {
     const r = await salesReport(
       db,
       await storeOf(),
-      day("2026-11-07", "2026-11-08", "UTC"),
+      day("2026-11-07", "2026-11-08"),
     );
     expect(r.summary).toEqual({
       sales: 0,
@@ -285,12 +354,8 @@ describe("salesReport", () => {
         { name: "Pikachu", language: "ja", gradeLabel: "PSA 10" },
       ],
     });
-    // Picked by the seller's zone today (UTC here), printed in the sale's.
-    const [head, a, b] = await reportCsvRows(
-      db,
-      id,
-      day("2026-11-08", "2026-11-08", "UTC"),
-    );
+    // Picked and printed in the sale's own zone.
+    const [head, a, b] = await reportCsvRows(db, id, day("2026-11-09"));
     expect(head.length).toBe(a.length);
     expect(a.slice(0, 4)).toEqual([
       "2026-11-09",
@@ -307,19 +372,22 @@ describe("salesReport", () => {
       2,
       "5.00",
     ]);
-    expect(a.at(-1)).toBe("Other: Trade");
+    expect(a.slice(-2)).toEqual(["Other", "Trade"]);
     expect(b.slice(7, 9)).toEqual(["PSA 10", "JP"]);
+    const col = (row: typeof a, name: string) => row[head.indexOf(name)];
+    expect(col(a, "sale_total")).toBe("10.00");
+    expect(col(b, "sale_total")).toBeNull();
+    expect(col(b, "sale_discount")).toBeNull();
+    expect(Number(col(a, "line_total")) + Number(col(b, "line_total"))).toBe(
+      10,
+    );
     expect(a.join()).not.toContain("maya@");
   });
 
   it("another store's sales are never in the CSV", async () => {
     const mine = await storeOf();
     await addSale(db, await storeOf(), "2026-11-08T12:00:00Z");
-    const rows = await reportCsvRows(
-      db,
-      mine,
-      day("2026-11-08", "2026-11-08", "UTC"),
-    );
+    const rows = await reportCsvRows(db, mine, day("2026-11-08"));
     expect(rows).toHaveLength(1);
   });
 });
@@ -351,8 +419,9 @@ describe.runIf(Boolean(url))("Postgres, 5,000 sales", () => {
         insert into sale_line (sale_id, line_no, listing_id, name, language, qty, unit_price, quoted_price)
         select id, l, gen_random_uuid(), 'Card ' || (seq * l) % 200, 'en', 2, 10, 10
         from s, generate_series(1, 4) l`);
+      const today = localDate(new Date(), "UTC");
       const r = parseRange(
-        { from: "2026-01-01", to: "2026-12-31" },
+        { from: addDays(today, -1), to: today },
         "UTC",
         new Date(),
       );
@@ -373,7 +442,7 @@ describe.runIf(Boolean(url))("Postgres, 5,000 sales", () => {
       );
       expect(rows).toHaveLength(20_001);
       const plan = (await db.execute(
-        sql`explain select count(*) from sale where store_id = ${id}::uuid and created_at >= now() - interval '1 day'`,
+        sql`explain select count(*) from sale where ${inRange(id, r)}`,
       )) as unknown as { "QUERY PLAN": string }[];
       console.log(
         "[budget] explain:",
