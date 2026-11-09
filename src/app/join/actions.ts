@@ -8,10 +8,16 @@ import { outboxPath } from "@/lib/email";
 import {
   accountExists,
   codeState,
+  hashCode,
   reserveInvite,
   type CodeState,
 } from "@/lib/invites";
-import { allowJoin, allowMagicLink, clientIp } from "@/lib/sign-in-limit";
+import {
+  allowCodeSend,
+  allowJoin,
+  allowMagicLink,
+  clientIp,
+} from "@/lib/sign-in-limit";
 import { sendSignInLink } from "@/lib/sign-in-link";
 
 export type JoinState = {
@@ -48,7 +54,9 @@ export async function requestInvite(
     if (!(await allowJoin(db, ip))) return { error: LIMITED };
     const state = await codeState(db, code);
     if (state !== "active") return { error: BAD[state], field: "code" };
-    if (!(await allowMagicLink(db, email, null))) return { error: LIMITED };
+    if (!(await allowMagicLink(db, email, ip, false)))
+      return { error: LIMITED };
+    if (!(await allowCodeSend(db, hashCode(code)))) return { error: LIMITED };
     const known = isAdminEmail(email) || (await accountExists(db, email));
     // Someone with an account just signs in; their code stays unused.
     if (!known && !(await reserveInvite(db, code, email))) {

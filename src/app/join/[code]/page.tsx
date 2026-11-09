@@ -16,9 +16,15 @@ export default async function JoinWithCode({
   params,
 }: PageProps<"/join/[code]">) {
   const { code } = await params;
+  let typed = code;
+  try {
+    typed = decodeURIComponent(code);
+  } catch {
+    // A malformed escape: show it as typed, and the check says it's wrong.
+  }
   return (
     <ToastRoot>
-      <JoinPage code={decodeURIComponent(code).slice(0, 64)} />
+      <JoinPage code={typed.slice(0, 64)} />
     </ToastRoot>
   );
 }

@@ -7,4 +7,4 @@ Owner approved 2026-11-09. Buyers never need an account; only invited people can
 - Enforced in `databaseHooks.user.create.before`: admin emails pass; everyone else must atomically claim an active invite reserved for their email, or no user is created and the link lands on `/login` with a clear message. `/sign-in/magic-link` is in `disabledPaths`, so sends only go through our limits.
 - `/admin`: `requireAdmin` in every page and action. Create, revoke, invite status, and all accounts for review.
 
-Ceilings: if the user insert fails after the claim, the invite is spent and the admin mints another. Railway's edge logs may record the `/join/CODE` path; the code is single use, expires, and the app never logs it.
+Ceilings: if the user insert fails after the claim, the invite is spent and the admin mints another. Railway's edge logs may record the `/join/CODE` path; the code is single use, expires, and the app never logs it. The code is a bearer token: until the invitee clicks their link, anyone who sees the code can re-reserve it for another email (the price of typo recovery). The admin page then shows who used it. One code triggers at most 5 sign-in emails a day.
