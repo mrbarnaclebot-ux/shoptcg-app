@@ -3,7 +3,9 @@ import { SectionMark } from "@/components/section-mark";
 import { lineButton } from "@/components/ticket-button";
 import { getDb } from "@/db";
 import { vapid } from "@/lib/push";
+import { usd } from "@/lib/format";
 import { storeQueue, type QueueTicket as Row } from "@/lib/request-reads";
+import { salesToday } from "@/lib/sales";
 import { AlertsRow, InstallNudge } from "./alerts";
 import { QueueLive, QueueTicket, SendTestRequest } from "./queue-live";
 
@@ -23,6 +25,8 @@ export async function RequestQueue({ storeId }: { storeId: string }) {
     console.error("[queue] load failed", err);
     return null;
   });
+  const sold = await salesToday(getDb(), storeId).catch(() => []);
+  const takings = sold.reduce((sum, s) => sum + Number(s.total), 0);
   return (
     <section aria-labelledby="requests-h" className="flex flex-col gap-4">
       <SectionMark n={1} id="requests-h">
@@ -52,16 +56,29 @@ export async function RequestQueue({ storeId }: { storeId: string }) {
               </p>
               <ul className="text-sm">
                 {queue.expired.map((t) => (
-                  <li
-                    key={t.id}
-                    className="flex justify-between border-t border-border py-2"
-                  >
-                    {t.buyerName ?? "Buyer"}
-                    <span className="num text-muted-foreground">{t.code}</span>
+                  <li key={t.id} className="border-t border-border">
+                    <Link
+                      href={`/dashboard/requests/${t.id}`}
+                      className="flex min-h-11 items-center justify-between py-2 hover:bg-surface"
+                    >
+                      {t.buyerName ?? "Buyer"}
+                      <span className="num text-muted-foreground">
+                        {t.code}
+                      </span>
+                    </Link>
                   </li>
                 ))}
               </ul>
             </details>
+          )}
+          {sold.length > 0 && (
+            <Link
+              href="/dashboard/sales"
+              className="num min-h-11 self-start py-2 font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+            >
+              Today: {sold.length} {sold.length === 1 ? "sale" : "sales"},{" "}
+              {usd(takings)}
+            </Link>
           )}
         </>
       ) : (

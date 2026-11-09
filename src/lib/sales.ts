@@ -286,6 +286,33 @@ export async function optOut(db: Db, token: string) {
     );
 }
 
+/** What the review screen needs, with live coverage per line; null if not this store's. */
+export async function saleDraft(db: Db, storeId: string, requestId: string) {
+  const [r] = await db
+    .select({
+      status: effectiveStatus,
+      code: request.code,
+      buyerName: request.buyerName,
+      isTest: request.isTest,
+      expiresAt: request.expiresAt,
+      saleId: sale.id,
+    })
+    .from(request)
+    .leftJoin(sale, eq(sale.requestId, request.id))
+    .where(and(eq(request.id, requestId), eq(request.storeId, storeId)));
+  if (!r) return null;
+  const asked = await db
+    .select({ id: requestLine.listingId })
+    .from(requestLine)
+    .where(eq(requestLine.requestId, requestId));
+  const left = await coverage(
+    db,
+    requestId,
+    asked.map((l) => l.id),
+  );
+  return { ...r, left };
+}
+
 export const saleLines = (db: Db, id: string) =>
   db
     .select()

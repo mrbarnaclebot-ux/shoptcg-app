@@ -188,9 +188,9 @@ export function QueueTicket({ t }: { t: TicketView }) {
               <TicketButton variant="secondary" onClick={() => setAsking(true)}>
                 Decline
               </TicketButton>
-              {/* ponytail: the confirm-sale screen arrives with phase 6; until
-                  then the button is visibly off rather than a link to a 404. */}
-              <TicketButton disabled>Review sale</TicketButton>
+              <TicketButton href={`/dashboard/requests/${t.id}`}>
+                Review sale
+              </TicketButton>
             </div>
           )}
         </div>
