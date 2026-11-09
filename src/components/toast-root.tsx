@@ -4,6 +4,11 @@ import { MotionConfig } from "motion/react";
 import { useEffect, useSyncExternalStore, type ReactNode } from "react";
 import { Toaster } from "sileo";
 import { ALERT_REGION_ID, STATUS_REGION_ID, toast } from "@/lib/toast";
+// Imported here, not globally: toasts only ship on login and the dashboard.
+import "@/styles/toasts.css";
+
+// Paper ticket stock (oklch 0.955 0.013 82); toasts.css also forces it in CSS.
+const PAPER = "#f4efe7";
 
 const PHONE = "(max-width: 767px)";
 
@@ -67,7 +72,8 @@ export function ToastRoot({ children }: { children: ReactNode }) {
         position={phone ? "bottom-center" : "top-right"}
         // Clears the 64px tab bar on phones and the 56-64px header above.
         offset={phone ? { bottom: 76 } : { top: 60, right: 8 }}
-        options={{ fill: "#151622", roundness: 7 }}
+        // Roundness 0: tickets are cut square, and it turns off the gooey blur.
+        options={{ fill: PAPER, roundness: 0 }}
       />
       <div id={STATUS_REGION_ID} role="status" className="sr-only" />
       <div id={ALERT_REGION_ID} role="alert" className="sr-only" />

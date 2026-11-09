@@ -2,8 +2,9 @@ import { createElement as h, Fragment, type ReactNode } from "react";
 import { sileo, type SileoOptions } from "sileo";
 import { certNo, usd } from "@/lib/format";
 
-// The app's whole toast vocabulary (PERSONALITY.md state map, Direction B copy;
-// Direction C only for the three earned moments). Copy lives here, nowhere else.
+// The app's whole toast vocabulary (PERSONALITY.md state map) in the SCREENS.md
+// vendor voice: what happened, then what to do. Toasts render as paper tickets
+// (styles/toasts.css). Copy lives here, nowhere else.
 
 export const ALERT_REGION_ID = "toast-alert";
 export const STATUS_REGION_ID = "toast-status";
@@ -20,7 +21,6 @@ function announce(text: string, urgent = false) {
 }
 
 type Kind = "success" | "info" | "warning";
-/** A non-error toast plus its spoken text (titles and spec blocks are not plain strings). */
 // Escape dismisses only these; sticky errors and offline stay until resolved.
 const transient = new Set<string>();
 
@@ -31,44 +31,44 @@ function show(kind: Kind, say: string, opts: SileoOptions) {
   return id;
 }
 
-// Sileo types title as string but renders it as a React child; the cert stamp
-// after the hairline needs its own span.
-function head(title: string, stamp?: string) {
-  if (!stamp) return title;
+// Sileo types title as string but renders it as a React child; the ticket
+// stub number after the title needs its own span.
+function head(title: string, no?: string) {
+  if (!no) return title;
   return h(
     Fragment,
     null,
     title,
-    h("span", { "data-stamp": "" }, stamp),
+    h("span", { "data-no": "" }, `No. ${no}`),
   ) as unknown as string;
 }
 
-/** Tabular spec block with ruler ticks, the lab readout under a toast title. */
-function spec(rows: [string, ReactNode][], lead?: string) {
+/** Receipt lines under a toast title: label left, value right. */
+function lines(rows: [string, ReactNode][], lead?: string) {
   return h(
     Fragment,
     null,
     lead && h("b", null, lead),
     h(
       "dl",
-      { "data-spec": "" },
+      { "data-lines": "" },
       rows.flatMap(([k, v]) => [
         h("dt", { key: `${k}t` }, k),
         h("dd", { key: `${k}d` }, v),
       ]),
     ),
-    h("span", { "data-ticks": "", "aria-hidden": true }),
   );
 }
 
-const RIP: SileoOptions["styles"] = { title: "toast-rip" };
-
-function error(title: string, description: string, stamp?: string) {
+// Errors stay until dismissed. A retry is a shortcut only: the same action is
+// always on the page too.
+function error(title: string, description: string, retry?: () => void) {
   announce(`${title}. ${description}`, true);
   return sileo.error({
-    title: head(title, stamp),
+    title,
     description,
     duration: null,
+    button: retry && { title: "Try again", onClick: retry },
   });
 }
 
@@ -88,21 +88,21 @@ export type ImportSummary = {
 };
 
 function importResult(r: ImportSummary): SileoOptions {
-  const rows: [string, ReactNode][] = [["Logged", r.count]];
-  if (r.unpriced) rows.push(["Set a price", r.unpriced]);
-  if (r.rejected.length) rows.push(["Rejected rows", r.rejected.join(", ")]);
+  const rows: [string, ReactNode][] = [["Added", r.count]];
+  if (r.unpriced) rows.push(["Need a price", r.unpriced]);
+  if (r.rejected.length) rows.push(["Skipped rows", r.rejected.join(", ")]);
   const review = r.unpriced > 0 || r.rejected.length > 0;
   announce(rows.map(([k, v]) => `${k} ${v}`).join(". "));
   return {
-    title: head(`${r.count} logged`, "CSV"),
-    description: spec(rows),
+    title: `${r.count} added from your CSV`,
+    description: lines(rows),
     duration: review ? 8000 : 5000,
   };
 }
 
 export const toast = {
   linkSent: (email: string) => {
-    const description = `To ${email}. Valid 5 min, single use.`;
+    const description = `Check ${email}. It works once, for 5 minutes.`;
     return show("success", `Link sent. ${description}`, {
       title: "Link sent",
       description,
@@ -110,32 +110,30 @@ export const toast = {
     });
   },
   linkExpired: () =>
-    error("Link expired", "Single use, 5 min. Request a new one below."),
+    error("Link expired", "Links work once, for 5 minutes. Send a fresh one."),
   sendFailed: (why: string) => error("Not sent", why),
   rateLimited: () => {
-    const description =
-      "Too many links requested. Wait a few minutes, then try again.";
-    return show("warning", `Limit reached. ${description}`, {
-      title: "Limit reached",
+    const description = "Wait a few minutes, then send another link.";
+    return show("warning", `Too many tries. ${description}`, {
+      title: "Too many tries",
       description,
       duration: 8000,
     });
   },
 
   storeCreated: (slug: string) => {
-    const description = `shoptcg.app/${slug} is live. Time to stock it.`;
+    const description = `shoptcg.app/${slug} is live. Time to stock the table.`;
     return show("success", `You're open. ${description}`, {
       title: "You're open",
       description,
-      styles: RIP,
       duration: 6000,
     });
   },
   slugTaken: (slug: string) =>
-    error("Slug taken", `"${slug}" is in use. Try "${slug}-cards".`),
+    error("Link taken", `"${slug}" is in use. Try "${slug}-cards".`),
 
   settingsSaved: (pct: number, rounding: number) => {
-    const description = `Rule: market ${pct > 0 ? "+" : ""}${pct}%, ${rounding ? `round to ${usd(rounding)}` : "exact cents"}.`;
+    const description = `Prices follow market ${pct > 0 ? "+" : ""}${pct}%, ${rounding ? `rounded to ${usd(rounding)}` : "to the cent"}.`;
     return show("success", `Settings saved. ${description}`, {
       title: "Settings saved",
       description,
@@ -145,14 +143,13 @@ export const toast = {
   notSaved: (why: string) => error("Not saved", why),
 
   itemAdded: (item: LoggedItem) => {
-    const price = item.price == null ? "Market rule" : usd(item.price);
+    const price = item.price == null ? "Follows market" : usd(item.price);
     const what = `${item.name}${item.condition ? `, ${item.condition}` : ""}, ${price}`;
     if (item.first) {
-      const description = `Your table is live. ${what}.`;
-      return show("success", `First hit logged. ${description}`, {
-        title: "First hit logged",
+      const description = `Buyers can see it now. ${what}.`;
+      return show("success", `First card on the table. ${description}`, {
+        title: "First card on the table",
         description,
-        styles: RIP,
         duration: 6000,
       });
     }
@@ -161,9 +158,9 @@ export const toast = {
       ["Your price", price],
     ];
     if (item.condition) rows.unshift(["Condition", item.condition]);
-    return show("success", `Logged. ${what}, qty ${item.qty}.`, {
-      title: head("Logged", certNo(item.id)),
-      description: spec(rows, item.name),
+    return show("success", `Added. ${what}, qty ${item.qty}.`, {
+      title: head("Added", certNo(item.id)),
+      description: lines(rows, item.name),
       duration: 5000,
     });
   },
@@ -174,7 +171,7 @@ export const toast = {
       duration: 4000,
     }),
   itemHidden: (id: string, name: string) => {
-    const description = `${name} is off your public table.`;
+    const description = `${name} is off your public table. Show it again from Edit.`;
     return show("info", `Hidden. ${description}`, {
       title: head("Hidden", certNo(id)),
       description,
@@ -182,40 +179,41 @@ export const toast = {
     });
   },
   qtyZero: (name: string, onHide: () => void) => {
-    const description = `${name} shows as sold out.`;
-    return show("warning", `Qty 0. ${description}`, {
-      title: "Qty 0",
+    const description = `${name} is at 0 and shows as sold out.`;
+    return show("warning", `Sold out. ${description}`, {
+      title: "Sold out",
       description,
       button: { title: "Hide item", onClick: onHide },
       duration: 8000,
     });
   },
-  qtyFailed: (qty: number) =>
+  qtyFailed: (qty: number, retry?: () => void) =>
     error(
       "Not saved",
-      `Qty change didn't reach the server. Count held at ${qty}.`,
+      `The count didn't reach the server, so it's back at ${qty}.`,
+      retry,
     ),
   searchLimit: (perHour: number) => {
-    const description = `${perHour} new lookups per hour. Cards already in the catalog still search.`;
-    return show("warning", `Limit reached. ${description}`, {
-      title: "Limit reached",
+    const description = `That's ${perHour} new lookups this hour. Cards already in the catalog still show up.`;
+    return show("warning", `Search limit. ${description}`, {
+      title: "Search limit",
       description,
       duration: 8000,
     });
   },
 
-  csvUnreadable: (why: string) => error("CSV not read", why),
+  csvUnreadable: (why: string) => error("Can't read that CSV", why),
   /** One toast that morphs from loading to the result; `run` rejects with a user-safe message. */
   importCsv: (rows: number, run: Promise<ImportSummary>) => {
-    announce(`Importing ${rows}`);
+    announce(`Adding ${rows} from your CSV`);
     return sileo.promise(run, {
-      loading: { title: head(`Importing ${rows}`, "CSV") },
+      loading: { title: `Adding ${rows} from your CSV` },
       success: (r) => importResult(r),
       error: (err) => {
         const why =
           err instanceof Error ? err.message : "Nothing was imported.";
-        announce(`Not imported. ${why}`, true);
-        return { title: "Not imported", description: why, duration: null };
+        announce(`Nothing added. ${why}`, true);
+        return { title: "Nothing added", description: why, duration: null };
       },
     });
   },
@@ -223,19 +221,19 @@ export const toast = {
   offline: () => {
     let back = () => {};
     const online = new Promise<void>((resolve) => (back = resolve));
-    const description = "Changes can't save until the connection is back.";
-    announce(`Offline. ${description}`, true);
+    const description = "Changes can't save until you're back online.";
+    announce(`No connection. ${description}`, true);
     sileo.promise(online, {
-      loading: { title: "Offline", description },
+      loading: { title: "No connection", description },
       success: () => {
-        announce("Online. Connection restored.");
+        announce("Back online. Changes save again.");
         return {
-          title: "Online",
-          description: "Connection restored.",
+          title: "Back online",
+          description: "Changes save again.",
           duration: 4000,
         };
       },
-      error: { title: "Offline" },
+      error: { title: "No connection" },
     });
     return back;
   },

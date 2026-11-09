@@ -1,0 +1,140 @@
+/*
+  Sileo toasts as paper tickets. Sileo injects its own CSS at runtime, so
+  every override is scoped one level deeper (html ...) to win on specificity.
+  Success, info and warning tear in with a receipt edge on the outer side;
+  errors are a stub: perforation after the badge and a line retry button.
+*/
+
+html:root {
+  --sileo-width: 360px;
+  /* No overshoot: the patched spring has no bounce and the CSS easing matches. */
+  --sileo-spring-easing: cubic-bezier(0.16, 1, 0.3, 1);
+  --sileo-state-success: oklch(0.49 0.13 150);
+  --sileo-state-error: oklch(0.5 0.18 27);
+  --sileo-state-warning: var(--sun-ink);
+  --sileo-state-info: var(--ink-2);
+  --sileo-state-action: var(--sun-ink);
+  --sileo-state-loading: var(--ink-2);
+}
+
+/* Paper stock, whatever fill was passed. CSS beats the SVG fill attribute. */
+html [data-sileo-pill],
+html [data-sileo-body] {
+  fill: var(--paper);
+}
+
+html [data-sileo-toast] {
+  font-family: var(--font-sans);
+  color: var(--ink);
+}
+
+/* Receipt edge: a row of half-circle bites on the side away from the body. */
+html [data-sileo-toast]:not([data-state="error"])[data-edge="bottom"] {
+  mask: radial-gradient(circle 4.5px at 5px 0, #0000 96%, #000) 0 0 / 10px 100%
+    repeat-x;
+}
+html [data-sileo-toast]:not([data-state="error"])[data-edge="top"] {
+  mask: radial-gradient(circle 4.5px at 5px 100%, #0000 96%, #000) 0 0 / 10px
+    100% repeat-x;
+}
+
+html [data-sileo-badge] {
+  border-radius: 50%;
+  color: var(--paper);
+  background-color: var(--sileo-tone);
+}
+html [data-sileo-badge][data-state="loading"] {
+  color: var(--ink-2);
+  background-color: transparent;
+}
+html [data-sileo-title] {
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+}
+html [data-sileo-title][data-state="error"] {
+  color: var(--sileo-tone);
+}
+
+/* Error stub: the badge sits on a tear-off stub behind a perforation. */
+html [data-sileo-toast][data-state="error"] [data-sileo-header-inner] {
+  gap: 0;
+}
+html [data-sileo-toast][data-state="error"] [data-sileo-badge] {
+  margin-right: 10px;
+}
+html [data-sileo-toast][data-state="error"] [data-sileo-title] {
+  padding-left: 10px;
+  background: radial-gradient(circle, var(--paper-3) 1.4px, #0000 1.9px) left
+    center / 3px 6px repeat-y;
+}
+html [data-sileo-toast][data-state="error"] [data-sileo-badge] {
+  color: var(--sileo-tone);
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
+/* Stub number after the title, e.g. "No. 0932". */
+html [data-sileo-title] [data-no] {
+  margin-left: 10px;
+  font: 600 0.8125rem/1 var(--font-display);
+  font-variation-settings: "opsz" 72;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
+}
+
+html [data-sileo-viewport] [data-sileo-description] {
+  color: var(--ink-2);
+  font-size: 0.875rem;
+}
+html [data-sileo-description] b {
+  display: block;
+  color: var(--ink);
+  font-weight: 600;
+}
+/* Receipt lines: label left, value right, dotted leader rule between rows. */
+html [data-sileo-description] [data-lines] {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  margin-top: 6px;
+  font-size: 0.8125rem;
+}
+html [data-sileo-description] [data-lines] > * {
+  padding: 3px 0;
+  border-top: 1px dashed var(--paper-3);
+}
+html [data-sileo-description] [data-lines] dd {
+  color: var(--ink);
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+html [data-sileo-button] {
+  border-radius: 0;
+  height: 2.5rem;
+  padding: 0 14px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+html [data-sileo-button]:hover {
+  background: oklch(0 0 0 / 0.05);
+}
+html [data-sileo-button]:focus-visible {
+  outline: 2px solid var(--sun-ink);
+  outline-offset: 2px;
+}
+
+/* Reduced motion: no slide or scale, a short fade only. */
+@media (prefers-reduced-motion: reduce) {
+  html [data-sileo-viewport] [data-sileo-toast] {
+    transform: none !important;
+    transition: opacity 200ms linear !important;
+  }
+}
