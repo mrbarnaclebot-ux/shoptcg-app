@@ -15,10 +15,11 @@ export const metadata: Metadata = {
 export default async function JoinWithCode({
   params,
 }: PageProps<"/join/[code]">) {
+  // Next has already decoded it; a malformed link never gets here (proxy.ts).
   const { code } = await params;
   return (
     <ToastRoot>
-      <JoinPage code={decodeURIComponent(code).slice(0, 64)} />
+      <JoinPage code={code.slice(0, 64)} />
     </ToastRoot>
   );
 }

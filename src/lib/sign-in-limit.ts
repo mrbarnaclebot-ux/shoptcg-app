@@ -5,9 +5,14 @@ import { signInSend } from "@/db/schema";
 // Better Auth's rate limiter runs only on HTTP requests to its router; the
 // login server action calls auth.api directly, so the limit lives here.
 export const LIMITS = {
+  // Per email and address: a stranger's requests can't use up a vendor's own.
   email: { max: 3, windowMs: 10 * 60_000 },
+  // Per email from anywhere, against mail bombing.
+  emailAll: { max: 20, windowMs: 60 * 60_000 },
   ip: { max: 10, windowMs: 60 * 60_000 },
   join: { max: 10, windowMs: 60 * 60_000 },
+  // Sign-in emails one code can trigger, so a leaked code can't spam addresses.
+  code: { max: 5, windowMs: 24 * 60 * 60_000 },
 } as const;
 
 async function under(db: Db, key: string, max: number, windowMs: number) {
@@ -21,20 +26,36 @@ async function under(db: Db, key: string, max: number, windowMs: number) {
 
 /**
  * True and records the attempt when this email and IP may get another link.
- * `ip` null skips the IP check (unknown client, or e2e from one machine).
+ * `ip` null pools unknown clients (and e2e from one machine) together.
+ * `ipBucket` false when the caller already counts the address, as /join does.
  */
-export async function allowMagicLink(db: Db, email: string, ip: string | null) {
-  const keys = [`email:${email.toLowerCase()}`];
-  if (!(await under(db, keys[0], LIMITS.email.max, LIMITS.email.windowMs)))
-    return false;
-  if (ip) {
-    keys.push(`ip:${ip}`);
-    if (!(await under(db, keys[1], LIMITS.ip.max, LIMITS.ip.windowMs)))
-      return false;
-  }
+export async function allowMagicLink(
+  db: Db,
+  email: string,
+  ip: string | null,
+  ipBucket = true,
+) {
+  const e = email.toLowerCase();
+  const checks: [string, { max: number; windowMs: number }][] = [
+    [`email:${e}:${ip ?? "-"}`, LIMITS.email],
+    [`email:${e}`, LIMITS.emailAll],
+  ];
+  if (ip && ipBucket) checks.push([`ip:${ip}`, LIMITS.ip]);
+  for (const [key, l] of checks)
+    if (!(await under(db, key, l.max, l.windowMs))) return false;
+  const keys = checks.map(([key]) => key);
   // ponytail: count-then-insert lets concurrent sends overshoot by a few, and
   // rows are never pruned; add a cleanup job if the table grows.
   await db.insert(signInSend).values(keys.map((key) => ({ key })));
+  return true;
+}
+
+/** True and records it when this code may send another sign-in email. */
+export async function allowCodeSend(db: Db, codeHash: string) {
+  const key = `code:${codeHash}`;
+  if (!(await under(db, key, LIMITS.code.max, LIMITS.code.windowMs)))
+    return false;
+  await db.insert(signInSend).values({ key });
   return true;
 }
 
