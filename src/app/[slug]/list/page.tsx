@@ -1,0 +1,65 @@
+import { ArrowLeft } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { getDb } from "@/db";
+import { getPublicItems } from "@/lib/storefront";
+import { storeOr404 } from "../store-lookup";
+import { metaLine } from "../tile";
+import { ListReview, type ReviewItem } from "./list-review";
+
+// The store lookup runs before any Suspense boundary so an unknown slug is a 404.
+export const instant = false;
+
+export async function generateMetadata({
+  params,
+}: PageProps<"/[slug]/list">): Promise<Metadata> {
+  const store = await storeOr404((await params).slug);
+  return { title: `Your list - ${store.name} - shoptcg` };
+}
+
+export default async function ListPage({
+  params,
+  searchParams,
+}: PageProps<"/[slug]/list">) {
+  const store = await storeOr404((await params).slug);
+  const raw = (await searchParams).ids;
+  const ids = String(Array.isArray(raw) ? raw[0] : (raw ?? ""))
+    .split(",")
+    .filter(Boolean);
+  const items: ReviewItem[] = (await getPublicItems(getDb(), store, ids)).map(
+    (it) => ({
+      id: it.id,
+      name: it.name,
+      meta: metaLine(it),
+      kind: it.kind,
+      imageUrl: it.imageUrl,
+      price: it.price,
+      available: it.available,
+    }),
+  );
+  return (
+    <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col px-4 pt-4 pb-16 md:pt-8">
+      <Link
+        href={`/${store.slug}`}
+        className="flex min-h-11 items-center gap-2 self-start font-semibold"
+      >
+        <ArrowLeft aria-hidden className="size-5" />
+        Back to store
+      </Link>
+      <h1 className="font-display mt-4 mb-5 text-[3rem] leading-[0.85] font-black">
+        Your list
+      </h1>
+      <ListReview
+        store={{
+          slug: store.slug,
+          name: store.name,
+          isOpen: store.isOpen,
+          currency: store.secondCurrency,
+          fxRate: store.fxRate,
+        }}
+        items={items}
+        loaded={ids}
+      />
+    </main>
+  );
+}

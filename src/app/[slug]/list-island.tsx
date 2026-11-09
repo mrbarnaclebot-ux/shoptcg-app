@@ -1,12 +1,13 @@
 "use client";
 
 import { Check, Plus } from "lucide-react";
+import Link from "next/link";
 import { useSyncExternalStore } from "react";
 
 // The buyer's list lives on this phone only, per store, for 24 hours
 // (SCREENS 7). It is the one client island on the public pages.
 
-type Line = { qty: number; price: number | null };
+export type Line = { qty: number; price: number | null };
 type List = { at: number; lines: Record<string, Line> };
 
 const TTL_MS = 24 * 60 * 60 * 1000;
@@ -30,7 +31,7 @@ function parse(raw: string): List["lines"] {
   }
 }
 
-function write(slug: string, lines: List["lines"]) {
+export function writeList(slug: string, lines: List["lines"]) {
   try {
     localStorage.setItem(key(slug), JSON.stringify({ at: Date.now(), lines }));
   } catch {
@@ -49,7 +50,7 @@ function subscribe(onChange: () => void) {
 }
 
 // The raw string is the snapshot so React compares it by value.
-function useLines(slug: string) {
+export function useLines(slug: string) {
   const raw = useSyncExternalStore(
     subscribe,
     () => read(slug),
@@ -75,7 +76,7 @@ export function AddButton(props: {
     const next = { ...lines };
     if (on) delete next[props.id];
     else next[props.id] = { qty: 1, price: props.price };
-    write(props.slug, next);
+    writeList(props.slug, next);
   };
   const Icon = on ? Check : Plus;
   if (props.big)
@@ -109,10 +110,13 @@ export function AddButton(props: {
 
 /** Paper stub pinned to the bottom once the list has something on it. */
 export function ListBar({ slug }: { slug: string }) {
-  const lines = Object.values(useLines(slug));
-  const n = lines.reduce((s, l) => s + l.qty, 0);
+  const lines = useLines(slug);
+  const n = Object.values(lines).reduce((s, l) => s + l.qty, 0);
   if (!n) return null;
-  const total = lines.reduce((s, l) => s + (l.price ?? 0) * l.qty, 0);
+  const total = Object.values(lines).reduce(
+    (s, l) => s + (l.price ?? 0) * l.qty,
+    0,
+  );
   return (
     <div className="fixed inset-x-3 bottom-4 z-20 mx-auto max-w-[560px] drop-shadow-[0_12px_24px_oklch(0_0_0/0.6)]">
       <div className="paper grid grid-cols-[1fr_auto]">
@@ -126,19 +130,12 @@ export function ListBar({ slug }: { slug: string }) {
             })}
           </span>
         </p>
-        {/* ponytail: the review page arrives with requests in phase 5; until
-            then the button is visibly off rather than a link to a 404. */}
-        <button
-          type="button"
-          disabled
-          aria-describedby="list-soon"
-          className="flex min-h-12 cursor-not-allowed flex-col items-center justify-center bg-brand px-5 font-semibold text-on-brand opacity-60"
+        <Link
+          href={`/${slug}/list?ids=${Object.keys(lines).join(",")}`}
+          className="flex min-h-12 items-center justify-center bg-brand px-5 font-semibold text-on-brand hover:bg-brand-hover"
         >
           Review list
-          <span id="list-soon" className="text-[0.6875rem] font-medium">
-            Opens soon
-          </span>
-        </button>
+        </Link>
       </div>
     </div>
   );

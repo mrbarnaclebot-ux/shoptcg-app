@@ -127,7 +127,7 @@ export async function storeSummary(db: Db, storeId: string) {
   return { items, updatedOn };
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** One active listing of this store, or null (bad id, hidden, other store). */
 export async function getPublicItem(db: Db, s: PublicStore, id: string) {
