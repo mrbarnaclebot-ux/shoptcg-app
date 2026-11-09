@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { lineButton } from "@/components/ticket-button";
+import { isAdminEmail } from "@/lib/admin";
 import { requireStore } from "@/lib/session";
 import { SettingsForm } from "./settings-form";
 import { SignOut } from "./sign-out";
@@ -50,6 +51,11 @@ async function Settings() {
           nfcEnabled: store.nfcEnabled,
         }}
       />
+      {isAdminEmail(user.email) && (
+        <Link href="/admin" className={`${lineButton} self-start`}>
+          Invites and accounts
+        </Link>
+      )}
     </>
   );
 }
