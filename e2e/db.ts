@@ -60,3 +60,45 @@ export async function pushRowExists(endpoint: string) {
     await sql.end();
   }
 }
+
+export async function userExists(email: string) {
+  const sql = localDb();
+  try {
+    const rows = await sql`select 1 from "user" where email = ${email}`;
+    return rows.length > 0;
+  } finally {
+    await sql.end();
+  }
+}
+
+/** Invite rows can't be expired through the UI before 14 days. */
+export async function expireInvite(id: string) {
+  const sql = localDb();
+  try {
+    await sql`update invite set expires_at = now() - interval '1 second' where id = ${id}`;
+  } finally {
+    await sql.end();
+  }
+}
+
+export async function inviteRow(id: string) {
+  const sql = localDb();
+  try {
+    const [row] =
+      await sql`select used_at, revoked_at, reserved_email, redeemed_by from invite where id = ${id}`;
+    return row;
+  } finally {
+    await sql.end();
+  }
+}
+
+export async function invitesLabelled(label: string) {
+  const sql = localDb();
+  try {
+    const [{ n }] =
+      await sql`select count(*)::int n from invite where label = ${label}`;
+    return n as number;
+  } finally {
+    await sql.end();
+  }
+}

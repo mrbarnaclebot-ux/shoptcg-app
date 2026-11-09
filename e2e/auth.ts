@@ -2,33 +2,73 @@ import { readFile } from "node:fs/promises";
 import { expect, type Page } from "@playwright/test";
 import { OUTBOX } from "../playwright.config";
 
-/** Signs in through the real magic-link flow, reading the link from the outbox. */
-export async function signIn(page: Page, email: string) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByRole("button", { name: "Email me a link" }).click();
-  await expect(
-    page.getByText("Check your email.", { exact: true }),
-  ).toBeVisible();
+async function links(email: string) {
+  const lines = await readFile(OUTBOX, "utf8").catch(() => "");
+  return lines
+    .split("\n")
+    .filter((l) => l.startsWith(`${email} `) && l.includes("/api/auth/"))
+    .map((l) => l.split(" ")[1]);
+}
+
+/**
+ * Runs `send`, then waits for the sign-in link it caused. Links go out after
+ * the response, so reading straight away could return an older, spent one.
+ */
+export async function newLink(email: string, send: () => Promise<unknown>) {
+  const before = (await links(email)).length;
+  await send();
   let url: string | undefined;
   await expect
-    .poll(async () => {
-      const lines = await readFile(OUTBOX, "utf8").catch(() => "");
-      url = lines
-        .split("\n")
-        .findLast((l) => l.startsWith(`${email} `))
-        ?.split(" ")[1];
-      return url;
-    })
+    .poll(async () => (url = (await links(email))[before]))
     .toBeTruthy();
-  await page.goto(url!);
+  return url!;
+}
+
+/** Lines the outbox holds for this address; to prove nothing was sent. */
+export async function outboxLines(email: string) {
+  const lines = await readFile(OUTBOX, "utf8").catch(() => "");
+  return lines.split("\n").filter((l) => l.startsWith(`${email} `)).length;
+}
+
+/** Signs in an existing account through the real magic-link flow. */
+export async function signIn(page: Page, email: string) {
+  const url = await newLink(email, async () => {
+    await page.goto("/login");
+    await page.getByLabel("Email").fill(email);
+    await page.getByRole("button", { name: "Email me a link" }).click();
+    await expect(
+      page.getByText("Check your email.", { exact: true }),
+    ).toBeVisible();
+  });
+  await page.goto(url);
   await expect(page).toHaveURL(/\/dashboard/);
 }
 
-/** Signs in a brand-new vendor and creates their store. */
+/** A real invite from the test-only route (E2E builds only). */
+export async function mintInvite(page: Page) {
+  const res = await page.request.post("/api/e2e/invite");
+  expect(res.ok()).toBe(true);
+  return (await res.json()) as { code: string; id: string };
+}
+
+/** Fills /join, waits for "Check your email", and returns the link it sent. */
+export function join(page: Page, code: string, email: string) {
+  return newLink(email, async () => {
+    await page.goto(`/join/${code}`);
+    await page.getByLabel("Email").fill(email);
+    await page.getByRole("button", { name: "Email me a link" }).click();
+    await expect(
+      page.getByText("Check your email.", { exact: true }),
+    ).toBeVisible();
+  });
+}
+
+/** A brand-new vendor who joins with an invite and creates their store. */
 export async function newVendor(page: Page) {
   const id = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-  await signIn(page, `e2e-${id}@example.test`);
+  const email = `e2e-${id}@example.test`;
+  await page.goto(await join(page, (await mintInvite(page)).code, email));
+  await expect(page).toHaveURL(/\/dashboard/);
   await page.getByLabel("Store name").fill(`E2E Cards ${id}`);
   await page.getByLabel("Store link").fill(`e2e-${id}`);
   await page.getByRole("button", { name: "Create store" }).click();

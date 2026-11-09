@@ -3,9 +3,11 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { getAuth } from "@/lib/auth";
+import { isAdminEmail } from "@/lib/admin";
 import { outboxPath } from "@/lib/email";
+import { accountExists } from "@/lib/invites";
 import { allowMagicLink, clientIp } from "@/lib/sign-in-limit";
+import { sendSignInLink } from "@/lib/sign-in-link";
 
 export type LoginState = {
   sent?: string;
@@ -32,24 +34,20 @@ export async function requestMagicLink(
 ): Promise<LoginState> {
   const parsed = emailSchema.safeParse(String(form.get("email") ?? "").trim());
   if (!parsed.success) return { error: "Enter a valid email address" };
+  const email = parsed.data.toLowerCase();
   const h = await headers();
   try {
-    if (!(await allowed(parsed.data, h))) return LIMITED;
-    await getAuth().api.signInMagicLink({
-      body: {
-        email: parsed.data,
-        callbackURL: "/dashboard",
-        errorCallbackURL: "/login?link=expired",
-      },
-      headers: h,
-    });
+    if (!(await allowed(email, h))) return LIMITED;
+    // Same answer either way: this page must not reveal who is a vendor.
+    if (isAdminEmail(email) || (await accountExists(getDb(), email)))
+      sendSignInLink(email, h);
   } catch (err) {
-    if ((err as { statusCode?: number }).statusCode === 429) return LIMITED;
-    console.error("[login] magic link failed", err);
+    // Only the name: a failed query's message can carry the address.
+    console.error("[login] request failed", (err as Error).name);
     return {
       error: "Could not send the link. Try again in a minute.",
       failed: true,
     };
   }
-  return { sent: parsed.data };
+  return { sent: email };
 }

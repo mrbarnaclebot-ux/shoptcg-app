@@ -13,6 +13,15 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,
+  // The code is in the URL: never pass it to another site.
+  async headers() {
+    return [
+      {
+        source: "/join/:path*",
+        headers: [{ key: "Referrer-Policy", value: "no-referrer" }],
+      },
+    ];
+  },
   images: {
     // Card art never changes at a URL, so optimised copies live a month.
     minimumCacheTTL: 2_592_000,

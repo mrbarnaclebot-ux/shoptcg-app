@@ -2,6 +2,7 @@ import "server-only";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db";
+import { isAdminEmail } from "@/lib/admin";
 import { getAuth } from "@/lib/auth";
 import { safeTimeZone } from "@/lib/format";
 import { postgresZone } from "@/lib/request-reads";
@@ -29,6 +30,13 @@ export async function storeOrNull() {
 export async function requireUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  return user;
+}
+
+/** Re-checked in every admin page and action. */
+export async function requireAdmin() {
+  const user = await requireUser();
+  if (!isAdminEmail(user.email)) redirect("/dashboard");
   return user;
 }
 

@@ -1,6 +1,11 @@
 import { beforeAll, expect, it } from "vitest";
 import type { Db } from "@/db/open";
-import { allowMagicLink, clientIp, LIMITS } from "@/lib/sign-in-limit";
+import {
+  allowCodeSend,
+  allowMagicLink,
+  clientIp,
+  LIMITS,
+} from "@/lib/sign-in-limit";
 import { migratedDb } from "@/lib/test-fixtures";
 
 let db: Db;
@@ -9,11 +14,30 @@ beforeAll(async () => {
   db = await migratedDb();
 });
 
-it("allows 3 links per email, case-insensitive, then refuses", async () => {
+it("allows 3 links per email and address, case-insensitive, then refuses", async () => {
   for (let i = 0; i < LIMITS.email.max; i++)
-    expect(await allowMagicLink(db, "A@x.test", `10.0.0.${i}`)).toBe(true);
-  expect(await allowMagicLink(db, "a@x.test", "10.0.9.9")).toBe(false);
-  expect(await allowMagicLink(db, "b@x.test", "10.0.9.9")).toBe(true);
+    expect(await allowMagicLink(db, "A@x.test", "10.0.0.1")).toBe(true);
+  expect(await allowMagicLink(db, "a@x.test", "10.0.0.1")).toBe(false);
+  expect(await allowMagicLink(db, "b@x.test", "10.0.0.1")).toBe(true);
+});
+
+it("a stranger's requests don't lock the vendor out", async () => {
+  for (let i = 0; i < 5; i++)
+    await allowMagicLink(db, "vendor@x.test", "6.6.6.6");
+  expect(await allowMagicLink(db, "vendor@x.test", "10.2.2.2")).toBe(true);
+});
+
+it("caps one email at 20 an hour from anywhere", async () => {
+  for (let i = 0; i < LIMITS.emailAll.max; i++)
+    expect(await allowMagicLink(db, "bomb@x.test", `10.3.0.${i}`)).toBe(true);
+  expect(await allowMagicLink(db, "bomb@x.test", "10.3.9.9")).toBe(false);
+});
+
+it("one code sends at most 5 sign-in emails a day", async () => {
+  for (let i = 0; i < LIMITS.code.max; i++)
+    expect(await allowCodeSend(db, "h1")).toBe(true);
+  expect(await allowCodeSend(db, "h1")).toBe(false);
+  expect(await allowCodeSend(db, "h2")).toBe(true);
 });
 
 it("allows 10 links per IP across emails, then refuses", async () => {
