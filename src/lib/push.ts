@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import webpush from "web-push";
 import type { Db } from "@/db/open";
 import { pushSubscription, store } from "@/db/schema";
@@ -9,6 +9,42 @@ import { shortName } from "@/lib/requests";
 // (iOS only once the dashboard is installed to the home screen).
 
 type Env = Record<string, string | undefined>;
+
+export const MAX_PUSH_DEVICES = 10;
+
+/** Upserts a browser's endpoint and keeps a vendor's newest devices only. */
+export async function savePush(
+  db: Db,
+  row: typeof pushSubscription.$inferInsert,
+) {
+  await db
+    .insert(pushSubscription)
+    .values(row)
+    // Dashboards re-save on load, so the date means "last seen".
+    .onConflictDoUpdate({
+      target: pushSubscription.endpoint,
+      set: { ...row, createdAt: new Date() },
+    });
+  await db
+    .delete(pushSubscription)
+    .where(
+      and(
+        eq(pushSubscription.userId, row.userId),
+        inArray(
+          pushSubscription.endpoint,
+          db
+            .select({ endpoint: pushSubscription.endpoint })
+            .from(pushSubscription)
+            .where(eq(pushSubscription.userId, row.userId))
+            .orderBy(
+              desc(pushSubscription.createdAt),
+              pushSubscription.endpoint,
+            )
+            .offset(MAX_PUSH_DEVICES),
+        ),
+      ),
+    );
+}
 
 /** VAPID settings, or null when push is off (dev, e2e). */
 export function vapid(env: Env = process.env) {

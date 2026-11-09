@@ -4,7 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/db";
 import { pushSubscription } from "@/db/schema";
-import { pushToUser } from "@/lib/push";
+import { pushToUser, savePush } from "@/lib/push";
 import { requireUser } from "@/lib/session";
 
 const key = z
@@ -24,15 +24,11 @@ export async function savePushSubscription(sub: unknown) {
   const user = await requireUser();
   const parsed = subSchema.safeParse(sub);
   if (!parsed.success) return false;
-  const row = {
+  await savePush(getDb(), {
     endpoint: parsed.data.endpoint,
     userId: user.id,
     ...parsed.data.keys,
-  };
-  await getDb()
-    .insert(pushSubscription)
-    .values(row)
-    .onConflictDoUpdate({ target: pushSubscription.endpoint, set: row });
+  });
   return true;
 }
 
