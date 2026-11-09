@@ -1,5 +1,5 @@
 import { getImageProps } from "next/image";
-import { Ticket } from "@/components/ticket";
+import { StubValue, Ticket } from "@/components/ticket";
 import sea from "../../public/media/card-sea.jpg";
 import sunset from "../../public/media/card-sunset.jpg";
 
@@ -19,21 +19,6 @@ const LINES = [
     price: "2 x $22.00",
   },
 ];
-
-function StubValue(props: { k: string; v: string; hold?: boolean }) {
-  return (
-    <div>
-      <div className="text-xs leading-tight text-muted-foreground">
-        {props.k}
-      </div>
-      <div
-        className={`font-display num text-[1.875rem] leading-none font-extrabold ${props.hold ? "text-brand-text" : ""}`}
-      >
-        {props.v}
-      </div>
-    </div>
-  );
-}
 
 export function RequestTicket() {
   return (

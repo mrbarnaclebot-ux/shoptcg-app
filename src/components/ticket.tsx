@@ -34,3 +34,25 @@ export function Ticket(props: {
     </Tag>
   );
 }
+
+/** One labelled value on a ticket stub: table, code, hold timer. */
+export function StubValue(props: {
+  k: string;
+  v: ReactNode;
+  hold?: boolean;
+  testId?: string;
+}) {
+  return (
+    <div>
+      <div className="text-xs leading-tight text-muted-foreground">
+        {props.k}
+      </div>
+      <div
+        data-testid={props.testId}
+        className={`font-display num text-[1.875rem] leading-none font-extrabold ${props.hold ? "text-brand-text" : ""}`}
+      >
+        {props.v}
+      </div>
+    </div>
+  );
+}

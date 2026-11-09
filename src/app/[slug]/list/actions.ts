@@ -9,7 +9,12 @@ import { outboxPath } from "@/lib/email";
 import { seedAllowed } from "@/lib/e2e-seed";
 import { pushNewRequest } from "@/lib/push";
 import { ipHash, requestLimited } from "@/lib/request-limit";
-import { cancelRequest, createRequest, HOLD_MS, MAX_LINES } from "@/lib/requests";
+import {
+  cancelRequest,
+  createRequest,
+  HOLD_MS,
+  MAX_LINES,
+} from "@/lib/requests";
 import { clientIp } from "@/lib/sign-in-limit";
 import { getPublicStore } from "@/lib/storefront";
 
@@ -34,7 +39,11 @@ const linesSchema = z
   .transform((ls) => [...new Map(ls.map((l) => [l.listingId, l])).values()]);
 
 const sendSchema = z.object({
-  name: z.string().trim().min(1, "Enter your name.").max(80, "Use 80 characters or fewer."),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Enter your name.")
+    .max(80, "Use 80 characters or fewer."),
   email: z
     .string()
     .trim()

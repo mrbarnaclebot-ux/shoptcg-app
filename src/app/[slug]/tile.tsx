@@ -21,7 +21,12 @@ const PLACEHOLDER = { raw: "Card", graded: "Slab", sealed: "Sealed" };
 export const HTML_LANG = { en: undefined, ja: "ja", zh: "zh" } as const;
 
 /** "Base Set 4/102. NM", "Graded. PSA 10" or "Sealed". */
-export function metaLine(it: PublicItem) {
+export function metaLine(
+  it: Pick<
+    PublicItem,
+    "kind" | "setName" | "number" | "condition" | "grader" | "grade"
+  >,
+) {
   const grade = gradeLabel(it);
   if (it.kind !== "raw")
     return it.kind === "graded" ? `Graded. ${grade}` : grade;
