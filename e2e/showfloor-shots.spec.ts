@@ -3,15 +3,16 @@ import { newVendor } from "./auth";
 
 // Show floor screenshots, not a regression test:
 //   SHOTS=showfloor pnpm e2e showfloor-shots
+// (SHOTS_OUT=.planning/phases/show-floor/after for the post-critique set.)
 // Toasts are caught mid-animation, so each width replays its own flow.
-const OUT = ".planning/phases/show-floor/shots";
+const OUT = process.env.SHOTS_OUT ?? ".planning/phases/show-floor/shots";
 const MID_ANIMATION_MS = 380;
 
 test.skip(process.env.SHOTS !== "showfloor", "set SHOTS=showfloor");
 test.setTimeout(240_000);
 
 // Photo screens go to JPEG so each file stays under 400 KB.
-const PHOTO = new Set(["landing", "login-sent"]);
+const PHOTO = new Set(["landing", "login-sent", "landing-zoom"]);
 
 async function shot(page: Page, name: string, width: number, wait = 0) {
   await page.addStyleTag({ content: "nextjs-portal { display: none }" });
@@ -46,6 +47,11 @@ for (const width of [390, 1280]) {
       page.getByRole("heading", { name: "Your table is set" }),
     ).toBeVisible();
     await shot(page, "store-created", width, 500);
+    await page.getByRole("switch", { name: "Store open" }).click();
+    await expect(
+      page.locator(".toasts").getByText("Buyers can send requests now."),
+    ).toBeVisible();
+    await shot(page, "open-toast", width, MID_ANIMATION_MS);
 
     await page.goto("/dashboard/settings");
     await page.getByLabel("Price rule (% of market)").fill("-10");
@@ -71,5 +77,29 @@ for (const width of [390, 1280]) {
       page.getByText("Sold out", { exact: true }).first(),
     ).toBeVisible();
     await shot(page, "inventory-toast", width, MID_ANIMATION_MS);
+
+    await page.context().setOffline(true);
+    await row.getByRole("button", { name: "One more" }).click();
+    await expect(page.getByText("Not saved.", { exact: true })).toHaveCount(2);
+    await shot(page, "error-toast", width, MID_ANIMATION_MS);
+    await page.context().setOffline(false);
+    await expect(
+      page.locator(".toasts").getByText("Back online."),
+    ).toBeVisible();
+    await shot(page, "online-toast", width);
+
+    await page.goto("/dashboard/inventory/add");
+    await shot(page, "add", width);
   });
 }
+
+// Text zoom check: the poster headline at the narrowest phone, and the desktop
+// hero at 200% (a 1920 window is 960 CSS px wide) with nothing clipped.
+test("landing headline at 320 and desktop 200% zoom", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto("/");
+  await shot(page, "landing", 320, 600);
+  await page.setViewportSize({ width: 960, height: 540 });
+  await page.goto("/");
+  await shot(page, "landing-zoom", 960, 600);
+});
