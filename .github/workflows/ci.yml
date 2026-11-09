@@ -23,7 +23,7 @@ jobs:
     # `pnpm start` runs in production mode, which refuses the PGlite fallback.
     services:
       postgres:
-        image: postgres:17
+        image: postgres:18
         env:
           POSTGRES_PASSWORD: postgres
         ports: ["5432:5432"]
