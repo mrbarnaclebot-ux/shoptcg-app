@@ -10,6 +10,7 @@ import {
   heldByListing,
   pendingDuplicate,
 } from "@/lib/request-reads";
+import { storeState } from "@/lib/store-state";
 import { uniqueViolation } from "@/lib/stores";
 import { vendorPrice } from "@/lib/vendor-price";
 
@@ -97,14 +98,15 @@ async function insertRequest(tx: Db, input: NewRequest): Promise<CreateResult> {
   const [s] = await tx
     .select({
       id: store.id,
-      isOpen: store.isOpen,
+      state: storeState,
       priceRulePct: store.priceRulePct,
       rounding: store.rounding,
     })
     .from(store)
     .where(eq(store.id, input.storeId))
     .for("share");
-  if (!s || (!s.isOpen && !input.isTest)) return { ok: false, closed: true };
+  if (!s || (s.state !== "open" && !input.isTest))
+    return { ok: false, closed: true };
   const ids = input.lines.map((l) => l.listingId);
   await tx
     .select({ id: listing.id })

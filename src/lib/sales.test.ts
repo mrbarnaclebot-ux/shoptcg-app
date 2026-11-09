@@ -28,7 +28,10 @@ import { addStore, migratedDb } from "@/lib/test-fixtures";
 
 async function shop(db: Db, qty = 3, price = "10.00") {
   const storeId = await addStore(db, randomUUID().slice(0, 8));
-  await db.update(store).set({ isOpen: true }).where(eq(store.id, storeId));
+  await db
+    .update(store)
+    .set({ state: "open", openedAt: new Date() })
+    .where(eq(store.id, storeId));
   const [l] = await db
     .insert(listing)
     .values({

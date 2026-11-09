@@ -146,15 +146,27 @@ export const toast = {
 
   slugTaken: (slug: string) =>
     error("Link taken", `"${slug}" is in use. Try "${slug}-cards".`),
-  storeOpen: (open: boolean) =>
-    open
-      ? show("ok", "You're open", "Buyers can send requests now.", 4000)
-      : show(
-          "info",
-          "Closed",
-          "Buyers can browse, but can't send requests.",
-          4000,
-        ),
+  storeState: (state: "open" | "paused" | "off", minutes: number | null) => {
+    if (state === "open")
+      return show("ok", "You're open", "Buyers can send requests now.", 4000);
+    if (state === "off")
+      return show(
+        "info",
+        "Not vending",
+        "Your page shows your name and table, no stock.",
+        4000,
+      );
+    const back =
+      minutes === null
+        ? "until you reopen"
+        : `for ${minutes === 60 ? "1 hour" : `${minutes} min`}`;
+    return show(
+      "info",
+      "Paused",
+      `Buyers can browse, not send, ${back}.`,
+      4000,
+    );
+  },
   notSaved: (why: string) => error("Not saved", why),
   tableSaved: (label: string | null) => {
     const body = label

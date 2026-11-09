@@ -4,13 +4,14 @@ import { Suspense } from "react";
 import { TableNumber } from "@/components/table-number";
 import { Ticket } from "@/components/ticket";
 import { getDb } from "@/db";
-import type { Store } from "@/db/schema";
 import { appUrl } from "@/lib/deployed";
 import { requireUser } from "@/lib/session";
+import { waitingCount } from "@/lib/request-reads";
 import { getStoreByOwner } from "@/lib/stores";
+import { RefreshAt } from "@/components/refresh-at";
 import { CreateStoreForm } from "./create-store-form";
 import { CopyLink } from "./copy-link";
-import { OpenSwitch } from "./open-switch";
+import { StoreControl } from "./store-control";
 import { RequestQueue } from "./requests/queue";
 import { StoreCreated } from "./store-created";
 
@@ -44,7 +45,10 @@ async function Dashboard({
       {store ? (
         <>
           {created && <StoreCreated slug={store.slug} />}
-          <StoreSummary store={store} />
+          <StoreSummary
+            store={store}
+            waiting={await waitingCount(getDb(), store.id)}
+          />
           <RequestQueue storeId={store.id} />
         </>
       ) : (
@@ -72,7 +76,13 @@ function NewStore() {
   );
 }
 
-function StoreSummary({ store }: { store: Store }) {
+function StoreSummary({
+  store,
+  waiting,
+}: {
+  store: NonNullable<Awaited<ReturnType<typeof getStoreByOwner>>>;
+  waiting: number;
+}) {
   const origin = appUrl().origin;
   const initials = store.name
     .split(/\s+/)
@@ -90,7 +100,13 @@ function StoreSummary({ store }: { store: Store }) {
         </div>
         <TableNumber label="Store" value={initials} />
       </div>
-      <OpenSwitch open={store.isOpen} />
+      <StoreControl
+        live={store.live}
+        resumesInMin={store.resumesInMin}
+        autoPaused={store.autoPaused}
+        waiting={waiting}
+      />
+      <RefreshAt inMs={store.changesInMs} />
       <div className="flex flex-col gap-1 border-t border-border pt-4">
         <p className="text-sm text-muted-foreground">Your public page</p>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">

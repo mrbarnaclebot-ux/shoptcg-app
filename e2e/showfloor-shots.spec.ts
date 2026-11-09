@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { newVendor } from "./auth";
+import { setStore } from "./buyer";
 
 // Show floor screenshots, not a regression test:
 //   SHOTS=showfloor pnpm e2e showfloor-shots
@@ -47,7 +48,7 @@ for (const width of [390, 1280]) {
       page.getByRole("heading", { name: "Your table is set" }),
     ).toBeVisible();
     await shot(page, "store-created", width, 500);
-    await page.getByRole("switch", { name: "Store open" }).click();
+    await setStore(page, "open");
     await expect(
       page.locator(".toasts").getByText("Buyers can send requests now."),
     ).toBeVisible();

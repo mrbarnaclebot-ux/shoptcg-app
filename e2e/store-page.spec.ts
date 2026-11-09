@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { newVendor } from "./auth";
+import { setStore } from "./buyer";
 
 type Seeded = { zard: string; thin: string; sold: string; hidden: string };
 
@@ -29,11 +30,7 @@ async function saveSettings(
 
 async function openStore(page: Page) {
   await page.goto("/dashboard");
-  const open = page.getByRole("switch", { name: "Store open" });
-  await open.click();
-  await expect(open).toHaveAttribute("aria-checked", "true");
-  // It flips before the save lands; a buyer loading now could still see it closed.
-  await expect(open).toHaveAttribute("aria-busy", "false");
+  await setStore(page, "open");
 }
 
 const count = (page: Page) =>

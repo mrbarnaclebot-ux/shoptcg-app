@@ -1,8 +1,15 @@
-import { eq } from "drizzle-orm";
+import { eq, getTableColumns, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db";
 import { store, type Store } from "@/db/schema";
 import { createStoreSchema } from "@/lib/slug";
+import {
+  autoPaused,
+  changesInMs,
+  resumesInMin,
+  storeState,
+  type StoreState,
+} from "@/lib/store-state";
 
 export const SLUG_TAKEN = "That address is taken";
 
@@ -11,9 +18,20 @@ export type FieldErrors = { name?: string; slug?: string; form?: string };
 export type CreateStoreResult =
   { ok: true; store: Store } | { ok: false; errors: FieldErrors };
 
+/** The owner's store, with what buyers get now (live) next to what was chosen (state). */
+// is_open is deprecated (see schema); left out so nothing reads it by mistake.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- dropped on purpose
+const { isOpen: _deprecated, ...storeColumns } = getTableColumns(store);
+
 export async function getStoreByOwner(db: Db, ownerUserId: string) {
   const rows = await db
-    .select()
+    .select({
+      ...storeColumns,
+      live: storeState,
+      resumesInMin,
+      changesInMs,
+      autoPaused,
+    })
     .from(store)
     .where(eq(store.ownerUserId, ownerUserId));
   return rows[0] ?? null;
@@ -124,11 +142,26 @@ export const settingsSchema = z
       });
   });
 
-/** Opens or closes the owner's store; false when they have none. */
-export async function setStoreOpen(db: Db, ownerUserId: string, open: boolean) {
+/**
+ * Opens, pauses (for pauseMs, or until reopened when null) or closes the owner's
+ * store; false when they have none. Opening starts a fresh 14-hour window.
+ */
+export async function setStoreState(
+  db: Db,
+  ownerUserId: string,
+  state: StoreState,
+  pauseMs: number | null = null,
+) {
   const rows = await db
     .update(store)
-    .set({ isOpen: open })
+    .set({
+      state,
+      openedAt: state === "open" ? sql`now()` : undefined,
+      pausedUntil:
+        state === "paused" && pauseMs
+          ? sql`now() + ${pauseMs} * interval '1 millisecond'`
+          : null,
+    })
     .where(eq(store.ownerUserId, ownerUserId))
     .returning({ id: store.id });
   return rows.length > 0;

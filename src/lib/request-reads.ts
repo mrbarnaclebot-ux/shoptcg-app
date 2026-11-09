@@ -176,6 +176,21 @@ export async function storeQueue(db: Db, storeId: string, timeZone: string) {
   };
 }
 
+/** Buyers still holding something: what pausing or stopping would leave waiting. */
+export async function waitingCount(db: Db, storeId: string) {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(request)
+    .where(
+      and(
+        eq(request.storeId, storeId),
+        eq(request.isTest, false),
+        sql`${effectiveStatus} = 'pending'`,
+      ),
+    );
+  return row?.n ?? 0;
+}
+
 /** This phone's still-held request with exactly these lines: a retry, not a new send. */
 export async function pendingDuplicate(
   db: Db,

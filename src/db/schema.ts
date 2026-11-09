@@ -28,7 +28,18 @@ export const store = pgTable(
     slug: text("slug").notNull().unique(),
     name: text("name").notNull(),
     logoUrl: text("logo_url"),
+    // What the vendor chose. What buyers get is storeState in src/lib/store-state.ts:
+    // timers (auto-resume, auto-pause) are computed on read, never by a job.
+    state: text("state", { enum: ["open", "paused", "off"] })
+      .notNull()
+      .default("paused"),
+    // Deprecated: replaced by state. Kept one release so the previous deploy
+    // keeps working while this one boots; dropped in the next migration.
     isOpen: boolean("is_open").notNull().default(false),
+    // A timed pause resumes by itself once now() passes this.
+    pausedUntil: timestamp("paused_until", { withTimezone: true }),
+    // An open store pauses itself 14 hours after this, so nobody pings a vendor who went home.
+    openedAt: timestamp("opened_at", { withTimezone: true }),
     priceRulePct: integer("price_rule_pct").notNull().default(0),
     rounding: numeric("rounding").notNull().default("0"),
     secondCurrency: text("second_currency"),
@@ -61,6 +72,7 @@ export const store = pgTable(
       "store_second_currency_code",
       sql`${t.secondCurrency} ~ '^[A-Z]{3}$'`,
     ),
+    check("store_state_valid", sql`${t.state} in ('open', 'paused', 'off')`),
     check(
       "store_table_label_format",
       sql`${t.tableLabel} ~ '^[A-Za-z0-9-]{1,8}$'`,

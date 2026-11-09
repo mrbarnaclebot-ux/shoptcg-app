@@ -9,6 +9,7 @@ import {
   reviewList,
   sendList,
   sent,
+  setStore,
 } from "./buyer";
 import { addPushRow, hasDb, pushRowExists } from "./db";
 
@@ -247,10 +248,7 @@ test("a closed store: no list bar, and a stale list gets the closed copy", async
   await reviewList(buyer);
   await fillForm(buyer);
 
-  const open = page.getByRole("switch", { name: "Store open" });
-  await open.click();
-  await expect(open).toHaveAttribute("aria-checked", "false");
-  await expect(open).toHaveAttribute("aria-busy", "false");
+  await setStore(page, { pause: "Until I reopen" });
 
   await buyer.getByRole("button", { name: "Send to seller" }).click();
   await expect(

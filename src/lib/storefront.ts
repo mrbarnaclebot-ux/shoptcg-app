@@ -5,6 +5,7 @@ import { altPrice } from "@/lib/fx";
 import { listStock, type StockRow } from "@/lib/listings";
 import { heldByListing, type Held } from "@/lib/request-reads";
 import { safeImageUrl } from "@/lib/pricing/images";
+import { changesInMs, resumesInMin, storeState } from "@/lib/store-state";
 import { underMarket, vendorPrice } from "@/lib/vendor-price";
 
 // Everything here is read by buyers with no session. The store id from the
@@ -21,7 +22,9 @@ export async function getPublicStore(db: Db, slug: string) {
       slug: store.slug,
       name: store.name,
       logoUrl: store.logoUrl,
-      isOpen: store.isOpen,
+      state: storeState,
+      resumesInMin,
+      changesInMs,
       tableLabel: store.tableLabel,
       secondCurrency: store.secondCurrency,
       fxRate: store.fxRate,
@@ -33,7 +36,12 @@ export async function getPublicStore(db: Db, slug: string) {
     .where(eq(store.slug, slug));
   if (!row) return null;
   const fxRate = row.fxRate === null ? null : Number(row.fxRate);
-  return { ...row, fxRate, rounding: Number(row.rounding) };
+  return {
+    ...row,
+    isOpen: row.state === "open",
+    fxRate,
+    rounding: Number(row.rounding),
+  };
 }
 
 export type Sort = "price-desc" | "price-asc" | "name" | "new";
