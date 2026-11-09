@@ -16,7 +16,12 @@ import {
   store,
   user,
 } from "@/db/schema";
-import { dayStart, heldByListing, storeQueue } from "@/lib/request-reads";
+import {
+  dayStart,
+  heldByListing,
+  postgresZone,
+  storeQueue,
+} from "@/lib/request-reads";
 import { createRequest, type NewRequest } from "@/lib/requests";
 import { confirmSale, optOut, type ConfirmInput } from "@/lib/sales";
 import { addStore, migratedDb } from "@/lib/test-fixtures";
@@ -397,6 +402,14 @@ test("deleting an account takes its store and sales with it", async () => {
   expect(await salesOf(db, s.storeId)).toEqual([]);
   expect(await db.select().from(saleLine)).toEqual([]);
   expect(await db.select().from(receiptEmail)).toEqual([]);
+});
+
+test("a zone Postgres doesn't know falls back to UTC, so the queue still loads", async () => {
+  const db = await migratedDb();
+  expect(await postgresZone(db, "Asia/Tokyo")).toBe("Asia/Tokyo");
+  const zone = await postgresZone(db, "Mars/Olympus");
+  expect(zone).toBe("UTC");
+  await db.execute(sql`select ${dayStart(zone)}`);
 });
 
 test("today starts at midnight in the seller's zone", async () => {

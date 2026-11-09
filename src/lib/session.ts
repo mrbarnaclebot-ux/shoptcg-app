@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { getAuth } from "@/lib/auth";
 import { safeTimeZone } from "@/lib/format";
+import { postgresZone } from "@/lib/request-reads";
 import { getStoreByOwner } from "@/lib/stores";
 
 export async function getCurrentUser() {
@@ -15,7 +16,8 @@ export async function getCurrentUser() {
 
 /** The seller's zone from their browser's cookie; UTC until it has set one. */
 export async function sellerTimeZone() {
-  return safeTimeZone((await cookies()).get("tz")?.value);
+  const zone = safeTimeZone((await cookies()).get("tz")?.value);
+  return postgresZone(getDb(), zone);
 }
 
 export async function requireUser() {

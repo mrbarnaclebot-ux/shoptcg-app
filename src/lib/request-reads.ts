@@ -122,6 +122,31 @@ export async function buyerRequest(db: Db, id: string, sessionId: string) {
   return { ...row, lines };
 }
 
+let zones: Promise<Set<string>> | undefined;
+
+/**
+ * This zone if Postgres knows it, else UTC: a browser can name a zone newer than
+ * the database's data, and date_trunc errors on those. The view costs ~165 ms, so
+ * it's read once a process.
+ */
+export async function postgresZone(db: Db, zone: string) {
+  zones ??= (
+    db.execute(sql`select name from pg_timezone_names`) as Promise<unknown>
+  ).then((r) => {
+    // postgres-js returns the rows, PGlite wraps them.
+    const rows = (Array.isArray(r) ? r : (r as { rows: unknown[] }).rows) as {
+      name: string;
+    }[];
+    return new Set(rows.map((row) => row.name));
+  });
+  try {
+    return (await zones).has(zone) ? zone : "UTC";
+  } catch (err) {
+    zones = undefined;
+    throw err;
+  }
+}
+
 /** Midnight today in this zone: a show day is the seller's, not the database's. */
 export const dayStart = (timeZone: string) =>
   sql`date_trunc('day', now(), ${timeZone})`;
