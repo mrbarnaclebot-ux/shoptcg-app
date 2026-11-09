@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useOptimistic, useRef, useState, useTransition } from "react";
 import { lineButton, TicketButton } from "@/components/ticket-button";
 import type { StoreState } from "@/lib/store-state";
 import { toast } from "@/lib/toast";
@@ -16,6 +16,9 @@ const PAUSES = [
   { minutes: 60, label: "1 hour" },
   { minutes: null, label: "Until I reopen" },
 ] as const;
+
+const toggle =
+  "min-h-11 text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px] disabled:opacity-45";
 
 const COPY: Record<StoreState, { title: string; sub: string }> = {
   open: { title: "Open", sub: "Buyers can send requests." },
@@ -37,9 +40,13 @@ export function StoreControl(props: {
   const [shown, setShown] = useOptimistic(props.live);
   const [pending, start] = useTransition();
   const [asking, setAsking] = useState<"pause" | "off" | null>(null);
-  const choose = (next: Choice) =>
+  const heading = useRef<HTMLHeadingElement>(null);
+  const choose = (next: Choice) => {
+    // Outside the Action: its updates only commit once the save ends, which
+    // would leave the choices tappable for the whole round trip.
+    setAsking(null);
+    heading.current?.focus();
     start(async () => {
-      setAsking(null);
       setShown(next.state);
       const res = await setStateAction(next).catch(() => ({
         error: "Couldn't reach the server. Your store didn't change.",
@@ -49,6 +56,7 @@ export function StoreControl(props: {
       else
         toast.storeState(next.state, "minutes" in next ? next.minutes : null);
     });
+  };
   const open = shown === "open";
   let sub = COPY[shown].sub;
   if (shown === "paused" && !pending) {
@@ -58,7 +66,7 @@ export function StoreControl(props: {
   }
   const warn =
     props.waiting > 0 &&
-    `${props.waiting} ${props.waiting === 1 ? "buyer is" : "buyers are"} waiting. Their holds stay until you confirm or decline.`;
+    `${props.waiting} ${props.waiting === 1 ? "buyer is" : "buyers are"} waiting. Their holds still run out on time. Confirm or decline them first.`;
   return (
     <section
       aria-label="Your store"
@@ -75,7 +83,11 @@ export function StoreControl(props: {
           aria-hidden
           className={`size-3 rounded-full ${open ? "bg-success" : "bg-subtle"}`}
         />
-        <h2 className="font-display text-[2rem] leading-none font-black">
+        <h2
+          ref={heading}
+          tabIndex={-1}
+          className="font-display text-[2rem] leading-none font-black outline-none"
+        >
           {COPY[shown].title}
         </h2>
         <p role="status" className="col-start-2 text-sm text-muted-foreground">
@@ -85,13 +97,42 @@ export function StoreControl(props: {
       {!open && (
         <TicketButton
           onClick={() => choose({ state: "open" })}
+          disabled={pending}
           className="w-full"
         >
           Open store
         </TicketButton>
       )}
-      {asking ? (
-        <div className="flex flex-col gap-3 border-t border-dashed border-border pt-3">
+      <div className="flex flex-wrap gap-x-6">
+        {/* Shown while paused too, to switch to another length directly. */}
+        <button
+          type="button"
+          aria-expanded={asking === "pause"}
+          aria-controls="store-ask"
+          disabled={pending}
+          onClick={() => setAsking(asking === "pause" ? null : "pause")}
+          className={toggle}
+        >
+          Pause
+        </button>
+        {shown !== "off" && (
+          <button
+            type="button"
+            aria-expanded={asking === "off"}
+            aria-controls="store-ask"
+            disabled={pending}
+            onClick={() => setAsking(asking === "off" ? null : "off")}
+            className={toggle}
+          >
+            Not vending
+          </button>
+        )}
+      </div>
+      {asking && (
+        <div
+          id="store-ask"
+          className="flex flex-col gap-3 border-t border-dashed border-border pt-3"
+        >
           {warn && <p className="text-sm font-semibold">{warn}</p>}
           {asking === "pause" ? (
             <div
@@ -103,6 +144,7 @@ export function StoreControl(props: {
                 <button
                   key={p.label}
                   type="button"
+                  disabled={pending}
                   onClick={() =>
                     choose({ state: "paused", minutes: p.minutes })
                   }
@@ -115,6 +157,7 @@ export function StoreControl(props: {
           ) : (
             <button
               type="button"
+              disabled={pending}
               onClick={() => choose({ state: "off" })}
               className={`${lineButton} self-start`}
             >
@@ -127,29 +170,10 @@ export function StoreControl(props: {
             onClick={() => setAsking(null)}
             className="min-h-11 self-start text-sm text-muted-foreground underline underline-offset-4"
           >
-            Keep it {COPY[shown].title.toLowerCase()}
+            {shown === "off"
+              ? "Stay not vending"
+              : `Keep it ${COPY[shown].title.toLowerCase()}`}
           </button>
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-x-6">
-          {shown !== "paused" && (
-            <button
-              type="button"
-              onClick={() => setAsking("pause")}
-              className="min-h-11 text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
-            >
-              Pause
-            </button>
-          )}
-          {shown !== "off" && (
-            <button
-              type="button"
-              onClick={() => setAsking("off")}
-              className="min-h-11 text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
-            >
-              Not vending
-            </button>
-          )}
         </div>
       )}
     </section>
