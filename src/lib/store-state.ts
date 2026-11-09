@@ -35,5 +35,6 @@ export const changesInMs = sql<number | null>`(extract(epoch from case
   end - now()) * 1000)::bigint`.mapWith((v) => (v === null ? null : Number(v)));
 
 /** True when an open window (opened, or a timed pause that ran out) closed after 14 hours. */
-export const autoPaused = sql<boolean>`(${storeState} = 'paused' and (${store.state} = 'open'
-  or (${store.state} = 'paused' and ${store.pausedUntil} <= now())))`;
+// coalesce: an open-ended pause has no paused_until, which would make this null.
+export const autoPaused = sql<boolean>`coalesce(${storeState} = 'paused' and (${store.state} = 'open'
+  or (${store.state} = 'paused' and ${store.pausedUntil} <= now())), false)`;
