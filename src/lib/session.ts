@@ -20,6 +20,12 @@ export async function sellerTimeZone() {
   return postgresZone(getDb(), zone);
 }
 
+/** For route handlers, which answer 401 rather than redirect. */
+export async function storeOrNull() {
+  const user = await getCurrentUser();
+  return user && getStoreByOwner(getDb(), user.id);
+}
+
 export async function requireUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");

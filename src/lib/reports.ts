@@ -17,10 +17,26 @@ export type Range = {
 
 type Params = Record<string, string | string[] | undefined>;
 
+// Building a formatter is slow enough to show on a 20,000 line export.
+const formatters = new Map<string, Intl.DateTimeFormat>();
+function formatter(
+  locale: string,
+  timeZone: string,
+  o: Intl.DateTimeFormatOptions,
+) {
+  const key = `${locale} ${timeZone}`;
+  let f = formatters.get(key);
+  if (!f)
+    formatters.set(
+      key,
+      (f = new Intl.DateTimeFormat(locale, { ...o, timeZone })),
+    );
+  return f;
+}
+
 /** A date (YYYY-MM-DD) on the calendar of this zone. */
 export const localDate = (at: Date, timeZone: string) =>
-  new Intl.DateTimeFormat("en-CA", {
-    timeZone,
+  formatter("en-CA", timeZone, {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -190,10 +206,9 @@ export async function reportCsvRows(db: Db, storeId: string, r: Range) {
     REPORT_CSV_HEADER,
     ...rows.map(({ sale: s, line: l }) => [
       localDate(s.createdAt, s.timeZone),
-      s.createdAt.toLocaleTimeString("en-US", {
-        timeStyle: "short",
-        timeZone: s.timeZone,
-      }),
+      formatter("en-US", s.timeZone, { timeStyle: "short" }).format(
+        s.createdAt,
+      ),
       s.receiptNo,
       s.buyerName.trim().split(/\s+/)[0],
       l.name,

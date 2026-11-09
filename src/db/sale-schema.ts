@@ -157,7 +157,9 @@ export const customer = pgTable(
   },
   (t) => [
     unique("customer_store_email_key").on(t.storeId, t.email),
-    index("customer_store_optin_idx").on(t.storeId).where(sql`${t.promoOptIn}`),
+    index("customer_store_optin_idx")
+      .on(t.storeId)
+      .where(sql`${t.promoOptIn}`),
     check("customer_email_lower", sql`${t.email} = lower(${t.email})`),
   ],
 );

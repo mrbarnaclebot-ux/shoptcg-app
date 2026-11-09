@@ -293,6 +293,16 @@ export const toast = {
   },
   saleFailed: () =>
     error("Sale not confirmed", "Tap Confirm again. It won't record twice."),
+  exported: (file: string, rows: number) =>
+    show(
+      "ok",
+      "Exported",
+      `${file}, ${rows} ${rows === 1 ? "row" : "rows"}.`,
+      4000,
+    ),
+  exportFailed: (retry: () => void) =>
+    error("Export failed", "Nothing was lost. Try again.", retry),
+  exportLimited: () => error("Too many exports", "Try again in a few minutes."),
   receiptSent: (email: string) =>
     show("ok", "Receipt sent", `Sent to ${email}.`, 4000),
   receiptFailed: (retry?: () => void) =>

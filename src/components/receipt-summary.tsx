@@ -1,4 +1,4 @@
-import { CardThumb } from "@/components/card-thumb";
+import { CardThumb, kindOf } from "@/components/card-thumb";
 import { usd, withLanguage } from "@/lib/format";
 import { altPrice, formatAlt } from "@/lib/fx";
 import { METHOD_LABEL } from "@/lib/receipt-email";
@@ -26,14 +26,6 @@ type Sale = {
 
 export const paidBy = (s: Pick<Sale, "paymentMethod" | "paymentNote">) =>
   s.paymentNote ?? METHOD_LABEL[s.paymentMethod];
-
-// Sale lines keep only the grade label; it is enough to pick the thumb's shape.
-const kindOf = (label: string | null) =>
-  label === "Sealed"
-    ? "sealed"
-    : /^(PSA|BGS|CGC|SGC)/.test(label ?? "")
-      ? "graded"
-      : "raw";
 
 /** The lines and totals of a saved sale, for seller and buyer alike. */
 export function ReceiptSummary({ sale: s }: { sale: Sale }) {

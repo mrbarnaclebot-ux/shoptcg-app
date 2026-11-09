@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { paidBy } from "@/components/receipt-summary";
+import { lineButton } from "@/components/ticket-button";
 import { TicketLoading } from "@/components/ticket";
 import { getDb } from "@/db";
 import { usd } from "@/lib/format";
@@ -14,9 +15,14 @@ export const metadata: Metadata = { title: "Sales - shoptcg" };
 export default function SalesPage() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-start gap-3 px-4 pt-8 pb-16">
-      <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
-        Sales
-      </h1>
+      <div className="flex w-full items-end justify-between gap-3">
+        <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
+          Sales
+        </h1>
+        <Link href="/dashboard/reports" className={lineButton}>
+          Report
+        </Link>
+      </div>
       <Suspense fallback={<TicketLoading>Loading sales</TicketLoading>}>
         <Today />
       </Suspense>

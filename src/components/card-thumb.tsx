@@ -65,6 +65,14 @@ function Placeholder(props: {
   );
 }
 
+// Sale lines keep only the grade label; it is enough to pick the thumb's shape.
+export const kindOf = (label: string | null) =>
+  label === "Sealed"
+    ? "sealed"
+    : /^(PSA|BGS|CGC|SGC)/.test(label ?? "")
+      ? "graded"
+      : "raw";
+
 export function CardThumb({
   src,
   kind,

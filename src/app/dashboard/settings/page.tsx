@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import { lineButton } from "@/components/ticket-button";
 import { requireStore } from "@/lib/session";
@@ -18,6 +19,14 @@ export default function SettingsPage() {
       >
         <Settings />
       </Suspense>
+      <nav aria-label="More" className="flex flex-wrap gap-3">
+        <Link href="/dashboard/customers" className={lineButton}>
+          Customers
+        </Link>
+        <Link href="/dashboard/reports" className={lineButton}>
+          Sales report
+        </Link>
+      </nav>
       <form action={signOutAction} className="border-t border-border pt-6">
         <button type="submit" className={lineButton}>
           Sign out
