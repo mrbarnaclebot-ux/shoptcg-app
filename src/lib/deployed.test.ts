@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isDeployed } from "@/lib/deployed";
+import { appUrl, isDeployed } from "@/lib/deployed";
 
 describe("isDeployed", () => {
   it("is true for any Railway marker", () => {
@@ -9,3 +9,17 @@ describe("isDeployed", () => {
   });
 });
 
+describe("appUrl", () => {
+  it("uses BETTER_AUTH_URL, falls back to localhost only in development", () => {
+    expect(appUrl({ BETTER_AUTH_URL: "https://shoptcg.app/" }).host).toBe(
+      "shoptcg.app",
+    );
+    expect(appUrl({ NODE_ENV: "development" }).origin).toBe(
+      "http://localhost:3000",
+    );
+    expect(() => appUrl({ NODE_ENV: "production" })).toThrow(/required/);
+    expect(() => appUrl({ RAILWAY_ENVIRONMENT: "production" })).toThrow(
+      /required/,
+    );
+  });
+});

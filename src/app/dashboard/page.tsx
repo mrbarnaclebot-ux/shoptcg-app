@@ -7,6 +7,7 @@ import { TableNumber } from "@/components/table-number";
 import { Ticket } from "@/components/ticket";
 import { getDb } from "@/db";
 import type { Store } from "@/db/schema";
+import { appUrl } from "@/lib/deployed";
 import { requireUser } from "@/lib/session";
 import { getStoreByOwner } from "@/lib/stores";
 import { CreateStoreForm } from "./create-store-form";
@@ -71,8 +72,7 @@ function NewStore() {
 }
 
 function StoreSummary({ store }: { store: Store }) {
-  // Request headers are client-controlled; the configured origin is not.
-  const origin = (process.env.BETTER_AUTH_URL ?? "").replace(/\/$/, "");
+  const origin = appUrl().origin;
   const initials = store.name
     .split(/\s+/)
     .map((w) => w[0])

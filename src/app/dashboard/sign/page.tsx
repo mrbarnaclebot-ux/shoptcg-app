@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { appUrl } from "@/lib/deployed";
 import { requireStore } from "@/lib/session";
 import { PrintButton } from "./print-button";
 import "./sign.css";
@@ -12,9 +13,7 @@ export const metadata: Metadata = { title: "Table sign - shoptcg" };
 // Printed signs are permanent, so the source tag is baked in now even though
 // nothing reads it yet.
 function storeUrl(slug: string, src: "sign" | "nfc") {
-  const origin = new URL(
-    process.env.BETTER_AUTH_URL || "http://localhost:3000",
-  );
+  const origin = appUrl();
   return {
     url: `${origin.origin}/${slug}?src=${src}`,
     shown: `${origin.host}/${slug}`,
