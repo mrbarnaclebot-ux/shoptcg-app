@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { TableNumber } from "@/components/table-number";
+import { RefreshAt } from "@/components/refresh-at";
 import { lineButton } from "@/components/ticket-button";
 import { getDb } from "@/db";
-import { shortDate } from "@/lib/format";
 import {
   listPublicStock,
   storeSummary,
@@ -15,6 +14,7 @@ import { Controls, SortMenu } from "./controls";
 import { ListBar } from "./list-island";
 import { filterHref, parseFilter } from "./params";
 import { storeOr404 } from "./store-lookup";
+import { NotVending, StoreHeader } from "./store-header";
 import { Tile, TileSkeleton } from "./tile";
 
 // The store lookup runs before any Suspense boundary so an unknown slug is a
@@ -26,7 +26,11 @@ export async function generateMetadata({
   params,
 }: PageProps<"/[slug]">): Promise<Metadata> {
   const store = await storeOr404((await params).slug);
-  return { title: `${store.name} - shoptcg` };
+  return {
+    title: `${store.name} - shoptcg`,
+    // Nothing to index while not vending, and no stale prices in search results.
+    ...(store.state === "off" && { robots: { index: false } }),
+  };
 }
 
 export default async function StorePage({
@@ -34,15 +38,24 @@ export default async function StorePage({
   searchParams,
 }: PageProps<"/[slug]">) {
   const store = await storeOr404((await params).slug);
+  if (store.state === "off") return <NotVending store={store} />;
   const f = parseFilter(await searchParams);
   const summary = await storeSummary(getDb(), store.id);
   return (
     <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col px-4 md:px-6 lg:px-8">
       <StoreHeader store={store} {...summary} />
+      {/* A closed page polls so a reopening shows within a minute; an open one waits for its timer. */}
+      <RefreshAt
+        inMs={store.changesInMs}
+        everyMs={store.isOpen ? undefined : 60_000}
+      />
       {!store.isOpen && (
         <p className="-mx-4 mb-3 bg-surface-2 px-4 py-3 text-sm md:mx-0">
           <span className="font-semibold">Browsing only.</span> {store.name}{" "}
-          isn&apos;t taking requests right now.
+          isn&apos;t taking requests right now
+          {store.resumesInMin !== null
+            ? `. Back in about ${store.resumesInMin} min.`
+            : "."}
         </p>
       )}
       <Controls slug={store.slug} f={f} />
@@ -58,40 +71,6 @@ export default async function StorePage({
       </footer>
       {store.isOpen && <ListBar slug={store.slug} />}
     </main>
-  );
-}
-
-function StoreHeader(props: {
-  store: PublicStore;
-  items: number;
-  updatedOn: string | null;
-}) {
-  const { store } = props;
-  return (
-    <header className="grid grid-cols-[1fr_auto] items-start gap-x-4 gap-y-2 pt-6 pb-4 md:pt-10">
-      <h1 className="font-display text-[2.5rem] leading-[0.9] font-black text-balance md:text-[4rem]">
-        {store.name}
-      </h1>
-      {store.tableLabel && (
-        <TableNumber
-          label="Table"
-          value={store.tableLabel}
-          className="row-span-2"
-        />
-      )}
-      <p className="text-sm leading-snug text-muted-foreground">
-        <span
-          className={`inline-flex items-center gap-1.5 font-semibold ${store.isOpen ? "text-success" : "text-text"}`}
-        >
-          <span aria-hidden className="size-[7px] rounded-full bg-current" />
-          {store.isOpen ? "Open" : "Closed"}
-        </span>
-        <br />
-        <span className="num">{props.items}</span>{" "}
-        {props.items === 1 ? "item" : "items"}.
-        {props.updatedOn && ` Prices updated ${shortDate(props.updatedOn)}.`}
-      </p>
-    </header>
   );
 }
 

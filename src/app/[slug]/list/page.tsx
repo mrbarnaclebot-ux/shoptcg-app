@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getDb } from "@/db";
 import { MAX_LINES } from "@/lib/requests";
 import { getPublicItems } from "@/lib/storefront";
+import { NotVending } from "../store-header";
 import { storeOr404 } from "../store-lookup";
 import { metaLine } from "../tile";
 import { ListReview, type ReviewItem } from "./list-review";
@@ -23,6 +24,7 @@ export default async function ListPage({
   searchParams,
 }: PageProps<"/[slug]/list">) {
   const store = await storeOr404((await params).slug);
+  if (store.state === "off") return <NotVending store={store} />;
   const raw = (await searchParams).ids;
   const ids = String(Array.isArray(raw) ? raw[0] : (raw ?? ""))
     .split(",")

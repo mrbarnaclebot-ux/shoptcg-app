@@ -15,6 +15,7 @@ import {
 } from "@/lib/storefront";
 import { AddButton } from "../../list-island";
 import { parseRange } from "../../params";
+import { NotVending } from "../../store-header";
 import { storeOr404 } from "../../store-lookup";
 import { Art, HTML_LANG, metaLine, stockLine } from "../../tile";
 import { PriceChart } from "./price-chart";
@@ -35,6 +36,8 @@ export async function generateMetadata({
 }: PageProps<"/[slug]/item/[id]">): Promise<Metadata> {
   const { slug, id } = await params;
   const { store, item } = await itemOr404(slug, id);
+  if (store.state === "off")
+    return { title: `${store.name} - shoptcg`, robots: { index: false } };
   return { title: `${item.name} - ${store.name} - shoptcg` };
 }
 
@@ -44,6 +47,9 @@ export default async function ItemPage({
 }: PageProps<"/[slug]/item/[id]">) {
   const { slug, id } = await params;
   const { store, item } = await itemOr404(slug, id);
+  // A 200 that says why, not a 404: a saved item link should not read as "this
+  // store is gone". No price, stock or history while not vending.
+  if (store.state === "off") return <NotVending store={store} />;
   const days = parseRange(await searchParams);
   return (
     <main className="mx-auto grid w-full max-w-[1200px] flex-1 content-start gap-x-12 px-4 pt-4 pb-32 md:px-6 lg:grid-cols-[minmax(0,420px)_1fr] lg:px-8 lg:pt-8">

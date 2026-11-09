@@ -87,7 +87,7 @@ export async function sendRequest(
   if (!lines.success) return { empty: true };
   const db = getDb();
   const store = await getPublicStore(db, slug);
-  if (!store?.isOpen) return { closed: true };
+  if (store?.state !== "open") return { closed: true };
   const sessionId = await ensureBuyerSid();
   const ip = await addressHash();
   const hold = await holdMs();
