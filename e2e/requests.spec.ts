@@ -1,50 +1,14 @@
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { newVendor } from "./auth";
-
-/** A signed-in vendor with demo stock and an open store. */
-async function openVendor(page: Page) {
-  const id = await newVendor(page);
-  const res = await page.request.post("/api/e2e/seed");
-  expect(res.ok()).toBe(true);
-  await page.goto("/dashboard");
-  const open = page.getByRole("switch", { name: "Store open" });
-  await open.click();
-  await expect(open).toHaveAttribute("aria-checked", "true");
-  return `e2e-${id}`;
-}
-
-async function newBuyer(browser: Browser, slug: string) {
-  const buyer = await (await browser.newContext()).newPage();
-  await buyer.goto(`/${slug}`);
-  return buyer;
-}
-
-const add = (buyer: Page, name: string) =>
-  buyer.getByRole("button", { name: `Add ${name} to your list` }).click();
-
-async function reviewList(buyer: Page) {
-  await buyer.getByRole("link", { name: "Review list" }).click();
-  await expect(buyer.getByRole("heading", { name: "Your list" })).toBeVisible();
-}
-
-async function fillForm(buyer: Page, name = "Maya Robinson") {
-  await buyer.getByLabel("Your name").fill(name);
-  await buyer.getByLabel("Email for your receipt").fill("maya@example.test");
-}
-
-const sent = (buyer: Page) =>
-  expect(buyer.getByRole("heading", { name: /^Sent to/ })).toBeVisible();
-
-/** Add, review and send; ends on the waiting screen and returns the code. */
-async function sendList(buyer: Page, slug: string, items: string[]) {
-  await buyer.goto(`/${slug}`);
-  for (const item of items) await add(buyer, item);
-  await reviewList(buyer);
-  await fillForm(buyer);
-  await buyer.getByRole("button", { name: "Send to seller" }).click();
-  await sent(buyer);
-  return (await buyer.getByTestId("request-code").textContent())!;
-}
+import {
+  add,
+  fillForm,
+  newBuyer,
+  openVendor,
+  reviewList,
+  sendList,
+  sent,
+} from "./buyer";
 
 test("happy path: the seller sees the ticket within 3 seconds", async ({
   page,
