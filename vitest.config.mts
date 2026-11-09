@@ -5,5 +5,9 @@ export default defineConfig({
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
-  test: { include: ["src/**/*.test.ts"] },
+  test: {
+    include: ["src/**/*.test.ts"],
+    // Many tests boot PGlite and migrate in their body: over 5 s on a busy machine.
+    testTimeout: 30_000,
+  },
 });
