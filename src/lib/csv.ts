@@ -43,3 +43,31 @@ export function parseCsv(text: string): { line: number; cells: string[] }[] {
   if (cell || cells.length) endRow();
   return rows;
 }
+
+// A spreadsheet runs these as formulas, with or without leading spaces, and
+// some read the full-width forms too.
+const FORMULA = /^[\s　]*[=+\-@＝＋－＠]|^[\t\r]/;
+
+type Cell = string | number | null | undefined;
+
+/** One cell, safe to open in Excel: formulas neutralised, then RFC 4180 quoted. */
+export function csvCell(value: Cell) {
+  const text = String(value ?? "");
+  const safe = FORMULA.test(text) ? `'${text}` : text;
+  return /[",\r\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
+}
+
+/** UTF-8 BOM (so Excel reads accents), CRLF line ends. */
+export const toCsv = (rows: Cell[][]) =>
+  "﻿" + rows.map((r) => r.map(csvCell).join(",") + "\r\n").join("");
+
+/** A download of these rows; the first is the header, so it isn't counted. */
+export const csvResponse = (filename: string, rows: Cell[][]) =>
+  new Response(toCsv(rows), {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Cache-Control": "no-store",
+      "X-Row-Count": String(rows.length - 1),
+    },
+  });

@@ -1,0 +1,1 @@
+CREATE INDEX "customer_store_optin_idx" ON "customer" USING btree ("store_id") WHERE "customer"."promo_opt_in";
