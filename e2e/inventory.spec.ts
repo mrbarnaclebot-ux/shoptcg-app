@@ -66,7 +66,37 @@ test("a new store starts closed and the switch opens it", async ({ page }) => {
   const open = page.getByRole("switch", { name: "Store open" });
   await expect(open).toHaveAttribute("aria-checked", "false");
   await open.click();
-  await expect(page.getByText("Buyers can send requests now.")).toBeVisible();
+  await expect(
+    page.locator(".toasts").getByText("Buyers can send requests now."),
+  ).toBeVisible();
   await page.reload();
   await expect(open).toHaveAttribute("aria-checked", "true");
+});
+
+test("the sold out toast moves off the row just tapped", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 500 });
+  await newVendor(page);
+  await page.goto("/dashboard/inventory/add");
+  await page
+    .getByRole("button", { name: "Not in the catalog? Add a custom item" })
+    .click();
+  await page.getByLabel("Name").fill("Flip test card");
+  await page.getByLabel("Qty").fill("1");
+  await page.getByLabel("Fixed price (optional)").fill("5");
+  await page.getByRole("button", { name: "Add custom item" }).click();
+  await expect(page.getByText("Added Flip test card")).toBeVisible();
+  await page.goto("/dashboard/inventory");
+
+  const row = page.locator("main li").filter({ hasText: "Flip test card" });
+  // Park the row right under the header, where phone toasts land.
+  await row.evaluate((el) => {
+    document.body.style.paddingBottom = "2000px";
+    scrollBy(0, el.getBoundingClientRect().top - 70);
+  });
+  await row.getByRole("button", { name: "One fewer" }).click();
+  const toast = page.locator(".toasts li").filter({ hasText: "Sold out" });
+  await expect(toast).toBeVisible();
+  await expect(page.locator(".toasts")).toHaveAttribute("data-flip");
+  const [a, b] = [await toast.boundingBox(), await row.boundingBox()];
+  expect(a!.y >= b!.y + b!.height || b!.y >= a!.y + a!.height).toBe(true);
 });

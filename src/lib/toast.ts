@@ -27,7 +27,8 @@ type Input = Omit<ToastItem, "id" | "leaving">;
 
 const MAX = 3;
 const LEAVE_MS = 200;
-let items: ToastItem[] = [];
+const NONE: ToastItem[] = [];
+let items = NONE;
 const subs = new Set<() => void>();
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -37,7 +38,7 @@ export const toastStore = {
     return () => void subs.delete(cb);
   },
   get: () => items,
-  server: (): ToastItem[] => [],
+  server: () => NONE,
 };
 
 function set(next: ToastItem[]) {

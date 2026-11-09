@@ -56,13 +56,15 @@ function useEscapeDismiss() {
 }
 
 // The row the vendor last touched (a tap does not focus a button on iOS, so
-// pointerdown is tracked too). A toast never sits on top of it.
-let touched: Element | null = null;
+// pointerdown is tracked too). A server refresh can swap the row's node before
+// the toast arrives, so its rect at tap time is the fallback.
+let touched: { el: Element; at: DOMRect } | null = null;
 function useTouchedRow() {
   useEffect(() => {
-    const mark = (e: Event) =>
-      (touched =
-        (e.target as Element).closest?.("li, tr, form, section") ?? null);
+    const mark = (e: Event) => {
+      const el = (e.target as Element).closest?.("li, tr, form, section");
+      touched = el ? { el, at: el.getBoundingClientRect() } : null;
+    };
     addEventListener("pointerdown", mark, true);
     addEventListener("focusin", mark, true);
     return () => {
@@ -71,6 +73,10 @@ function useTouchedRow() {
     };
   }, []);
 }
+
+const touchedRect = () =>
+  touched &&
+  (touched.el.isConnected ? touched.el.getBoundingClientRect() : touched.at);
 
 const overlaps = (a: DOMRect, b: DOMRect) =>
   a.top < b.bottom && b.top < a.bottom && a.left < b.right && b.left < a.right;
@@ -85,11 +91,9 @@ function useFlip(count: number) {
     if (!el) return;
     // Measured in the home spot; this runs before paint, so nothing jumps.
     el.removeAttribute("data-flip");
-    if (!count || !touched?.isConnected) return;
-    const hit = overlaps(
-      el.getBoundingClientRect(),
-      touched.getBoundingClientRect(),
-    );
+    const row = count ? touchedRect() : null;
+    if (!row) return;
+    const hit = overlaps(el.getBoundingClientRect(), row);
     el.toggleAttribute("data-flip", hit);
   }, [count]);
   return ref;
