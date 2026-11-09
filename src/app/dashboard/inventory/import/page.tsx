@@ -2,7 +2,6 @@ import { ChevronLeft, Download } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CSV_COLUMNS, MAX_ROWS } from "@/lib/csv-import";
-import { MISSES_PER_HOUR } from "@/lib/catalog";
 import { ImportFlow } from "./import-flow";
 
 export const metadata: Metadata = { title: "Import CSV - shoptcg" };
@@ -39,11 +38,8 @@ export default function ImportPage() {
           see every row before anything is saved.
         </p>
         <p className="border-t border-dashed border-border-strong pt-3 text-sm text-muted-foreground">
-          Each row is matched against the shoptcg catalog first, which is free.
-          Cards not in it yet are looked up with our price provider, and those
-          lookups count toward your limit of {MISSES_PER_HOUR} searches an hour.
-          Rows past the limit, Chinese items and anything we can&apos;t match
-          exactly come in as custom items you can price yourself.
+          We match each row to the catalog; anything we can&apos;t match comes
+          in as a custom item you price.
         </p>
       </div>
       <ImportFlow />

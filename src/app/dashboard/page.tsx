@@ -11,6 +11,8 @@ import { appUrl } from "@/lib/deployed";
 import { requireUser } from "@/lib/session";
 import { getStoreByOwner } from "@/lib/stores";
 import { CreateStoreForm } from "./create-store-form";
+import { CopyLink } from "./copy-link";
+import { OpenSwitch } from "./open-switch";
 import { StoreCreated } from "./store-created";
 
 export const metadata: Metadata = { title: "Dashboard - shoptcg" };
@@ -86,23 +88,22 @@ function StoreSummary({ store }: { store: Store }) {
           <h1 className="font-display text-[2.75rem] leading-[0.88] font-black break-words">
             {store.name}
           </h1>
-          <p
-            className={`mt-2 flex items-center gap-1.5 text-sm font-semibold ${store.isOpen ? "text-success" : "text-muted-foreground"}`}
-          >
-            <span aria-hidden className="size-[7px] rounded-full bg-current" />
-            {store.isOpen ? "Open" : "Closed"}
-          </p>
         </div>
         <TableNumber label="Store" value={initials} />
       </div>
+      <OpenSwitch open={store.isOpen} />
       <div className="flex flex-col gap-1 border-t border-border pt-4">
         <p className="text-sm text-muted-foreground">Your public page</p>
-        <Link
-          href={`/${store.slug}`}
-          className="inline-flex min-h-11 items-center font-semibold break-all underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
-        >
-          {origin}/{store.slug}
-        </Link>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {/* Shown like the table sign: no protocol, in the poster face. */}
+          <Link
+            href={`/${store.slug}`}
+            className="font-display inline-flex min-h-11 items-center text-2xl font-extrabold break-all underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+          >
+            {origin.replace(/^https?:\/\//, "")}/{store.slug}
+          </Link>
+          <CopyLink url={`${origin}/${store.slug}`} />
+        </div>
       </div>
     </section>
   );

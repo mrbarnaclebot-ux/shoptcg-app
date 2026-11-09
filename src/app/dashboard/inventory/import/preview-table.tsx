@@ -23,7 +23,11 @@ function stockOf(r: PreviewRow) {
   const price = input.overridePrice;
   return {
     qty: String(input.qty),
-    price: price ? usd(Number(price)) : needsPrice(r) ? "None" : "Market",
+    price: price
+      ? usd(Number(price))
+      : needsPrice(r)
+        ? "No price yet"
+        : "Market",
   };
 }
 
@@ -61,7 +65,9 @@ function Row({ r }: { r: PreviewRow }) {
   const own = r.row?.kind === "custom" ? r.row.input : null;
   return (
     <tr className="border-b border-dashed border-border align-middle">
-      <td className="num py-2 pr-3 text-sm text-subtle">{r.line}</td>
+      <td className="num hidden py-2 pr-3 text-sm text-subtle md:table-cell">
+        {r.line}
+      </td>
       <td className="py-2 pr-3">
         <div className="flex items-center gap-3">
           <CardThumb
@@ -75,9 +81,17 @@ function Row({ r }: { r: PreviewRow }) {
             <p className="text-sm text-muted-foreground">{r.detail}</p>
             {r.status !== "error" && (
               <p className="text-sm text-muted-foreground md:hidden">
-                Qty {qty}. {price}
+                Row {r.line}. Qty {qty}. {price}
               </p>
             )}
+            {r.status === "error" && (
+              <p className="text-sm text-muted-foreground md:hidden">
+                Row {r.line}
+              </p>
+            )}
+            <div className="mt-1 md:hidden">
+              <Badges r={r} label={label} tone={tone} />
+            </div>
             {r.note && (
               <p
                 className={`text-sm ${r.status === "error" ? "text-danger" : "text-warning"}`}
@@ -90,15 +104,21 @@ function Row({ r }: { r: PreviewRow }) {
       </td>
       <td className="num hidden py-2 pr-3 text-right md:table-cell">{qty}</td>
       <td className="num hidden py-2 pr-3 text-right md:table-cell">{price}</td>
-      <td className="py-2">
-        <div className="flex flex-col items-start gap-1">
-          <span className={`${BADGE_BASE} ${tone}`}>{label}</span>
-          {needsPrice(r) && (
-            <span className={`${BADGE_BASE} text-warning`}>Set a price</span>
-          )}
-        </div>
+      <td className="hidden py-2 md:table-cell">
+        <Badges r={r} label={label} tone={tone} />
       </td>
     </tr>
+  );
+}
+
+function Badges(props: { r: PreviewRow; label: string; tone: string }) {
+  return (
+    <div className="flex flex-wrap items-start gap-1 md:flex-col">
+      <span className={`${BADGE_BASE} ${props.tone}`}>{props.label}</span>
+      {needsPrice(props.r) && (
+        <span className={`${BADGE_BASE} text-warning`}>Set a price</span>
+      )}
+    </div>
   );
 }
 
@@ -117,11 +137,11 @@ export function PreviewTable({ rows }: { rows: PreviewRow[] }) {
       <table className="w-full border-collapse text-left">
         <thead className="border-b-[1.5px] border-text">
           <tr>
-            <th className={th}>Row</th>
+            <th className={`${th} hidden md:table-cell`}>Row</th>
             <th className={th}>Item</th>
             <th className={`${th} hidden text-right md:table-cell`}>Qty</th>
             <th className={`${th} hidden text-right md:table-cell`}>Price</th>
-            <th className={th}>Result</th>
+            <th className={`${th} hidden md:table-cell`}>Result</th>
           </tr>
         </thead>
         <tbody>

@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  sileo@0.1.6:
-    hash: 69d8cce389c36fc53a3a1815ce76c6e5df26d67a25b7788e8cc31b469821c31d
-    path: patches/sileo@0.1.6.patch
-
 importers:
 
   .:
@@ -55,9 +50,6 @@ importers:
       server-only:
         specifier: ^0.0.1
         version: 0.0.1
-      sileo:
-        specifier: 0.1.6
-        version: 0.1.6(patch_hash=69d8cce389c36fc53a3a1815ce76c6e5df26d67a25b7788e8cc31b469821c31d)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
@@ -3373,12 +3365,6 @@ packages:
   signal-exit@4.1.0:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
-
-  sileo@0.1.6:
-    resolution: {integrity: sha512-a1IIJ72BMskiXfbWlO+eTWu1yxz7wQtFIW7SvyaAax0WHqPi/WUsQH9yKvbWo2dDSxel4LdGRLYLzJCIIE6eHA==}
-    peerDependencies:
-      react: '>=18'
-      react-dom: '>=18'
 
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
@@ -6853,14 +6839,6 @@ snapshots:
   signal-exit@3.0.7: {}
 
   signal-exit@4.1.0: {}
-
-  sileo@0.1.6(patch_hash=69d8cce389c36fc53a3a1815ce76c6e5df26d67a25b7788e8cc31b469821c31d)(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
-    dependencies:
-      motion: 12.43.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      react: 19.3.0
-      react-dom: 19.3.0(react@19.3.0)
-    transitivePeerDependencies:
-      - '@emotion/is-prop-valid'
 
   sisteransi@1.0.5: {}
 
