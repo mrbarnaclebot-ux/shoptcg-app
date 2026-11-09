@@ -18,7 +18,6 @@ type Values = {
   secondCurrency: string;
   fxRate: string;
   nfcEnabled: boolean;
-  isOpen: boolean;
 };
 
 const ROUNDING = [
@@ -42,8 +41,8 @@ export function SettingsForm({ values }: { values: Values }) {
   );
   const e = state.errors ?? {};
   useEffect(() => {
-    if (state.saved) toast.settingsSaved(state.saved.pct, state.saved.rounding);
-    else if (state.errors) toast.notSaved(saveError(state.errors));
+    // A save shows the inline "Saved." instead of a toast.
+    if (state.errors) toast.notSaved(saveError(state.errors));
   }, [state]);
   return (
     <form
@@ -63,12 +62,6 @@ export function SettingsForm({ values }: { values: Values }) {
         <SectionMark n={3} level="legend" className="mb-4">
           At the table
         </SectionMark>
-        <Toggle
-          name="isOpen"
-          checked={values.isOpen}
-          label="Store open"
-          hint="Closed stores can still be browsed, but buyers can't send requests."
-        />
         <Toggle
           name="nfcEnabled"
           checked={values.nfcEnabled}

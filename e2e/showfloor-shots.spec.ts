@@ -43,7 +43,7 @@ for (const width of [390, 1280]) {
 
     await newVendor(page);
     await expect(
-      page.getByRole("heading", { name: "You're open" }),
+      page.getByRole("heading", { name: "Your table is set" }),
     ).toBeVisible();
     await shot(page, "store-created", width, 500);
 

@@ -122,7 +122,7 @@ function Qty({ row }: { row: Row }) {
     start(async () => {
       const res = await updateListingAction({ id: row.id, active: false });
       if (res.error) toast.notSaved(res.error);
-      else toast.itemHidden(row.id, row.name);
+      else toast.itemHidden(row.name);
     });
   const step = (delta: 1 | -1) =>
     start(async () => {

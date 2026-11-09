@@ -34,7 +34,7 @@ import { requireStore } from "@/lib/session";
 // only ever used together with that store id (see lib/listings.ts).
 
 type Result = { error?: string };
-/** What the toast needs: the new listing's id and whether it was the store's first. */
+/** The new listing's id and whether it was the store's first (the first gets the show moment). */
 type Added = { id: string; first: boolean };
 const SAVE_FAILED = "Couldn't save that. Try again.";
 

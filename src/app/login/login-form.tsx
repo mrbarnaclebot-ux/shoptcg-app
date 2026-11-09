@@ -36,8 +36,8 @@ export function LoginForm() {
   );
   const expired = useExpiredLink();
   useEffect(() => {
-    if (state.sent) toast.linkSent(state.sent);
-    else if (state.limited) toast.rateLimited();
+    // A sent link swaps the form for the "Check your email" ticket, so no toast.
+    if (state.limited) toast.rateLimited();
     else if (state.failed && state.error) toast.sendFailed(state.error);
   }, [state]);
   if (state.sent) return <Sent email={state.sent} />;

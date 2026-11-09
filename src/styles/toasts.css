@@ -1,140 +1,165 @@
 /*
-  Sileo toasts as paper tickets. Sileo injects its own CSS at runtime, so
-  every override is scoped one level deeper (html ...) to win on specificity.
-  Success, info and warning tear in with a receipt edge on the outer side;
-  errors are a stub: perforation after the badge and a line retry button.
+  Toasts as one-row tickets (design/variations/v3-showfloor section 3):
+  icon | bold title + sentence | optional button. Good news is paper with a
+  receipt-bite top edge; failures are the hall (night) with a red ring.
+  Phones: top, under the header. 768 and up: bottom-right, clear of the
+  header actions. [data-flip] moves the stack to the other edge when it would
+  cover the row the vendor just touched (toast-root.tsx).
 */
 
-html:root {
-  --sileo-width: 360px;
-  /* No overshoot: the patched spring has no bounce and the CSS easing matches. */
-  --sileo-spring-easing: cubic-bezier(0.16, 1, 0.3, 1);
-  --sileo-state-success: oklch(0.49 0.13 150);
-  --sileo-state-error: oklch(0.5 0.18 27);
-  --sileo-state-warning: var(--sun-ink);
-  --sileo-state-info: var(--ink-2);
-  --sileo-state-action: var(--sun-ink);
-  --sileo-state-loading: var(--ink-2);
+.toasts {
+  --bad-night: oklch(0.72 0.17 27); /* --danger on the hall */
+  position: fixed;
+  z-index: 50;
+  inset-inline: 16px;
+  top: 64px;
+  display: grid;
+  gap: 12px;
+  pointer-events: none;
+}
+.toasts[data-flip] {
+  top: auto;
+  bottom: 80px; /* clears the 64px tab bar */
+}
+@media (min-width: 768px) {
+  .toasts {
+    top: auto;
+    bottom: 24px;
+    left: auto;
+    right: 24px;
+    width: min(470px, calc(100vw - 48px));
+  }
+  .toasts[data-flip] {
+    top: 24px;
+    bottom: auto;
+  }
 }
 
-/* Paper stock, whatever fill was passed. CSS beats the SVG fill attribute. */
-html [data-sileo-pill],
-html [data-sileo-body] {
-  fill: var(--paper);
-}
-
-html [data-sileo-toast] {
-  font-family: var(--font-sans);
+.toasts > li {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px 14px 14px;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  pointer-events: auto;
+  background: var(--paper);
   color: var(--ink);
+  box-shadow: 0 18px 40px oklch(0 0 0 / 0.45);
+  animation: toast-tear 0.7s var(--ease-out-expo) both;
+  transition: opacity 200ms linear;
+}
+.toasts > li[data-leaving] {
+  opacity: 0;
+}
+.toasts b {
+  font-weight: 600;
 }
 
-/* Receipt edge: a row of half-circle bites on the side away from the body. */
-html [data-sileo-toast]:not([data-state="error"])[data-edge="bottom"] {
-  mask: radial-gradient(circle 4.5px at 5px 0, #0000 96%, #000) 0 0 / 10px 100%
-    repeat-x;
-}
-html [data-sileo-toast]:not([data-state="error"])[data-edge="top"] {
-  mask: radial-gradient(circle 4.5px at 5px 100%, #0000 96%, #000) 0 0 / 10px
-    100% repeat-x;
+/* Receipt bite along the top edge of paper tickets. */
+.toasts > li:not([data-toast="bad"])::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: -5px;
+  height: 6px;
+  background: radial-gradient(circle at 5px 0, #0000 4.5px, var(--paper) 5px) 0
+    0 / 10px 6px repeat-x;
 }
 
-html [data-sileo-badge] {
+.toast-ic {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   color: var(--paper);
-  background-color: var(--sileo-tone);
+  background: oklch(0.49 0.13 150);
 }
-html [data-sileo-badge][data-state="loading"] {
+.toast-ic svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+[data-toast="info"] .toast-ic {
+  background: var(--ink-2);
+}
+[data-toast="warn"] .toast-ic {
+  background: var(--sun-ink);
+}
+[data-toast="wait"] .toast-ic {
   color: var(--ink-2);
-  background-color: transparent;
-}
-html [data-sileo-title] {
-  color: var(--ink);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  text-transform: none;
-  display: inline-flex;
-  align-items: center;
-}
-html [data-sileo-title][data-state="error"] {
-  color: var(--sileo-tone);
-}
-
-/* Error stub: the badge sits on a tear-off stub behind a perforation. */
-html [data-sileo-toast][data-state="error"] [data-sileo-header-inner] {
-  gap: 0;
-}
-html [data-sileo-toast][data-state="error"] [data-sileo-badge] {
-  margin-right: 10px;
-}
-html [data-sileo-toast][data-state="error"] [data-sileo-title] {
-  padding-left: 10px;
-  background: radial-gradient(circle, var(--paper-3) 1.4px, #0000 1.9px) left
-    center / 3px 6px repeat-y;
-}
-html [data-sileo-toast][data-state="error"] [data-sileo-badge] {
-  color: var(--sileo-tone);
   background: transparent;
-  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+[data-toast="wait"] .toast-ic svg {
+  animation: toast-spin 1s linear infinite;
 }
 
-/* Stub number after the title, e.g. "No. 0932". */
-html [data-sileo-title] [data-no] {
-  margin-left: 10px;
-  font: 600 0.8125rem/1 var(--font-display);
-  font-variation-settings: "opsz" 72;
-  letter-spacing: 0.06em;
-  color: var(--ink-2);
+/* Failures: the hall, ringed in red. */
+.toasts > li[data-toast="bad"] {
+  background: var(--night);
+  color: var(--on-night);
+  box-shadow:
+    inset 0 0 0 1.5px var(--bad-night),
+    0 18px 40px oklch(0 0 0 / 0.45);
+}
+[data-toast="bad"] .toast-ic {
+  color: var(--bad-night);
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--bad-night);
 }
 
-html [data-sileo-viewport] [data-sileo-description] {
-  color: var(--ink-2);
-  font-size: 0.875rem;
-}
-html [data-sileo-description] b {
-  display: block;
-  color: var(--ink);
-  font-weight: 600;
-}
-/* Receipt lines: label left, value right, dotted leader rule between rows. */
-html [data-sileo-description] [data-lines] {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  margin-top: 6px;
-  font-size: 0.8125rem;
-}
-html [data-sileo-description] [data-lines] > * {
-  padding: 3px 0;
-  border-top: 1px dashed var(--paper-3);
-}
-html [data-sileo-description] [data-lines] dd {
-  color: var(--ink);
-  text-align: right;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-html [data-sileo-button] {
-  border-radius: 0;
-  height: 2.5rem;
+.toasts button {
+  min-height: 40px;
   padding: 0 14px;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--ink);
+  white-space: nowrap;
+  color: inherit;
   background: transparent;
   box-shadow: inset 0 0 0 1.5px currentColor;
+  cursor: pointer;
 }
-html [data-sileo-button]:hover {
-  background: oklch(0 0 0 / 0.05);
+.toasts button:hover {
+  background: color-mix(in oklch, currentColor 8%, transparent);
 }
-html [data-sileo-button]:focus-visible {
-  outline: 2px solid var(--sun-ink);
+.toasts button:focus-visible {
+  outline: 2px solid var(--sun);
   outline-offset: 2px;
 }
 
-/* Reduced motion: no slide or scale, a short fade only. */
+/* The edge prints in from the top; text never fades. */
+@keyframes toast-tear {
+  from {
+    opacity: 0;
+    transform: translateY(-22px);
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    clip-path: inset(-10px 0 -60px 0);
+  }
+}
+@keyframes toast-spin {
+  to {
+    rotate: 360deg;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  html [data-sileo-viewport] [data-sileo-toast] {
-    transform: none !important;
-    transition: opacity 200ms linear !important;
+  .toasts > li {
+    animation: toast-fade 0.2s linear both;
+  }
+  [data-toast="wait"] .toast-ic svg {
+    animation: none;
+  }
+}
+@keyframes toast-fade {
+  from {
+    opacity: 0;
   }
 }

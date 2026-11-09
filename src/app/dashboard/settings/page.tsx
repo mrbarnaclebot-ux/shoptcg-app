@@ -41,7 +41,6 @@ async function Settings() {
           secondCurrency: store.secondCurrency ?? "",
           fxRate: store.fxRate === null ? "" : String(Number(store.fxRate)),
           nfcEnabled: store.nfcEnabled,
-          isOpen: store.isOpen,
         }}
       />
     </>

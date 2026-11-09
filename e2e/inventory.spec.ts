@@ -54,3 +54,16 @@ test("store settings keep their choices after saving", async ({ page }) => {
   ).toBeChecked();
   await expect(page.getByLabel("Price rule (% of market)")).toHaveValue("-10");
 });
+
+test("a new store starts closed and the switch opens it", async ({ page }) => {
+  await newVendor(page);
+  await expect(
+    page.getByRole("heading", { name: "Your table is set" }),
+  ).toBeVisible();
+  const open = page.getByRole("switch", { name: "Store open" });
+  await expect(open).toHaveAttribute("aria-checked", "false");
+  await open.click();
+  await expect(page.getByText("Buyers can send requests now.")).toBeVisible();
+  await page.reload();
+  await expect(open).toHaveAttribute("aria-checked", "true");
+});

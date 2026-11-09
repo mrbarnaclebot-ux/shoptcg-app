@@ -48,7 +48,7 @@ export function EditPanel({
               overridePrice: fixed,
               ...(row.kind === "raw" && { condition: form.get("condition") }),
             },
-            () => toast.itemUpdated(row.id, row.name, change),
+            () => toast.itemUpdated(row.name, change),
           );
         }}
       >
@@ -64,12 +64,8 @@ export function EditPanel({
             onClick={() =>
               save({ active: !row.active }, () =>
                 row.active
-                  ? toast.itemHidden(row.id, row.name)
-                  : toast.itemUpdated(
-                      row.id,
-                      row.name,
-                      "Back on your public table.",
-                    ),
+                  ? toast.itemHidden(row.name)
+                  : toast.itemUpdated(row.name, "Back on your public table."),
               )
             }
           >

@@ -89,7 +89,6 @@ export const settingsSchema = z
         .nullable(),
     ),
     nfcEnabled: checkbox,
-    isOpen: checkbox,
   })
   .superRefine((v, ctx) => {
     if (v.secondCurrency && v.fxRate === null)
@@ -99,6 +98,16 @@ export const settingsSchema = z
         message: "Enter your rate for 1 USD",
       });
   });
+
+/** Opens or closes the owner's store; false when they have none. */
+export async function setStoreOpen(db: Db, ownerUserId: string, open: boolean) {
+  const rows = await db
+    .update(store)
+    .set({ isOpen: open })
+    .where(eq(store.ownerUserId, ownerUserId))
+    .returning({ id: store.id });
+  return rows.length > 0;
+}
 
 /** Saves the owner's store settings; the owner id is the ownership check. */
 export async function updateSettings(

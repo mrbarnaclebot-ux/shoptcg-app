@@ -48,8 +48,8 @@ export function CustomForm() {
   );
   const e = state.errors ?? {};
   useEffect(() => {
-    if (state.added) toast.itemAdded(state.added);
-    else if (state.errors?.form) toast.notSaved(state.errors.form);
+    // A save shows the inline confirmation instead of a toast.
+    if (state.errors?.form) toast.notSaved(state.errors.form);
   }, [state]);
   return (
     <form key={state.n ?? 0} action={action} className="flex flex-col gap-5">

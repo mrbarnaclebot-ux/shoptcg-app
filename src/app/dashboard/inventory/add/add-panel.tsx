@@ -37,16 +37,8 @@ export function AddPanel({
       });
       setError(res.error);
       if (res.error) return void toast.notSaved(res.error);
-      const first = Boolean(res.first);
-      setAdded({ first });
-      toast.itemAdded({
-        id: res.id!,
-        name: item.name,
-        qty: Number(form.get("qty")),
-        condition: item.kind === "raw" ? condition : null,
-        price: fixed ? Number(fixed.replace("$", "")) : null,
-        first,
-      });
+      // The panel turns into the confirmation; no toast on top of it.
+      setAdded({ first: Boolean(res.first) });
     });
   if (added)
     return <Added name={item.name} first={added.first} onAgain={onClose} />;
