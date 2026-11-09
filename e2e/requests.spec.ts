@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { expect, test, type Page } from "@playwright/test";
 import { newVendor } from "./auth";
 import {
   add,
@@ -9,6 +10,19 @@ import {
   sendList,
   sent,
 } from "./buyer";
+import { addPushRow, hasDb, pushRowExists } from "./db";
+
+type Lines = Record<string, { qty: number; price: number; name?: string }>;
+const readLines = (buyer: Page, slug: string) =>
+  buyer.evaluate(
+    (k) => JSON.parse(localStorage.getItem(k)!).lines as Lines,
+    `list:${slug}`,
+  );
+const writeLines = (buyer: Page, slug: string, lines: Lines) =>
+  buyer.evaluate(
+    ([k, v]) => localStorage.setItem(k, v),
+    [`list:${slug}`, JSON.stringify({ at: Date.now(), lines })],
+  );
 
 test("happy path: the seller sees the ticket within 3 seconds", async ({
   page,
@@ -273,4 +287,128 @@ test("Terms name buyer requests; the app installs", async ({
   }
   expect((await request.get("/apple-icon")).ok()).toBe(true);
   expect((await request.get("/sw.js")).ok()).toBe(true);
+});
+
+test("the list says what it had to change", async ({ page, browser }) => {
+  const slug = await openVendor(page);
+  const buyer = await newBuyer(browser, slug);
+  await add(buyer, "Charizard ex");
+  const [id] = Object.keys(await readLines(buyer, slug));
+  const gone = randomUUID();
+  const fillers = Array.from({ length: 29 }, () => randomUUID());
+  const lines: Lines = {
+    [id]: { qty: 99, price: 1 },
+    [gone]: { qty: 1, price: 1, name: "Old promo" },
+    ...Object.fromEntries(fillers.map((f) => [f, { qty: 1, price: 1 }])),
+  };
+  await writeLines(buyer, slug, lines);
+  await buyer.goto(`/${slug}/list`);
+
+  await expect(
+    buyer.getByText("Only 3 left, so we lowered this."),
+  ).toBeVisible();
+  await expect(
+    buyer.getByText("Old promo is no longer for sale."),
+  ).toBeVisible();
+  await expect(
+    buyer.getByText("won't be sent. A request holds 30 cards."),
+  ).toHaveCount(1);
+  await expect(
+    buyer.getByRole("button", { name: "Send without it" }),
+  ).toBeVisible();
+
+  await buyer.getByRole("button", { name: "Remove Old promo" }).click();
+  await expect(buyer.getByText("Old promo is no longer for sale.")).toHaveCount(
+    0,
+  );
+  await expect(buyer.getByText(/won't be sent/)).toHaveCount(0);
+});
+
+test("Send again asks before replacing a newer list", async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  const slug = await openVendor(page);
+  const ctx = await browser.newContext();
+  await ctx.addCookies([{ name: "e2e_hold_ms", value: "3000", url: baseURL! }]);
+  const buyer = await ctx.newPage();
+  await sendList(buyer, slug, ["Mew ex"]);
+  await expect(
+    buyer.getByRole("heading", { name: "Your hold ended." }),
+  ).toBeVisible({ timeout: 10_000 });
+  const again = buyer
+    .locator("main")
+    .getByRole("button", { name: "Send again" });
+  const newer: Lines = { [randomUUID()]: { qty: 1, price: 1, name: "Newer" } };
+  await writeLines(buyer, slug, newer);
+
+  buyer.once("dialog", (d) => d.dismiss());
+  await again.click();
+  await expect(
+    buyer.getByRole("heading", { name: "Your hold ended." }),
+  ).toBeVisible();
+  expect(await readLines(buyer, slug)).toEqual(newer);
+
+  buyer.once("dialog", (d) => d.accept());
+  await again.click();
+  await expect(buyer.getByRole("heading", { name: "Your list" })).toBeVisible();
+  await expect(
+    buyer.getByRole("listitem").filter({ hasText: "Mew ex" }),
+  ).toBeVisible();
+});
+
+test.describe("signing out", () => {
+  test.skip(!hasDb, "reads the push table directly");
+
+  const stubPush = (page: Page, hang: boolean, endpoint: string) =>
+    page.addInitScript(
+      ([e, h]) => {
+        Object.defineProperty(
+          ServiceWorkerContainer.prototype,
+          "getRegistration",
+          {
+            value: async () => ({
+              pushManager: {
+                getSubscription: () =>
+                  h
+                    ? new Promise(() => {})
+                    : Promise.resolve({
+                        endpoint: e,
+                        unsubscribe: async () => {
+                          sessionStorage.setItem("unsubscribed", "1");
+                          return true;
+                        },
+                      }),
+              },
+            }),
+          },
+        );
+      },
+      [endpoint, hang] as const,
+    );
+
+  test("stops this device's alerts", async ({ page }) => {
+    const id = await newVendor(page);
+    const endpoint = `https://fcm.googleapis.com/${randomUUID()}`;
+    await addPushRow(`e2e-${id}@example.test`, endpoint);
+    await stubPush(page, false, endpoint);
+    await page.goto("/dashboard/settings");
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(/\/$/);
+    expect(
+      await page.evaluate(() => sessionStorage.getItem("unsubscribed")),
+    ).toBe("1");
+    expect(await pushRowExists(endpoint)).toBe(false);
+  });
+
+  test("still works when the push service never answers", async ({ page }) => {
+    await newVendor(page);
+    await stubPush(page, true, "https://fcm.googleapis.com/hang");
+    await page.goto("/dashboard/settings");
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await page.goto("/dashboard");
+    await expect(page).toHaveURL(/\/login/);
+  });
 });

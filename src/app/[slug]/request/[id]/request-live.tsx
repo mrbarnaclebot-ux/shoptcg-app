@@ -8,21 +8,40 @@ import type { RequestStatus } from "@/db/schema";
 import type { Line } from "@/lib/request-reads";
 import { toast } from "@/lib/toast";
 import { clock, useLive, useNow, useRefreshWhile } from "@/lib/use-live";
-import { writeList } from "../../list-island";
+import { listOn, writeList } from "../../list-island";
 import { cancelMyRequest } from "../../list/actions";
 
 const WARN_MS = 3 * 60_000;
+
+const sameLines = (a: Record<string, { qty: number }>, b: typeof a) => {
+  const key = (l: typeof a) =>
+    Object.entries(l)
+      .map(([id, { qty }]) => `${id}:${qty}`)
+      .sort()
+      .join();
+  return key(a) === key(b);
+};
 
 /** Puts what was on the request back on the list; the review clamps it to what's left. */
 function useSendAgain(slug: string, lines: Line[]) {
   const router = useRouter();
   return () => {
-    writeList(
-      slug,
-      Object.fromEntries(
-        lines.map((l) => [l.listingId, { qty: l.qty, price: l.price }]),
-      ),
+    const again = Object.fromEntries(
+      lines.map((l) => [
+        l.listingId,
+        { qty: l.qty, price: l.price, name: l.name },
+      ]),
     );
+    const newer = listOn(slug);
+    if (
+      Object.keys(newer).length &&
+      !sameLines(newer, again) &&
+      !window.confirm(
+        "Replace the list you started with this request? Your newer list will be lost.",
+      )
+    )
+      return;
+    writeList(slug, again);
     router.push(`/${slug}/list`);
   };
 }
