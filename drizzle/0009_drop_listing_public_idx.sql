@@ -1,0 +1,1 @@
+DROP INDEX "listing_store_public_idx";
