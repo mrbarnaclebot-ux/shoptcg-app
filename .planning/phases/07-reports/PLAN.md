@@ -24,14 +24,14 @@ After a show the vendor picks a date range and gets revenue, sales count, items 
 | Sales list | Server-rendered table, each row a native `<details>` that expands line items. Watermelon Transaction List skipped. | Accessible, zero JS; Transaction List needs 37 colour swaps and has no reduced-motion handling. |
 | CSV export | Route `GET /dashboard/reports/export?from&to` (route handler, vendor session) returning one row per sale line: `date, time, receipt_no, buyer_first_name, item, set, number, grade, language, qty, unit_price, sale_discount, sale_total, payment_method`. Filename `shoptcg-<slug>-<from>[_<to>].csv`. UTF-8 BOM, CRLF, RFC 4180 quoting. | One flat file pivots easily; per-line lets the vendor see what sold. |
 | CSV injection | `csvCell(v)` in `src/lib/csv.ts`: if a string starts with `=`, `+`, `-`, `@`, tab or CR, prefix `'`; then quote if it contains `"`, `,`, CR or LF (double quotes inside). Numbers are written by our own formatter (never prefixed, they are not user strings). Applied to every cell in both exports. | OWASP CSV injection guidance; buyer names and custom item names are attacker controlled. |
-| Customers | `/dashboard/customers` (under More): name, email, purchases, last purchase, Promo status ("Subscribed since Nov 9" / "Unsubscribed Nov 12" / "Receipts only"). Filter chips All / Subscribed. Search by name or email. | Vendor sees who bought; status makes consent visible. |
+| Customers | `/dashboard/customers` (under More): name, email, purchases, last purchase, Promo status ("Subscribed since Nov 9" / "Unsubscribed Nov 12" / "Receipts only"). Filter chips All / Subscribed. Search by name or email. Draws the latest 500; search finds the rest. | Vendor sees who bought; status makes consent visible. |
 | Promo export | `GET /dashboard/customers/export` only rows with `promo_opt_in = true`: `name, email, subscribed_at, unsubscribe_url`. Filename `shoptcg-<slug>-promo-list-<date>.csv`. Copy above the button: "Only buyers who ticked the box. Include the unsubscribe link in every email you send." | Export only in v1; vendor's mail tool must carry our link so opt-outs land here. |
 | Unsubscribe handling | Already built in phase 6; this phase adds the status column and makes sure exports read `promo_opt_in` at export time. No manual re-subscribe button for vendors. | Vendors must not re-add someone who opted out. |
 | Delete customer | [Remove customer] on the row (inline confirm) deletes the `customer` row (erasure request). Sales keep their snapshot name/email (receipts are financial records). | GDPR-style erasure without breaking immutable receipts. |
 | Toasts | #22 "Exported / shoptcg-...csv, 31 rows" and #23 promo list exported: CSV links are plain downloads, so the toast fires from a tiny client wrapper that `fetch`es the CSV, makes a Blob URL, triggers download, and reads the row count from an `X-Row-Count` header. Errors -> #26 with [Try again]. | State map needs the count; the export also works as a plain link for no-JS. |
 | Run Widget | Skipped (adds `@number-flow/react`). Summary is a definition list per SCREENS. | No hero metrics; no new dep. |
 
-## Schema changes (migration `0011_reports.sql`)
+## Schema changes (migration `0013_reports.sql`)
 
 - Index `sale_store_created_idx (store_id, created_at)` exists from phase 6; add `sale_store_method_idx (store_id, payment_method, created_at)` only if EXPLAIN on a 5,000-sale seed shows a seq scan (expect not; skip by default).
 - `customer_store_optin_idx (store_id) where promo_opt_in`.
@@ -42,7 +42,6 @@ After a show the vendor picks a date range and gets revenue, sales count, items 
 - `src/lib/reports.ts`: `parseRange(params, tz, now)` (pure, Vitest: defaults, weekend logic on a Sunday and a Wednesday, from > to swapped, span cap), `salesReport(db, storeId, range)` -> `{summary, byMethod, bestSellers, sales}`, `reportCsvRows(...)`.
 - `src/lib/customers.ts`: `listCustomers(db, storeId, filter)`, `promoRows(db, storeId)`, `removeCustomer(db, storeId, id)`.
 - `src/lib/csv.ts`: add `csvCell`, `toCsv(rows)`.
-- `src/lib/tz.ts`: `validTz(v)`.
 - Routes: `src/app/dashboard/reports/page.tsx`, `src/app/dashboard/reports/export/route.ts`, `src/app/dashboard/customers/page.tsx`, `src/app/dashboard/customers/export/route.ts`; `removeCustomer` server action.
 - Auth: every query takes `store.id` from `requireStore()` (route handlers use the same session helper; 401 JSON-free plain response if missing). Range and filters validated by zod; invalid -> defaults.
 - Responses: `Content-Type: text/csv; charset=utf-8`, `Content-Disposition: attachment; filename="..."`, `Cache-Control: no-store`, `X-Row-Count`.
@@ -50,7 +49,7 @@ After a show the vendor picks a date range and gets revenue, sales count, items 
 ## UI screens and states
 
 1. `/dashboard/reports` (Sales tab gets a "Report" link; More lists Customers): range presets as paper tab stubs, custom date form; summary `<dl>` with Big Shoulders values (Revenue, Sales, Items sold, Average sale, Discounts given); payment table with Cash first and bold plus "Count your cash box against the Cash total."; best sellers (thumb, name, qty, revenue, caption "before discounts"); sales list with expandable rows linking to receipts; [Export CSV] secondary ticket button. Desktop: summary and payment side by side.
-   States: empty "No sales in this range." + "Sales you confirm at the table show up here."; loading skeleton rows in Suspense; error boundary "Couldn't build the report. [Try again]".
+   States: empty "No sales in this range." + "Sales you confirm at the table show up here."; a paper-ticket loading fallback in Suspense (not grey skeletons); the list draws the newest 500 sales, the summary and CSV cover all of them; error boundary "Couldn't build the report. [Try again]".
 2. `/dashboard/customers`: chips, search, rows, status text, [Export promo list] (disabled with "No one has opted in yet." when zero), remove inline confirm. Empty: "No customers yet. Buyers appear here after their first confirmed sale."
 3. Show floor: report reads like a show-end tally sheet on paper (perforated top edge, table number block with the store's table label), no charts.
 
@@ -71,7 +70,7 @@ After a show the vendor picks a date range and gets revenue, sales count, items 
 ## Tasks (in order, each with its check)
 
 1. `csvCell` / `toCsv` + Vitest (injection prefixes, quoting, CRLF, BOM). Check: `pnpm test src/lib/csv.test.ts`.
-2. `tz.ts` + `tz` cookie effect in dashboard layout. Check: Vitest `validTz('Australia/Sydney')` true, `'Mars/Base'` false.
+2. Done in phase 6 (`sellerTimeZone`, `safeTimeZone`, `postgresZone`).
 3. `parseRange` Vitest. Check: `pnpm test src/lib/reports.test.ts`.
 4. `salesReport` Vitest on PGlite: seed sales across midnight in `Australia/Sydney` vs UTC and assert they land on the right day; payment split sums to revenue; best sellers order.
 5. Reports page UI + states. Check: dev screenshot at 390 / 1280.

@@ -231,6 +231,10 @@ test("the promo list is opted-in buyers only, and unsubscribing leaves it", asyn
   await expect(rowOf("Yara Yes")).toBeVisible();
   await expect(rowOf("Noor No")).toHaveCount(0);
   await page.getByRole("link", { name: "All" }).click();
+  await expect(page.getByRole("link", { name: "All" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   await page.getByLabel("Search by name or email").fill("noor");
   await page.getByRole("button", { name: "Search" }).click();
   await expect(rowOf("Noor No")).toBeVisible();
