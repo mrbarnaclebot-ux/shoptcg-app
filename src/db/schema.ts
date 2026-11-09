@@ -37,6 +37,8 @@ export const store = pgTable(
     nfcEnabled: boolean("nfc_enabled").notNull().default(false),
     // The organiser's table number ("B14"), shown on the store header and sign.
     tableLabel: text("table_label"),
+    // Last receipt number used; its row lock serialises numbering per store.
+    receiptSeq: integer("receipt_seq").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -229,3 +231,5 @@ export type Listing = typeof listing.$inferSelect;
 export type NewListing = typeof listing.$inferInsert;
 
 export * from "./request-schema";
+
+export * from "./sale-schema";
