@@ -1,43 +1,82 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Pause, Play } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 type Conn = { saveData?: boolean };
 
+const WIDE = "(min-width: 768px)";
+const CALM = "(prefers-reduced-motion: reduce)";
+
 // The loop is decoration: only on wide screens, never under reduced motion or
-// Save-Data, and only after the page has loaded so it can't compete with the
-// poster (the LCP image). Until then, and instead, the poster shows.
+// Save-Data. Re-checked when either media query changes.
 function wantsVideo() {
   const conn = (navigator as Navigator & { connection?: Conn }).connection;
   return (
-    !conn?.saveData &&
-    matchMedia("(min-width: 768px)").matches &&
-    !matchMedia("(prefers-reduced-motion: reduce)").matches
+    !conn?.saveData && matchMedia(WIDE).matches && !matchMedia(CALM).matches
   );
 }
 
-export function HeroVideo() {
-  const [on, setOn] = useState(false);
+function subscribe(cb: () => void) {
+  const mqs = [matchMedia(WIDE), matchMedia(CALM)];
+  mqs.forEach((m) => m.addEventListener("change", cb));
+  return () => mqs.forEach((m) => m.removeEventListener("change", cb));
+}
+
+// Starts only after the page has loaded, so it can't compete with the photo
+// underneath (the LCP image), which also stands in until the first frame.
+function useLoaded() {
+  const [loaded, setLoaded] = useState(false);
   useEffect(() => {
-    if (!wantsVideo()) return;
-    const start = () => setOn(true);
-    if (document.readyState === "complete") start();
-    else addEventListener("load", start, { once: true });
-    return () => removeEventListener("load", start);
+    const done = () => setLoaded(true);
+    if (document.readyState === "complete") done();
+    else addEventListener("load", done, { once: true });
+    return () => removeEventListener("load", done);
   }, []);
-  if (!on) return null;
+  return loaded;
+}
+
+export function HeroVideo() {
+  const allowed = useSyncExternalStore(subscribe, wantsVideo, () => false);
+  const loaded = useLoaded();
+  const [paused, setPaused] = useState(false);
+  const ref = useRef<HTMLVideoElement>(null);
+  if (!allowed || !loaded) return null;
+  // WCAG 2.2.2: motion that runs past 5 s gets a pause; the push-in stops too.
+  const toggle = () => {
+    const v = ref.current;
+    if (!v) return;
+    if (paused) void v.play();
+    else v.pause();
+    setPaused(!paused);
+  };
   return (
-    <video
-      aria-hidden
-      autoPlay
-      muted
-      loop
-      playsInline
-      preload="none"
-      poster="/media/hero-poster.jpg"
-      className="hero-video absolute inset-0 size-full object-cover"
-    >
-      <source src="/media/hero.mp4" type="video/mp4" />
-    </video>
+    <>
+      <video
+        ref={ref}
+        aria-hidden
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="none"
+        data-paused={paused || undefined}
+        className="hero-video absolute inset-0 size-full object-cover"
+      >
+        <source src="/media/hero.mp4" type="video/mp4" />
+      </video>
+      <button
+        type="button"
+        onClick={toggle}
+        className="absolute top-24 right-14 z-10 inline-flex min-h-11 items-center gap-2 px-3 text-sm font-semibold text-muted-foreground shadow-[inset_0_0_0_1px_oklch(1_0_0/0.25)] hover:text-text"
+      >
+        {paused ? (
+          <Play aria-hidden className="size-4" />
+        ) : (
+          <Pause aria-hidden className="size-4" />
+        )}
+        {paused ? "Play video" : "Pause video"}
+      </button>
+    </>
   );
 }

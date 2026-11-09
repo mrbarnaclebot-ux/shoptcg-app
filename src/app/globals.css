@@ -4,6 +4,31 @@
 @import "../styles/tokens.css";
 @import "../styles/showfloor.css";
 
+/*
+  Size-adjusted fallbacks for Big Shoulders (Display cut, black) so the swap
+  barely moves the poster headlines. Metrics from the font files: Arial
+  Narrow Bold is within 2% of its width, Arial Bold needs 83%. Phones without
+  either fall through to sans-serif.
+*/
+@font-face {
+  font-family: "Big Shoulders Fallback";
+  src: local("Arial Narrow Bold"), local("ArialNarrow-Bold");
+  font-weight: 100 900;
+  size-adjust: 101.6%;
+  ascent-override: 97%;
+  descent-override: 21.1%;
+  line-gap-override: 0%;
+}
+@font-face {
+  font-family: "Big Shoulders Fallback Arial";
+  src: local("Arial Bold"), local("Arial-BoldMT"), local("Arial");
+  font-weight: 100 900;
+  size-adjust: 83.3%;
+  ascent-override: 118.3%;
+  descent-override: 25.8%;
+  line-gap-override: 0%;
+}
+
 /* The hall is dark; the .dark class on <html> enables shadcn dark: variants. */
 @custom-variant dark (&:is(.dark *));
 

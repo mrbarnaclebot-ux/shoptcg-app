@@ -31,7 +31,8 @@ function Hero() {
   return (
     <section
       aria-labelledby="hero-h"
-      className="relative overflow-hidden md:h-[min(880px,100svh)] md:min-h-[640px]"
+      // Grows past the viewport when the copy needs it (text zoom), never clips it.
+      className="relative overflow-hidden md:flex md:min-h-[max(640px,min(880px,100svh))] md:flex-col md:justify-end"
     >
       <div className="grain relative h-[560px] overflow-hidden md:absolute md:inset-0 md:h-auto">
         <HeroPicture />
@@ -63,10 +64,10 @@ function Hero() {
 
 function HeroCopy() {
   return (
-    <div className="relative z-10 -mt-[5.5rem] flex flex-col px-4 md:absolute md:bottom-0 md:left-14 md:mt-0 md:w-[min(860px,calc(100%-7rem))] md:px-0">
+    <div className="relative z-10 -mt-[5.5rem] flex flex-col px-4 md:mt-0 md:ml-14 md:w-[min(860px,calc(100%-7rem))] md:px-0 md:pt-28">
       <h1
         id="hero-h"
-        className="font-display -ml-1.5 text-[23vw] leading-[0.8] font-black tracking-[-0.012em] whitespace-nowrap md:order-last md:-mb-1.5 md:-ml-3.5 md:text-[min(16.4vw,236px)]"
+        className="font-display -ml-1.5 text-[clamp(4.5rem,23vw,9rem)] leading-[0.8] font-black tracking-[-0.012em] whitespace-nowrap md:order-last md:-mb-1.5 md:-ml-3.5 md:text-[clamp(7rem,16.4vw,14.75rem)]"
       >
         <span className="block">Your table,</span>
         <span className="block text-brand">priced live.</span>

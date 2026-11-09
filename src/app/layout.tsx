@@ -9,9 +9,13 @@ const poster = Big_Shoulders({
   axes: ["opsz"],
   variable: "--font-poster",
   display: "swap",
-  // Next has no metrics for it, so no size-adjusted fallback; Arial Narrow is close.
+  // Next has no metrics for it; globals.css declares size-adjusted fallbacks.
   adjustFontFallback: false,
-  fallback: ["Arial Narrow", "sans-serif"],
+  fallback: [
+    "Big Shoulders Fallback",
+    "Big Shoulders Fallback Arial",
+    "sans-serif",
+  ],
 });
 
 // Newsprint grotesk for everything read up close.
