@@ -1,177 +1,166 @@
 /*
-  Design tokens: the single source of brand values (UI-SPEC.md section 8).
-  Import after `@import "tailwindcss";`. The app is dark-only in v1.
+  Design tokens for "Show floor, after dark" (design/variations/v3-showfloor).
+  Import after `@import "tailwindcss";`.
+
+  Two materials, not a dark theme:
+  - the hall (galaxy black): the page and anything that is the room.
+  - paper (warm ticket stock): anything you hold. Add `.paper` to a box and
+    every semantic token below re-binds, so components adapt without props.
+  Orange is lamplight: only where the eye should land. On paper it darkens
+  to --sun-ink so text still clears 4.5:1.
 
   shadcn name clashes, resolved in favour of shadcn semantics:
-  - Spec "accent" (sunrise orange) is exposed as `brand` utilities:
-    bg-brand, bg-brand-hover, text-on-brand, text-brand-text, bg-brand-bg.
-    shadcn `accent` stays a neutral hover wash (surface-2).
-  - Spec "muted" (secondary text) is `text-muted-foreground`.
-    shadcn `muted` stays a background (surface-2).
+  - the lamp is exposed as `brand` utilities (bg-brand, text-brand-text...).
+  - secondary text is `text-muted-foreground`; shadcn `muted` is a surface.
 */
 
 @theme {
-  /* galaxy: primary brand, black */
-  --color-galaxy-50: #f2f3f9;
-  --color-galaxy-100: #e4e5f0;
-  --color-galaxy-200: #cbccdf;
-  --color-galaxy-300: #a9abc7;
-  --color-galaxy-400: #8183a4;
-  --color-galaxy-500: #5e6081;
-  --color-galaxy-600: #434561;
-  --color-galaxy-700: #2d2e44;
-  --color-galaxy-800: #1c1c2c;
-  --color-galaxy-900: #11121c;
-  --color-galaxy-950: #090911;
-
-  /* seal: secondary brand, grey */
-  --color-seal-50: #f3f5f8;
-  --color-seal-100: #e5e8ec;
-  --color-seal-200: #d1d5d9;
-  --color-seal-300: #b6bbc1;
-  --color-seal-400: #9a9fa6;
-  --color-seal-500: #7e848b;
-  --color-seal-600: #646970;
-  --color-seal-700: #4b5056;
-  --color-seal-800: #373b40;
-  --color-seal-900: #26292e;
-  --color-seal-950: #181b1e;
-
-  /* sunrise: accent brand, orange */
-  --color-sunrise-50: #fff1e6;
-  --color-sunrise-100: #ffdfca;
-  --color-sunrise-200: #ffc49e;
-  --color-sunrise-300: #ffa86f;
-  --color-sunrise-400: #ff9044;
-  --color-sunrise-500: #f77c10;
-  --color-sunrise-600: #db6500;
-  --color-sunrise-700: #b45000;
-  --color-sunrise-800: #8e3d00;
-  --color-sunrise-900: #6a2f00;
-  --color-sunrise-950: #471e00;
-
-  /* type */
   --font-sans:
-    var(--font-archivo), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    var(--font-body), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     "Hiragino Sans", "Yu Gothic UI", "Noto Sans CJK JP", "PingFang SC",
     "Microsoft YaHei", sans-serif;
-  --font-heading: var(--font-sans);
+  --font-display: var(--font-poster), "Arial Narrow", var(--font-sans);
+  --font-heading: var(--font-display);
+
   --text-xs: 0.8125rem;
-  --text-xs--line-height: 1rem;
+  --text-xs--line-height: 1.1rem;
   --text-sm: 0.875rem;
-  --text-sm--line-height: 1.25rem;
+  --text-sm--line-height: 1.3rem;
   --text-base: 1rem;
-  --text-base--line-height: 1.5rem;
+  --text-base--line-height: 1.55rem;
   --text-lg: 1.125rem;
-  --text-lg--line-height: 1.625rem;
+  --text-lg--line-height: 1.65rem;
   --text-xl: 1.375rem;
   --text-xl--line-height: 1.75rem;
-  --text-2xl: 1.75rem;
-  --text-2xl--line-height: 2rem;
-  --text-3xl: 2.25rem;
-  --text-3xl--line-height: 2.5rem;
-  --text-display: 3.25rem;
-  --text-display--line-height: 3.375rem;
+  --text-2xl: 1.875rem;
+  --text-2xl--line-height: 1;
+  --text-3xl: 2.5rem;
+  --text-3xl--line-height: 0.9;
+  --text-display: 4rem;
+  --text-display--line-height: 0.82;
 
-  /* radii */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-card: 6px;
+  /* Tickets are cut, not moulded: every radius is square. */
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
 
-  /* motion */
   --ease-out: cubic-bezier(0.25, 1, 0.5, 1);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --dur-fast: 120ms;
   --dur-base: 200ms;
   --dur-slow: 320ms;
-
-  /* elevation */
-  --shadow-1: inset 0 1px 0 rgb(255 255 255 / 0.04);
-  --shadow-2: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-3:
-    inset 0 1px 0 rgb(255 255 255 / 0.08), 0 16px 48px -12px rgb(0 0 0 / 0.7);
 }
 
 :root {
   color-scheme: dark;
 
-  /* semantic */
-  --bg: #090911;
-  --surface: #11121c;
-  --surface-2: #1c1c2c;
-  --surface-3: #2d2e44;
-  --border: #373b40;
-  --border-strong: #646970;
-  --text: #f3f5f8;
-  --muted-text: #b6bbc1;
-  --subtle: #9a9fa6;
-  --disabled: #646970;
-  --brand: #f77c10;
-  --brand-hover: #ff9044;
-  --on-brand: #090911;
-  --brand-text: #ff9044;
-  --brand-bg: #3d1d06;
-  --focus: #ff9044;
-  --success: #61cb7c;
-  --success-bg: #122d19;
-  --warning: #f1ca47;
-  --warning-bg: #322807;
-  --danger: #f66c6d;
-  --danger-bg: #3f1919;
-  --hold: #8bbcef;
-  --hold-bg: #172839;
-  --deal: #5cddc4;
-  --deal-bg: #062d26;
+  /* the hall */
+  --night: #090911;
+  --night-2: oklch(0.19 0.014 285);
+  --night-3: oklch(0.25 0.014 285);
+  --seal: #7e848b;
+  --on-night: oklch(0.94 0.012 80);
+  --on-night-2: oklch(0.76 0.01 250);
+  /* the lamp */
+  --sun: #f77c10;
+  --sun-hover: oklch(0.76 0.17 57);
+  --sun-ink: oklch(0.51 0.155 47);
+  /* the ticket stock */
+  --paper: oklch(0.955 0.013 82);
+  --paper-2: oklch(0.91 0.016 82);
+  --paper-3: oklch(0.84 0.016 82);
+  --ink: oklch(0.19 0.014 285);
+  --ink-2: oklch(0.43 0.012 270);
 
-  /* shadcn v4 names */
-  --background: var(--bg);
-  --foreground: var(--text);
-  --card: var(--surface);
-  --card-foreground: var(--text);
-  --popover: var(--surface-2);
-  --popover-foreground: var(--text);
-  --primary: var(--brand);
-  --primary-foreground: var(--on-brand);
-  --secondary: var(--surface-2);
-  --secondary-foreground: var(--text);
-  --muted: var(--surface-2);
-  --muted-foreground: var(--muted-text);
-  --accent: var(--surface-2);
-  --accent-foreground: var(--text);
-  --destructive: var(--danger);
-  --input: var(--border-strong);
-  --ring: var(--focus);
-  --radius: 10px;
+  /* semantic, hall values (contrast on --night: text 16.6, muted 9.3, subtle 5.3, lamp 7.4) */
+  --bg: var(--night);
+  --surface: var(--night-2);
+  --surface-2: var(--night-3);
+  --border: var(--night-3);
+  --border-strong: var(--seal);
+  --text: var(--on-night);
+  --muted-text: var(--on-night-2);
+  --subtle: var(--seal);
+  --brand: var(--sun);
+  --brand-hover: var(--sun-hover);
+  --on-brand: var(--night);
+  --brand-text: var(--sun);
+  --focus: var(--sun);
+  --success: oklch(0.78 0.14 150);
+  --danger: oklch(0.72 0.17 27);
+  --warning: var(--sun);
+  --perf: var(--night-3);
+}
+
+/* Layered so a utility on the same box (bg-*, text-*) still wins. */
+@layer base {
+  /* Paper values (contrast on --paper: ink 16.2, ink-2 7.1, sun-ink 5.1, danger 5.8). */
+  .paper {
+    color-scheme: light;
+    --bg: var(--paper);
+    --surface: var(--paper-2);
+    --surface-2: var(--paper-2);
+    --border: var(--paper-3);
+    --border-strong: var(--ink);
+    --text: var(--ink);
+    --muted-text: var(--ink-2);
+    --subtle: var(--ink-2);
+    --brand-text: var(--sun-ink);
+    --focus: var(--sun-ink);
+    --success: oklch(0.49 0.13 150);
+    --danger: oklch(0.5 0.18 27);
+    --warning: var(--sun-ink);
+    --perf: var(--paper-3);
+    background-color: var(--bg);
+    color: var(--text);
+  }
+
+  /* shadcn aliases re-declared on .paper so they re-resolve against its values. */
+  :root,
+  .paper {
+    --background: var(--bg);
+    --foreground: var(--text);
+    --card: var(--surface);
+    --card-foreground: var(--text);
+    --popover: var(--surface-2);
+    --popover-foreground: var(--text);
+    --primary: var(--brand);
+    --primary-foreground: var(--on-brand);
+    --secondary: var(--surface-2);
+    --secondary-foreground: var(--text);
+    --muted: var(--surface-2);
+    --muted-foreground: var(--muted-text);
+    --accent: var(--surface-2);
+    --accent-foreground: var(--text);
+    --destructive: var(--danger);
+    --input: var(--border-strong);
+    --ring: var(--focus);
+    --radius: 0;
+  }
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
-  --color-surface-3: var(--surface-3);
   --color-border-strong: var(--border-strong);
   --color-text: var(--text);
   --color-subtle: var(--subtle);
-  --color-disabled: var(--disabled);
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);
   --color-on-brand: var(--on-brand);
   --color-brand-text: var(--brand-text);
-  --color-brand-bg: var(--brand-bg);
   --color-focus: var(--focus);
   --color-success: var(--success);
-  --color-success-bg: var(--success-bg);
-  --color-warning: var(--warning);
-  --color-warning-bg: var(--warning-bg);
   --color-danger: var(--danger);
-  --color-danger-bg: var(--danger-bg);
-  --color-hold: var(--hold);
-  --color-hold-bg: var(--hold-bg);
-  --color-deal: var(--deal);
-  --color-deal-bg: var(--deal-bg);
+  --color-warning: var(--warning);
+  --color-night: var(--night);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
 
-  /* shadcn */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -202,12 +191,15 @@
   h1,
   h2,
   h3 {
-    letter-spacing: -0.01em;
     text-wrap: balance;
+  }
+  /* Big Shoulders ships an optical-size axis; pin the poster cut. */
+  .font-display {
+    font-variation-settings: "opsz" 72;
   }
   :focus-visible {
     outline: 2px solid var(--focus);
-    outline-offset: 2px;
+    outline-offset: 3px;
   }
   ::selection {
     background: var(--brand);
@@ -215,18 +207,13 @@
   }
 }
 
-/* Prices, quantities, timers, totals. */
+/* Prices, quantities, timers, totals. Tabular only in the poster face:
+   Schibsted's tabular period is figure-wide and splits "$48.10". */
 @utility num {
-  font-variant-numeric: tabular-nums lining-nums;
-  font-feature-settings:
-    "tnum" 1,
-    "lnum" 1;
-  font-weight: 700;
-}
-
-/* Archivo width axis, e.g. wdth-118 for the display voice. */
-@utility wdth-* {
-  font-variation-settings: "wdth" --value(integer);
+  font-variant-numeric: lining-nums;
+  &.font-display {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

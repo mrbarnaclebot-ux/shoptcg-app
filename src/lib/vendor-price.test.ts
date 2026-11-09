@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { vendorPrice } from "@/lib/vendor-price";
+import { underMarket, vendorPrice } from "@/lib/vendor-price";
 
 describe("vendorPrice", () => {
   it.each([
@@ -25,4 +25,18 @@ describe("vendorPrice", () => {
     expect(vendorPrice(42.25, 0, 0.5, null)).toBe(42.5);
     expect(vendorPrice(42.5, 0, 1, null)).toBe(43);
   });
+});
+
+describe("underMarket", () => {
+  it.each([
+    [42, 48.1, 12],
+    [45.7, 48.1, null],
+    [45.69, 48.1, 5],
+    [50, 48.1, null],
+    [null, 48.1, null],
+    [10, null, null],
+    [10, 0, null],
+  ])("price %s market %s -> %s", (p, m, want) =>
+    expect(underMarket(p, m)).toBe(want),
+  );
 });

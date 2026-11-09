@@ -3,9 +3,9 @@
 // Adapted from Watermelon UI "Labeled Progress Indicator" (MIT,
 // registry.watermelon.sh/r/labeled-progress-indicator.json). Changes: an
 // indeterminate progressbar role (the server reports no row count while it
-// checks), labels mirrored in the progressbar value text, brand tokens, ruler ticks under a
-// sweeping bar instead of the blue shimmer, no blur or 3D flip, and both
-// motions stop under reduced motion.
+// checks), labels mirrored in the progressbar value text, a lamp-orange
+// segment sweeping a perforated paper track instead of the blue shimmer (Show
+// floor), no blur or 3D flip, and both motions stop under reduced motion.
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
@@ -29,7 +29,7 @@ export function LabeledProgressIndicator(props: {
       {/* Visual only: the progressbar's aria-valuetext carries the same step. */}
       <p
         aria-hidden
-        className="relative h-6 overflow-hidden text-sm font-semibold text-muted-foreground"
+        className="relative h-6 overflow-hidden text-[0.9375rem] font-semibold"
       >
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.span
@@ -48,7 +48,7 @@ export function LabeledProgressIndicator(props: {
         role="progressbar"
         aria-label={props.label}
         aria-valuetext={steps[i]}
-        className="relative h-2 overflow-hidden rounded-[2px] bg-surface-2 ring-1 ring-border"
+        className="relative h-2.5 overflow-hidden bg-[radial-gradient(circle,var(--border-strong)_1.2px,transparent_1.7px)] bg-[length:6px_100%] bg-center bg-repeat-x"
       >
         <motion.div
           className="absolute inset-y-0 w-1/3 bg-brand"
@@ -61,7 +61,6 @@ export function LabeledProgressIndicator(props: {
           }}
         />
       </div>
-      <div aria-hidden className="ruler" />
     </div>
   );
 }

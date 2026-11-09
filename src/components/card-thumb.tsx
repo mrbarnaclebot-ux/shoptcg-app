@@ -9,7 +9,7 @@ const ASPECT = {
 } as const;
 
 // Outline drawings for items with no photo, one per kind, in a 0 0 24 24 box.
-// ponytail: placeholder art; the designer restyles these later.
+// ponytail: line placeholders until the item has a photo.
 const OUTLINE = {
   raw: <rect x="5" y="2" width="14" height="20" rx="1.5" />,
   graded: (
@@ -69,7 +69,7 @@ export function CardThumb({
   className?: string;
 }) {
   const box = cn(
-    "w-10 shrink-0 overflow-hidden rounded-[4.6%/3.3%] bg-surface-2",
+    "w-10 shrink-0 overflow-hidden bg-surface-2",
     ASPECT[kind],
     className,
   );

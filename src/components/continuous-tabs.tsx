@@ -3,10 +3,10 @@
 // Adapted from Watermelon UI "Continuous Tabs" (MIT,
 // registry.watermelon.sh/r/continuous-tabs.json). Changes: renders links (the
 // filter lives in the URL, so it works before hydration and is shareable)
-// marked with aria-current instead of local state, brand tokens instead of
-// hard-coded greys, squared slab corners, 44px hit areas, no mount gate (it
-// rendered null on the server), and a critically damped slide. Reduced motion
-// comes from the app-wide MotionConfig.
+// marked with aria-current instead of local state; Show floor styling (a
+// lamp-orange bar slides under the current tab on a ruled baseline, instead of
+// a pill); 44px hit areas; no mount gate (it rendered null on the server); and
+// a critically damped slide. Reduced motion comes from the app-wide MotionConfig.
 import { LayoutGroup, motion } from "motion/react";
 import Link from "next/link";
 
@@ -21,7 +21,7 @@ export function ContinuousTabs(props: {
     <LayoutGroup id={props.id}>
       <nav
         aria-label={props.label}
-        className="flex shrink-0 items-center rounded-sm bg-surface px-0.5 ring-1 ring-border"
+        className="flex shrink-0 items-end gap-5 border-b-[1.5px] border-border"
       >
         {props.tabs.map((tab) => (
           <Link
@@ -29,18 +29,16 @@ export function ContinuousTabs(props: {
             href={tab.href}
             scroll={false}
             aria-current={tab.on ? "true" : undefined}
-            className="group relative inline-flex h-11 shrink-0 items-center px-1"
+            className="relative -mb-[1.5px] inline-flex min-h-11 shrink-0 items-end pb-2.5 text-[0.9375rem] font-medium text-muted-foreground transition-colors duration-150 hover:text-text aria-[current=true]:font-bold aria-[current=true]:text-text"
           >
-            <span className="relative inline-flex h-9 items-center px-3 text-sm font-semibold text-muted-foreground transition-colors duration-150 group-hover:text-text group-aria-[current=true]:text-sunrise-200">
-              {tab.on && (
-                <motion.span
-                  layoutId="pill"
-                  transition={SLIDE}
-                  className="absolute inset-0 rounded-sm bg-brand-bg ring-1 ring-brand"
-                />
-              )}
-              <span className="relative">{tab.label}</span>
-            </span>
+            {tab.label}
+            {tab.on && (
+              <motion.span
+                layoutId="bar"
+                transition={SLIDE}
+                className="absolute inset-x-0 bottom-0 h-1 bg-brand"
+              />
+            )}
           </Link>
         ))}
       </nav>

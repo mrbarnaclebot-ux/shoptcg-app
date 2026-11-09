@@ -1,7 +1,8 @@
 "use client";
 
 // Adapted from Watermelon UI "Stepper" (MIT, registry.watermelon.sh/r/stepper.json).
-// Changes: brand tokens instead of hard-coded greys, lucide icons instead of
+// Changes: one square-cut box with a cut-line border (Show floor), poster-face
+// digits, brand tokens instead of hard-coded greys, lucide icons instead of
 // react-icons, critically damped digits (no overshoot, no blur), a labelled
 // group with a polite live value, 44px targets, and reduced motion via the
 // app-wide MotionConfig plus useReducedMotion for the digit roll.
@@ -43,13 +44,13 @@ export function Stepper(props: {
     props.onStep(delta);
   };
   const btn =
-    "grid size-11 place-items-center rounded-sm bg-surface-2 ring-1 ring-border-strong transition-colors duration-150 hover:bg-surface-3 active:translate-y-px disabled:opacity-40";
+    "grid size-11 place-items-center transition-colors duration-150 hover:bg-[color-mix(in_oklch,currentColor_10%,transparent)] active:translate-y-px disabled:opacity-35 focus-visible:outline-offset-[-2px]";
   const shift = still ? 0 : 14;
   return (
     <div
       role="group"
       aria-label={props.label}
-      className="flex items-center gap-1"
+      className="inline-flex items-center shadow-[inset_0_0_0_1.5px_var(--border-strong)]"
     >
       <button
         type="button"
@@ -60,7 +61,7 @@ export function Stepper(props: {
       >
         <Minus aria-hidden className="size-5" />
       </button>
-      <span className="num relative flex h-11 w-12 items-center justify-center overflow-hidden text-lg">
+      <span className="font-display num relative flex h-11 w-11 items-center justify-center overflow-hidden text-[1.375rem] font-extrabold">
         <output aria-live="polite" className="sr-only">
           {value}
         </output>

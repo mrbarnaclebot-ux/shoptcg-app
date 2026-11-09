@@ -21,3 +21,10 @@ export function vendorPrice(
   // A cheap card rounded to a whole-dollar step must not become free.
   return Math.max(rounded, step) / 100;
 }
+
+/** Whole percent under market for the stamp, or null under 5% (SCREENS 5). Never "above". */
+export function underMarket(price: number | null, market: number | null) {
+  if (price === null || market === null || market <= 0) return null;
+  const pct = Math.floor(((market - price) / market) * 100);
+  return pct >= 5 ? pct : null;
+}
