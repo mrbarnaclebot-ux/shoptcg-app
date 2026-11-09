@@ -59,3 +59,5 @@ next-env.d.ts
 
 # Critique captures: 10 MB of working screenshots, named in CRITIQUE.md
 .planning/phases/show-floor/critique/
+drizzle.base.config.tmp.ts
+.base-migrations/
