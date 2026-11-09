@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { Segmented } from "@/components/segmented";
-import { Button } from "@/components/ui/button";
+import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CONDITIONS } from "@/lib/listing-input";
@@ -75,14 +75,19 @@ export function CustomForm() {
         error={e.imageUrl}
       />
       <StockFields errors={e} />
-      <p className="text-sm text-subtle">
+      <p className="text-sm text-muted-foreground">
         Custom items have no market price, so set a fixed price or add one
         later.
       </p>
       {e.form && <p className="text-sm font-semibold text-danger">{e.form}</p>}
-      <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
+      <TicketButton
+        type="submit"
+        disabled={pending}
+        aria-busy={pending}
+        className="self-start"
+      >
         {pending ? "Adding" : "Add custom item"}
-      </Button>
+      </TicketButton>
     </form>
   );
 }

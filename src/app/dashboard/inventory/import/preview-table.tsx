@@ -1,11 +1,13 @@
 import { CardThumb } from "@/components/card-thumb";
+import { Ticket } from "@/components/ticket";
 import type { PreviewRow } from "@/lib/csv-import";
 import { usd } from "@/lib/format";
 
+// Outlined tags on the paper receipt; colour plus the word, never colour alone.
 const BADGE = {
-  matched: ["Matched", "bg-success-bg text-success"],
-  custom: ["Custom", "bg-surface-2 text-muted-foreground"],
-  error: ["Error", "bg-danger-bg text-danger"],
+  matched: ["Matched", "text-success"],
+  custom: ["Custom", "text-muted-foreground"],
+  error: ["Error", "text-danger"],
 } as const;
 
 /** A custom row with no price imports fine but shows "No price" until the vendor sets one. */
@@ -13,7 +15,7 @@ export const needsPrice = (r: PreviewRow) =>
   r.row?.kind === "custom" && !r.row.input.overridePrice;
 
 const BADGE_BASE =
-  "rounded-sm px-1.5 py-0.5 text-xs font-semibold tracking-[0.06em] whitespace-nowrap uppercase";
+  "px-1.5 py-1 text-xs leading-none font-semibold whitespace-nowrap shadow-[inset_0_0_0_1px_currentColor]";
 
 function stockOf(r: PreviewRow) {
   const input = r.row?.input;
@@ -58,7 +60,7 @@ function Row({ r }: { r: PreviewRow }) {
   const { qty, price } = stockOf(r);
   const own = r.row?.kind === "custom" ? r.row.input : null;
   return (
-    <tr className="border-b border-border align-middle">
+    <tr className="border-b border-dashed border-border align-middle">
       <td className="num py-2 pr-3 text-sm text-subtle">{r.line}</td>
       <td className="py-2 pr-3">
         <div className="flex items-center gap-3">
@@ -92,9 +94,7 @@ function Row({ r }: { r: PreviewRow }) {
         <div className="flex flex-col items-start gap-1">
           <span className={`${BADGE_BASE} ${tone}`}>{label}</span>
           {needsPrice(r) && (
-            <span className={`${BADGE_BASE} bg-warning-bg text-warning`}>
-              Set a price
-            </span>
+            <span className={`${BADGE_BASE} text-warning`}>Set a price</span>
           )}
         </div>
       </td>
@@ -104,13 +104,18 @@ function Row({ r }: { r: PreviewRow }) {
 
 export function PreviewTable({ rows }: { rows: PreviewRow[] }) {
   if (!rows.length) return <p>That file has a header row but no items.</p>;
-  const th =
-    "py-2 pr-3 text-xs font-semibold tracking-[0.06em] text-subtle uppercase";
+  const th = "py-2 pr-3 text-sm font-semibold text-muted-foreground";
   return (
-    <div className="flex flex-col gap-3">
+    // The preview is a receipt: every row on paper before anything is saved.
+    <Ticket
+      as="div"
+      no={String(rows.length).padStart(4, "0")}
+      className="[--stub:2.25rem]"
+      bodyClassName="flex flex-col gap-3 p-4 md:p-5"
+    >
       <Summary rows={rows} />
       <table className="w-full border-collapse text-left">
-        <thead className="border-b border-border">
+        <thead className="border-b-[1.5px] border-text">
           <tr>
             <th className={th}>Row</th>
             <th className={th}>Item</th>
@@ -125,6 +130,6 @@ export function PreviewTable({ rows }: { rows: PreviewRow[] }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </Ticket>
   );
 }

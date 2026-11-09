@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Button } from "@/components/ui/button";
+import { lineButton } from "@/components/ticket-button";
 import { requireStore } from "@/lib/session";
 import { signOutAction } from "../actions";
 import { SettingsForm } from "./settings-form";
@@ -10,18 +10,18 @@ export const metadata: Metadata = { title: "Settings - shoptcg" };
 export default function SettingsPage() {
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-8 px-4 pt-8 pb-16">
-      <h1 className="text-3xl font-extrabold wdth-125">Store settings</h1>
+      <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
+        Store settings
+      </h1>
       <Suspense
-        fallback={
-          <div className="h-[640px] animate-pulse rounded-lg bg-surface" />
-        }
+        fallback={<div className="h-[640px] animate-pulse bg-surface" />}
       >
         <Settings />
       </Suspense>
       <form action={signOutAction} className="border-t border-border pt-6">
-        <Button type="submit" variant="secondary" size="lg">
+        <button type="submit" className={lineButton}>
           Sign out
-        </Button>
+        </button>
       </form>
     </main>
   );
@@ -31,7 +31,9 @@ async function Settings() {
   const { user, store } = await requireStore();
   return (
     <>
-      <p className="-mt-6 text-sm text-subtle">Signed in as {user.email}</p>
+      <p className="-mt-7 text-sm text-muted-foreground">
+        Signed in as {user.email}
+      </p>
       <SettingsForm
         values={{
           priceRulePct: store.priceRulePct,

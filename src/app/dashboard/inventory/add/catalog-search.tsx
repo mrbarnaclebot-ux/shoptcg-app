@@ -97,7 +97,7 @@ export function CatalogSearch({ onCustom }: { onCustom: () => void }) {
       <div className="relative">
         <Search
           aria-hidden
-          className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-subtle"
+          className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground"
         />
         <Input
           type="search"
@@ -139,20 +139,20 @@ function Results(props: {
       className="flex flex-col gap-3"
     >
       {error && (
-        <p className="flex gap-2 rounded-md bg-warning-bg px-4 py-3 text-sm text-warning">
+        <p className="flex gap-2 px-4 py-3 text-sm text-warning shadow-[inset_0_0_0_1.5px_currentColor]">
           <CircleAlert aria-hidden className="mt-0.5 size-4 shrink-0" />
           {error}
         </p>
       )}
       {status === "loading" && !items.length && (
-        <p className="text-sm text-subtle">Searching</p>
+        <p className="text-sm text-muted-foreground">Searching</p>
       )}
       {status === "done" && !items.length && !error && (
         <p className="text-muted-foreground">
           No cards found. Check the spelling or number.
         </p>
       )}
-      <ul className="flex flex-col divide-y divide-border">
+      <ul className="flex flex-col divide-y divide-border border-y border-border">
         {items.map((it) => (
           <ResultItem key={it.id} item={it} onPick={props.onPick} />
         ))}
@@ -162,7 +162,7 @@ function Results(props: {
           <button
             type="button"
             onClick={props.onMore}
-            className="min-h-11 text-sm font-semibold text-brand-text"
+            className="min-h-11 text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
           >
             Not here? Search more
           </button>
@@ -170,7 +170,7 @@ function Results(props: {
         <button
           type="button"
           onClick={props.onCustom}
-          className="min-h-11 text-sm font-semibold text-brand-text"
+          className="min-h-11 text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
         >
           Add a custom item instead
         </button>
@@ -191,7 +191,7 @@ function ResultItem({
       <button
         type="button"
         onClick={() => onPick(item)}
-        className="flex w-full items-center gap-3 py-2 text-left hover:bg-surface"
+        className="flex w-full items-center gap-3 px-1 py-2 text-left transition-colors hover:bg-surface focus-visible:outline-offset-[-2px]"
       >
         <CardThumb
           src={item.imageUrl}

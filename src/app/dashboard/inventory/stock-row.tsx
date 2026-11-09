@@ -1,11 +1,12 @@
 "use client";
 
-import { TriangleAlert } from "lucide-react";
 import { useOptimistic, useState, useTransition } from "react";
 import { CardThumb } from "@/components/card-thumb";
+import { HangTag } from "@/components/hang-tag";
+import { Stamp } from "@/components/stamp";
 import { Stepper } from "@/components/stepper";
+import { HatchTag, TapeHatch } from "@/components/tape-hatch";
 import {
-  certNo,
   daysBetween,
   gradeLabel,
   LANGUAGE_LABEL,
@@ -14,96 +15,98 @@ import {
 } from "@/lib/format";
 import type { StockRow as Row } from "@/lib/listings";
 import { toast } from "@/lib/toast";
+import { underMarket } from "@/lib/vendor-price";
 import { stepQtyAction, updateListingAction } from "./actions";
 import { EditPanel } from "./edit-panel";
 
 // Synced nightly, so two days without a new point means the sync is missing it.
 const STALE_DAYS = 2;
 
-/** One inventory item as a slab: label strip on top, readout and controls below. */
+/** One inventory item: the thumb, a hang-tag price, a stamp when it's a deal. */
 export function StockRow(props: {
   row: Row;
   price: number | null;
   today: string;
 }) {
-  const { row } = props;
+  const { row, price } = props;
   const [editing, setEditing] = useState(false);
+  const off = !row.active ? "Hidden" : row.qty === 0 ? "Sold out" : null;
+  const thumb = (
+    <CardThumb
+      src={row.imageUrl}
+      kind={row.kind}
+      language={row.language}
+      className="w-11"
+    />
+  );
   return (
-    <li className="flex flex-col rounded-sm bg-surface ring-1 ring-border">
-      <SlabLabel row={row} />
-      <div className="flex flex-col gap-3 p-3 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-8">
-        <div className="flex items-start gap-3 lg:flex-1">
-          <CardThumb
-            src={row.imageUrl}
-            kind={row.kind}
-            language={row.language}
-          />
-          <p
-            lang={row.language === "en" ? undefined : row.language}
-            className="line-clamp-2 min-w-0 flex-1 font-semibold wdth-108"
-          >
-            {row.name}
-          </p>
-          <PriceColumn {...props} />
-        </div>
-        <div className="flex items-center justify-between gap-3 pl-[52px] lg:gap-6 lg:pl-0">
+    <li className="border-b border-border last:border-b-0">
+      <div className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 px-4 py-3 lg:grid-cols-[44px_minmax(0,1fr)_3rem_11rem_11rem_4rem] lg:items-center lg:gap-x-5">
+        {off ? <TapeHatch label={off}>{thumb}</TapeHatch> : thumb}
+        <Name row={row} price={price} />
+        <span className="font-display hidden text-[0.95rem] font-extrabold tracking-[0.06em] text-muted-foreground lg:block">
+          {LANGUAGE_LABEL[row.language]}
+        </span>
+        <div className="col-start-2 row-start-2 flex items-center gap-3 lg:col-start-4 lg:row-start-1">
           <Qty row={row} />
-          <button
-            type="button"
-            aria-expanded={editing}
-            onClick={() => setEditing(!editing)}
-            className="inline-flex min-h-11 items-center px-2 text-sm font-semibold text-brand-text"
-          >
-            {editing ? "Close" : "Edit"}
-          </button>
         </div>
-        {editing && <EditPanel row={row} onDone={() => setEditing(false)} />}
+        <PriceTag {...props} />
+        <button
+          type="button"
+          aria-expanded={editing}
+          onClick={() => setEditing(!editing)}
+          className="col-start-3 row-start-2 inline-flex min-h-11 items-center justify-self-end px-2 font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px] lg:col-start-6 lg:row-start-1"
+        >
+          {editing ? "Close" : "Edit"}
+        </button>
       </div>
+      {editing && <EditPanel row={row} onDone={() => setEditing(false)} />}
     </li>
   );
 }
 
-// The grading-label strip: set and number condensed, grade, cert number.
-function SlabLabel({ row }: { row: Row }) {
+function Name({ row, price }: { row: Row; price: number | null }) {
   const set = [row.setName, row.number].filter(Boolean).join(" ");
+  const deal = underMarket(price, row.market);
   return (
-    <div className="flex items-center gap-x-3 gap-y-1 border-b border-border px-3 py-1.5 text-xs font-bold tracking-[0.08em] text-muted-foreground uppercase">
-      <span className="min-w-0 truncate wdth-80">{set || "Custom item"}</span>
-      <span className="rounded-[3px] bg-seal-50 px-1.5 text-galaxy-950">
-        {gradeLabel(row) || "Raw"}
-      </span>
-      {row.language !== "en" && <span>{LANGUAGE_LABEL[row.language]}</span>}
-      {!row.active && <span className="text-warning">Hidden</span>}
-      <span className="num ml-auto shrink-0 font-semibold text-subtle">
-        <span className="sr-only">Cert </span>
-        {certNo(row.id)}
-      </span>
+    <div className="flex min-w-0 flex-col items-start gap-1">
+      {deal && <Stamp>{deal}% under market</Stamp>}
+      <p
+        lang={row.language === "en" ? undefined : row.language}
+        className="line-clamp-2 font-semibold"
+      >
+        {row.name}
+      </p>
+      <p className="text-[0.8125rem] text-muted-foreground">
+        {[set || "Custom item", gradeLabel(row) || "Raw"].join(". ")}
+        <span className="lg:hidden">. {LANGUAGE_LABEL[row.language]}</span>
+      </p>
+      {!row.active && <HatchTag>Hidden from buyers</HatchTag>}
     </div>
   );
 }
 
-function PriceColumn({ row, price, today }: Parameters<typeof StockRow>[0]) {
+function PriceTag({ row, price, today }: Parameters<typeof StockRow>[0]) {
   const stale = row.asOf ? daysBetween(row.asOf, today) : 0;
+  const mkt =
+    row.market !== null && row.asOf
+      ? `Mkt ${usd(row.market)}, ${shortDate(row.asOf)}`
+      : null;
   return (
-    <div className="flex shrink-0 flex-col items-end gap-0.5 text-right">
-      <span className="num min-w-[5ch] text-lg">
-        {price === null ? "No price" : usd(price)}
-      </span>
+    <div className="col-start-3 row-start-1 flex flex-col items-end gap-1 lg:col-start-5">
+      <HangTag price={price === null ? "No price" : usd(price)} />
       {row.overridePrice !== null && (
-        <span className="rounded-sm bg-surface-2 px-1.5 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase">
-          Fixed
+        <span className="text-xs font-semibold text-muted-foreground">
+          Fixed price
         </span>
       )}
-      {row.market !== null && row.asOf && (
-        <span className="text-sm text-subtle">
-          Mkt <span className="num font-medium">{usd(row.market)}</span>
-          {" as of "}
-          {shortDate(row.asOf)}
+      {mkt && (
+        <span className="num text-right text-xs text-muted-foreground">
+          {mkt}
         </span>
       )}
       {stale > STALE_DAYS && (
-        <span className="inline-flex items-center gap-1 rounded-sm bg-warning-bg px-1.5 text-xs font-semibold text-warning">
-          <TriangleAlert aria-hidden className="size-3" />
+        <span className="px-1.5 py-1 text-xs leading-none font-semibold text-warning shadow-[inset_0_0_0_1px_currentColor]">
           Price {stale} days old
         </span>
       )}
@@ -133,35 +136,31 @@ function Qty({ row }: { row: Row }) {
       } catch {
         // The optimistic value reverts on its own; say why it moved back.
         setFailed(true);
-        toast.qtyFailed(shown);
+        toast.qtyFailed(shown, () => step(delta));
       }
     });
   return (
-    <div className="flex items-center gap-2">
+    <>
       <Stepper value={shown} label={`Quantity, ${row.name}`} onStep={step} />
       {failed ? (
         <span className="text-sm font-semibold text-danger">Not saved.</span>
       ) : (
         shown === 0 && <SoldOut active={row.active} onHide={hide} />
       )}
-    </div>
+    </>
   );
 }
 
 // The toast's "Hide item" lives here too: toast buttons are shortcuts, never the only path.
 function SoldOut({ active, onHide }: { active: boolean; onHide: () => void }) {
+  if (!active) return null;
   return (
-    <span className="flex items-center gap-1 text-sm font-semibold text-subtle">
-      Sold out
-      {active && (
-        <button
-          type="button"
-          onClick={onHide}
-          className="min-h-11 px-2 text-brand-text"
-        >
-          Hide
-        </button>
-      )}
-    </span>
+    <button
+      type="button"
+      onClick={onHide}
+      className="min-h-11 px-1 text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-4"
+    >
+      Hide
+    </button>
   );
 }

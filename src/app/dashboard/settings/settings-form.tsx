@@ -2,7 +2,9 @@
 
 import { startTransition, useActionState, useEffect, useState } from "react";
 import { Segmented } from "@/components/segmented";
-import { Button } from "@/components/ui/button";
+import { HangTag } from "@/components/hang-tag";
+import { SectionMark } from "@/components/section-mark";
+import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usd } from "@/lib/format";
@@ -45,7 +47,7 @@ export function SettingsForm({ values }: { values: Values }) {
   }, [state]);
   return (
     <form
-      className="flex flex-col gap-8"
+      className="flex flex-col gap-10"
       // Submitted by hand: a form action would auto-reset the fields after
       // saving and desync the controlled rule and rounding inputs.
       onSubmit={(ev) => {
@@ -58,7 +60,9 @@ export function SettingsForm({ values }: { values: Values }) {
       <CurrencyFields values={values} errors={e} />
 
       <fieldset className="flex flex-col gap-2">
-        <legend className={LEGEND}>At the table</legend>
+        <SectionMark n={3} level="legend" className="mb-4">
+          At the table
+        </SectionMark>
         <Toggle
           name="isOpen"
           checked={values.isOpen}
@@ -75,9 +79,9 @@ export function SettingsForm({ values }: { values: Values }) {
 
       <Err id="form-error" msg={e.form} />
       <div className="flex items-center gap-4">
-        <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
+        <TicketButton type="submit" disabled={pending} aria-busy={pending}>
           {pending ? "Saving" : "Save settings"}
-        </Button>
+        </TicketButton>
         <p role="status" className="text-sm font-semibold text-success">
           {state.saved && !pending ? "Saved." : ""}
         </p>
@@ -92,9 +96,6 @@ function saveError(errors: Record<string, string>) {
   return `${n} ${n === 1 ? "field needs" : "fields need"} a fix. Your entries are still here.`;
 }
 
-const LEGEND =
-  "mb-4 w-full border-t border-border-strong pt-2 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase";
-
 function Toggle(props: {
   name: string;
   checked: boolean;
@@ -102,16 +103,16 @@ function Toggle(props: {
   hint: string;
 }) {
   return (
-    <label className="flex cursor-pointer items-start gap-3 rounded-md py-2">
+    <label className="flex cursor-pointer items-start gap-3 py-2">
       <input
         type="checkbox"
         name={props.name}
         defaultChecked={props.checked}
-        className="mt-0.5 size-6 shrink-0 accent-brand"
+        className="mt-0.5 size-6 shrink-0 accent-[var(--sun)]"
       />
       <span className="flex flex-col gap-0.5">
         <span className="font-semibold">{props.label}</span>
-        <span className="text-sm text-subtle">{props.hint}</span>
+        <span className="text-sm text-muted-foreground">{props.hint}</span>
       </span>
     </label>
   );
@@ -125,7 +126,9 @@ function PricingFields({ values, errors: e }: FieldsProps) {
   const example = vendorPrice(48.1, Number(pct) || 0, Number(rounding), null);
   return (
     <fieldset className="flex flex-col gap-4">
-      <legend className={LEGEND}>Pricing</legend>
+      <SectionMark n={1} level="legend" className="mb-4">
+        Pricing
+      </SectionMark>
       <div className="flex flex-col gap-2">
         <Label htmlFor="priceRulePct">Price rule (% of market)</Label>
         <Input
@@ -138,7 +141,7 @@ function PricingFields({ values, errors: e }: FieldsProps) {
           aria-describedby="rule-hint rule-error"
           className="max-w-32"
         />
-        <p id="rule-hint" className="text-sm text-subtle">
+        <p id="rule-hint" className="text-sm text-muted-foreground">
           Use -10 to sell 10% under market, 0 to match it.
         </p>
         <Err id="rule-error" msg={e.priceRulePct} />
@@ -150,16 +153,24 @@ function PricingFields({ values, errors: e }: FieldsProps) {
         options={ROUNDING}
         onChange={setRounding}
       />
-      <p
-        className="rounded-sm bg-surface px-4 py-3 text-sm text-muted-foreground ring-1 ring-border"
-        aria-live="polite"
-      >
-        A card at <span className="num text-text">$48.10</span> market sells for{" "}
-        <span className="num text-text">
-          {example === null ? "-" : usd(example)}
-        </span>
-        . Fixed prices you set on an item always win.
-      </p>
+      {/* A worked example on a hang tag, so the rule reads as a real price. */}
+      <div className="flex flex-wrap items-center gap-4 border-t border-dashed border-border-strong pt-4">
+        <HangTag
+          price={example === null ? "-" : usd(example)}
+          sub="on a $48.10 card"
+        />
+        <p
+          className="max-w-[30ch] text-sm text-muted-foreground"
+          aria-live="polite"
+        >
+          A card at <span className="num text-text">$48.10</span> market sells
+          for{" "}
+          <span className="num font-semibold text-text">
+            {example === null ? "-" : usd(example)}
+          </span>
+          . Fixed prices you set on an item always win.
+        </p>
+      </div>
     </fieldset>
   );
 }
@@ -167,8 +178,10 @@ function PricingFields({ values, errors: e }: FieldsProps) {
 function CurrencyFields({ values, errors: e }: FieldsProps) {
   return (
     <fieldset className="flex flex-col gap-4">
-      <legend className={LEGEND}>Second currency</legend>
-      <p className="text-sm text-subtle">
+      <SectionMark n={2} level="legend" className="mb-4">
+        Second currency
+      </SectionMark>
+      <p className="text-sm text-muted-foreground">
         Buyers see an approximate price in your currency next to USD. Leave
         blank to show USD only.
       </p>

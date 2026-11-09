@@ -25,18 +25,20 @@ export default function ImportPage() {
     <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-6 px-4 pt-4 pb-16 md:px-6 lg:px-8">
       <Link
         href="/dashboard/inventory"
-        className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-muted-foreground"
+        className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-muted-foreground hover:text-text"
       >
         <ChevronLeft aria-hidden className="size-4" />
         Inventory
       </Link>
       <div className="flex max-w-[68ch] flex-col gap-3">
-        <h1 className="text-2xl font-bold wdth-112">Import CSV</h1>
+        <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
+          Import CSV
+        </h1>
         <p className="text-muted-foreground">
           Upload a spreadsheet of your stock, up to {MAX_ROWS} rows. You will
           see every row before anything is saved.
         </p>
-        <p className="rounded-md bg-surface px-4 py-3 text-sm text-muted-foreground">
+        <p className="border-t border-dashed border-border-strong pt-3 text-sm text-muted-foreground">
           Each row is matched against the shoptcg catalog first, which is free.
           Cards not in it yet are looked up with our price provider, and those
           lookups count toward your limit of {MISSES_PER_HOUR} searches an hour.
@@ -45,14 +47,14 @@ export default function ImportPage() {
         </p>
       </div>
       <ImportFlow />
-      <details className="max-w-[68ch] rounded-lg border border-border p-4">
+      <details className="max-w-[68ch] p-4 shadow-[inset_0_0_0_1px_var(--border-strong)]">
         <summary className="min-h-11 cursor-pointer content-center font-semibold">
           Template columns
         </summary>
         <dl className="mt-3 grid grid-cols-[7rem_1fr] gap-x-4 gap-y-2 text-sm">
           {CSV_COLUMNS.map((c) => (
             <div key={c} className="contents">
-              <dt className="font-mono text-text">{c}</dt>
+              <dt className="font-mono text-sm text-text">{c}</dt>
               <dd className="text-muted-foreground">{COLUMN_HELP[c]}</dd>
             </div>
           ))}
@@ -60,7 +62,7 @@ export default function ImportPage() {
         <a
           href="/inventory-template.csv"
           download
-          className="mt-4 inline-flex min-h-11 items-center gap-2 font-semibold text-brand-text"
+          className="mt-4 inline-flex min-h-11 items-center gap-2 font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
         >
           <Download aria-hidden className="size-4" />
           Download the CSV template

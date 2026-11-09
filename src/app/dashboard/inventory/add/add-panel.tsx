@@ -4,9 +4,10 @@ import { Check, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { CardThumb } from "@/components/card-thumb";
-import { RipMoment } from "@/components/rip-moment";
+import { ShowMoment } from "@/components/show-moment";
 import { Segmented } from "@/components/segmented";
-import { Button } from "@/components/ui/button";
+import { Ticket } from "@/components/ticket";
+import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CatalogItem } from "@/db/schema";
@@ -50,30 +51,32 @@ export function AddPanel({
   if (added)
     return <Added name={item.name} first={added.first} onAgain={onClose} />;
   return (
-    <form action={submit} data-panel className="flex flex-col gap-5">
-      <button
-        type="button"
-        onClick={onClose}
-        className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-muted-foreground"
-      >
-        <ChevronLeft aria-hidden className="size-4" />
-        Back to results
-      </button>
-      <ItemHeader item={item} />
-      {item.kind === "raw" && (
-        <Segmented
-          label="Condition"
-          value={condition}
-          options={CONDITIONS.map((c) => [c, c] as const)}
-          onChange={setCondition}
-        />
-      )}
-      <StockFields />
-      {error && <p className="text-sm text-danger">{error}</p>}
-      <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
-        {pending ? "Adding" : "Add to stock"}
-      </Button>
-    </form>
+    <Ticket as="div" className="[--stub:2rem]">
+      <form action={submit} data-panel className="flex flex-col gap-5">
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-muted-foreground hover:text-text"
+        >
+          <ChevronLeft aria-hidden className="size-4" />
+          Back to results
+        </button>
+        <ItemHeader item={item} />
+        {item.kind === "raw" && (
+          <Segmented
+            label="Condition"
+            value={condition}
+            options={CONDITIONS.map((c) => [c, c] as const)}
+            onChange={setCondition}
+          />
+        )}
+        <StockFields />
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <TicketButton type="submit" disabled={pending} aria-busy={pending}>
+          {pending ? "Adding" : "Add to stock"}
+        </TicketButton>
+      </form>
+    </Ticket>
   );
 }
 
@@ -118,7 +121,7 @@ export function StockFields({
   );
 }
 
-/** Inline confirmation; the store's first item gets the Direction C moment. */
+/** Inline confirmation; the store's first item gets the show-floor moment. */
 export function Added(props: {
   name: string;
   first: boolean;
@@ -127,13 +130,11 @@ export function Added(props: {
   const actions = (
     <div className="flex flex-wrap gap-3">
       {props.onAgain && (
-        <Button type="button" size="lg" onClick={props.onAgain}>
-          Add another
-        </Button>
+        <TicketButton onClick={props.onAgain}>Add another</TicketButton>
       )}
       <Link
         href="/dashboard/inventory"
-        className="inline-flex min-h-12 items-center px-2 font-semibold text-brand-text"
+        className="inline-flex min-h-12 items-center px-2 font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
       >
         View inventory
       </Link>
@@ -141,24 +142,25 @@ export function Added(props: {
   );
   if (props.first)
     return (
-      <RipMoment kicker="Item 0001" headline="First hit logged">
+      <ShowMoment stamp="First card" headline="On the table" no="0001">
         <p className="text-muted-foreground">
-          Your table is live. Added {props.name} to your stock.
+          Added {props.name} to your stock. Buyers can see it now.
         </p>
         {actions}
-      </RipMoment>
+      </ShowMoment>
     );
   return (
-    <div
-      role="status"
-      className="flex flex-col gap-4 rounded-sm bg-success-bg p-5"
+    <Ticket
+      as="div"
+      className="[--stub:2rem]"
+      bodyClassName="flex flex-col gap-4"
     >
-      <p className="flex items-center gap-2 font-semibold text-success">
-        <Check aria-hidden className="size-5" />
+      <p role="status" className="flex items-center gap-2 font-semibold">
+        <Check aria-hidden className="size-5 shrink-0 text-success" />
         Added {props.name} to your stock.
       </p>
       {actions}
-    </div>
+    </Ticket>
   );
 }
 
@@ -172,7 +174,9 @@ function ItemHeader({ item }: { item: CatalogItem }) {
         className="w-20"
       />
       <div className="min-w-0">
-        <h2 className="text-lg font-semibold">{item.name}</h2>
+        <h2 className="font-display text-[1.875rem] leading-none font-extrabold">
+          {item.name}
+        </h2>
         <p className="text-sm text-muted-foreground">
           {[item.setName, item.number].filter(Boolean).join(" ")}
         </p>

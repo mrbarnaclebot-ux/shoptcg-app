@@ -4,7 +4,7 @@ import { CircleAlert, Download, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { LabeledProgressIndicator } from "@/components/labeled-progress-indicator";
-import { Button } from "@/components/ui/button";
+import { TicketButton } from "@/components/ticket-button";
 import type { PreviewRow } from "@/lib/csv-import";
 import { toast, type ImportSummary } from "@/lib/toast";
 import { importCsvAction, previewCsvAction } from "../actions";
@@ -73,15 +73,14 @@ export function ImportFlow() {
         />
       )}
       {error && (
-        <p className="flex gap-2 rounded-sm bg-danger-bg px-4 py-3 text-danger">
+        <p className="flex gap-2 px-4 py-3 text-danger shadow-[inset_0_0_0_1.5px_currentColor]">
           <CircleAlert aria-hidden className="mt-0.5 size-5 shrink-0" />
           {error}
         </p>
       )}
       {rows && <PreviewTable rows={rows} />}
       {rows && (
-        <Button
-          size="lg"
+        <TicketButton
           className="self-start"
           disabled={!valid.length || importing}
           aria-busy={importing}
@@ -90,7 +89,7 @@ export function ImportFlow() {
           {importing
             ? "Importing"
             : `Import ${valid.length} ${valid.length === 1 ? "item" : "items"}`}
-        </Button>
+        </TicketButton>
       )}
     </div>
   );
@@ -119,9 +118,14 @@ function FilePicker(props: {
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <label className="inline-flex h-12 cursor-pointer items-center gap-2 rounded-md bg-brand px-5 font-bold text-on-brand has-focus-visible:ring-2 has-focus-visible:ring-focus has-focus-visible:ring-offset-2">
-        <Upload aria-hidden className="size-5" />
-        {props.again ? "Choose another file" : "Choose CSV file"}
+      {/* A label styled as the ticket button; the mask hides outlines, so focus is an inset ring. */}
+      <label className="btn-ticket cursor-pointer has-focus-visible:shadow-[inset_0_0_0_3px_var(--on-brand),inset_0_0_0_5px_var(--brand)] has-disabled:cursor-not-allowed has-disabled:opacity-45">
+        <span className="btn-ticket-main">
+          {props.again ? "Choose another file" : "Choose CSV file"}
+        </span>
+        <span aria-hidden className="btn-ticket-stub">
+          <Upload className="size-[18px]" />
+        </span>
         <input
           type="file"
           accept=".csv,text/csv"
@@ -133,7 +137,7 @@ function FilePicker(props: {
       <a
         href="/inventory-template.csv"
         download
-        className="inline-flex min-h-11 items-center gap-2 font-semibold text-brand-text"
+        className="inline-flex min-h-11 items-center gap-2 font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
       >
         <Download aria-hidden className="size-4" />
         CSV template

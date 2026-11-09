@@ -1,13 +1,14 @@
 "use client";
 
 import { useActionState, useEffect, useSyncExternalStore } from "react";
-import { Button } from "@/components/ui/button";
+import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/lib/toast";
 import { requestMagicLink, type LoginState } from "./actions";
 
-const EXPIRED = "That link expired or was already used. Request a new one.";
+const EXPIRED =
+  "That link has expired. Enter your email and we'll send a fresh one.";
 
 // Expired links land on /login?link=expired (errorCallbackURL in actions.ts).
 // Read on the client so the login page stays static.
@@ -61,9 +62,9 @@ export function LoginForm() {
           </p>
         )}
       </div>
-      <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
+      <TicketButton type="submit" disabled={pending} aria-busy={pending}>
         {pending ? "Sending link" : "Email me a link"}
-      </Button>
+      </TicketButton>
     </form>
   );
 }
@@ -71,18 +72,18 @@ export function LoginForm() {
 function Sent({ email }: { email: string }) {
   return (
     // No role="status": the linkSent toast already announces it.
-    <div className="flex flex-col rounded-sm bg-surface ring-1 ring-border">
-      <div className="flex items-baseline justify-between gap-3 border-b border-border px-5 py-3">
-        <p className="text-lg font-bold wdth-112">Link sent.</p>
-        <p className="num text-xs text-subtle">VALID 5 MIN</p>
-      </div>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 px-5 py-4 text-sm">
-        <dt className="text-subtle">To</dt>
-        <dd className="text-right font-semibold break-all">{email}</dd>
-        <dt className="text-subtle">Use</dt>
-        <dd className="text-right font-semibold">Single, this device or any</dd>
-      </dl>
-      <div aria-hidden className="ruler mx-5 mb-4" />
+    <div className="flex flex-col gap-3">
+      <p className="font-display text-[2.25rem] leading-[0.9] font-black">
+        Check your email.
+      </p>
+      <p className="text-muted-foreground">
+        We sent a link to{" "}
+        <span className="font-semibold break-all text-text">{email}</span>. It
+        works once, for 5 minutes.
+      </p>
+      <p className="border-t border-dashed border-border pt-3 text-sm text-muted-foreground">
+        Didn&apos;t get it? Check spam, or reload this page to send again.
+      </p>
     </div>
   );
 }

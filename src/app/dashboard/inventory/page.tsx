@@ -1,8 +1,8 @@
-import { FileSpreadsheet, LayoutGrid, Plus } from "lucide-react";
+import { FileSpreadsheet, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { buttonVariants } from "@/components/ui/button";
+import { lineButton, TicketButton } from "@/components/ticket-button";
 import { shortDate } from "@/lib/format";
 import { getDb } from "@/db";
 import { listStock } from "@/lib/listings";
@@ -17,7 +17,7 @@ export default function InventoryPage({
   searchParams,
 }: PageProps<"/dashboard/inventory">) {
   return (
-    <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-4 px-4 pt-6 pb-16 md:px-6 lg:px-8">
+    <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-6 px-4 pt-8 pb-16 md:px-6 lg:px-8">
       <Suspense fallback={<Skeleton />}>
         <Inventory searchParams={searchParams} />
       </Suspense>
@@ -43,7 +43,7 @@ async function Inventory({
       <Header count={filtered ? null : rows.length} synced={synced} />
       {rows.length || filtered ? <Filters filter={filter} /> : null}
       {rows.length ? (
-        <ul className="flex flex-col gap-2">
+        <ul className="-mx-4 bg-surface md:mx-0">
           {rows.map((r) => (
             <StockRow
               key={r.id}
@@ -65,43 +65,37 @@ async function Inventory({
 function Header(props: { count: number | null; synced: string | null }) {
   const { count } = props;
   return (
-    <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-4">
       <div className="flex flex-col gap-2">
-        <p className="eyebrow self-start">
-          <span aria-hidden className="live-dot" />
-          {props.synced
-            ? `Market data ${shortDate(props.synced)}, sync nightly`
-            : "Market sync nightly"}
-        </p>
-        <h1 className="text-3xl font-extrabold wdth-125">
-          Inventory{" "}
+        <h1 className="font-display flex items-baseline gap-3 text-[3.5rem] leading-[0.82] font-black">
+          Inventory
           {count !== null && (
-            <small className="num text-base font-semibold text-muted-foreground wdth-100">
+            <small className="num font-sans text-base font-semibold text-muted-foreground">
               {count} {count === 1 ? "item" : "items"}
             </small>
           )}
         </h1>
+        <p className="text-sm text-muted-foreground">
+          {props.synced
+            ? `Market prices from ${shortDate(props.synced)}. Updated nightly.`
+            : "Market prices update nightly."}
+        </p>
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-3">
         <Link
           href="/dashboard/inventory/import"
           aria-label="Import CSV"
-          className={buttonVariants({
-            variant: "secondary",
-            size: "lg",
-            className: "px-3",
-          })}
+          className={`${lineButton} px-3.5`}
         >
           <FileSpreadsheet aria-hidden className="size-5" />
           <span className="hidden sm:inline">Import CSV</span>
         </Link>
-        <Link
+        <TicketButton
           href="/dashboard/inventory/add"
-          className={buttonVariants({ size: "lg", className: "px-4" })}
+          icon={<Plus className="size-[18px]" strokeWidth={2.4} />}
         >
-          <Plus aria-hidden className="size-5" />
           Add
-        </Link>
+        </TicketButton>
       </div>
     </div>
   );
@@ -109,32 +103,23 @@ function Header(props: { count: number | null; synced: string | null }) {
 
 function EmptyShelf() {
   return (
-    <section className="flex flex-col items-center gap-3 rounded-sm border border-dashed border-border-strong px-5 py-12 text-center">
-      <LayoutGrid aria-hidden className="size-8 stroke-[1.75] text-subtle" />
-      <h2 className="text-xl font-extrabold wdth-118">
-        <span className="num">0</span> items logged.
+    <section className="flex flex-col items-start gap-3 border-t border-dashed border-border-strong pt-6">
+      <h2 className="font-display text-[2.25rem] leading-none font-extrabold">
+        Your shelf is empty.
       </h2>
-      <p className="max-w-[36ch] text-muted-foreground">
-        Search by name or number, or import a CSV.
+      <p className="max-w-[44ch] text-muted-foreground">
+        Add your first card by name or number, or import a CSV of your stock.
       </p>
-      <div className="mt-2 flex flex-wrap justify-center gap-3">
-        <Link
-          href="/dashboard/inventory/add"
-          className={buttonVariants({ size: "lg" })}
-        >
-          Add a card
-        </Link>
-        <Link
-          href="/dashboard/inventory/import"
-          className={buttonVariants({ variant: "secondary", size: "lg" })}
-        >
+      <div className="mt-2 flex flex-wrap gap-3">
+        <TicketButton href="/dashboard/inventory/add">Add a card</TicketButton>
+        <Link href="/dashboard/inventory/import" className={lineButton}>
           Import CSV
         </Link>
       </div>
       <a
         href="/inventory-template.csv"
         download
-        className="inline-flex min-h-11 items-center text-brand-text underline underline-offset-4"
+        className="inline-flex min-h-11 items-center underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
       >
         Download the CSV template
       </a>
@@ -144,11 +129,16 @@ function EmptyShelf() {
 
 function NoMatches() {
   return (
-    <div className="flex flex-col items-center gap-2 py-12 text-center">
-      <p className="text-lg font-semibold">Nothing matches.</p>
+    <div className="flex flex-col items-start gap-2 py-10">
+      <p className="font-display text-[2rem] leading-none font-extrabold">
+        Nothing matches.
+      </p>
+      <p className="text-muted-foreground">
+        Try the card number, or clear filters.
+      </p>
       <Link
         href="/dashboard/inventory"
-        className="inline-flex min-h-11 items-center text-brand-text underline underline-offset-4"
+        className="inline-flex min-h-11 items-center underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
       >
         Clear filters
       </Link>
@@ -159,9 +149,9 @@ function NoMatches() {
 function Skeleton() {
   return (
     <div className="flex flex-col gap-3" aria-hidden>
-      <div className="h-12 animate-pulse rounded-sm bg-surface" />
+      <div className="h-12 animate-pulse bg-surface" />
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="h-28 animate-pulse rounded-sm bg-surface" />
+        <div key={i} className="h-24 animate-pulse bg-surface" />
       ))}
     </div>
   );

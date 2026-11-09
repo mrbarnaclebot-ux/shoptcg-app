@@ -6,12 +6,15 @@ export const metadata: Metadata = { title: "Terms - shoptcg" };
 export default function TermsPage() {
   return (
     <div className="flex flex-1 flex-col">
-      <header className="px-4 py-3 md:px-6 lg:px-8">
+      <header className="px-4 py-2 md:px-14 md:py-6">
         <Wordmark />
       </header>
-      <main className="mx-auto w-full max-w-[68ch] flex-1 px-4 pt-10 pb-16">
-        <article className="flex flex-col gap-4 text-muted-foreground [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-foreground [&_h2]:wdth-108">
-          <h1 className="text-2xl font-bold text-foreground wdth-112">Terms</h1>
+      {/* The terms are a printed handout: one sheet of paper on the hall. */}
+      <main className="paper mx-auto mb-16 w-full max-w-[72ch] flex-1 px-5 pt-10 pb-12 md:px-12">
+        <article className="flex flex-col gap-4 text-muted-foreground [&_h2]:mt-6 [&_h2]:border-t-[1.5px] [&_h2]:border-text [&_h2]:pt-3 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-foreground">
+          <h1 className="font-display text-[4rem] leading-[0.82] font-black text-foreground">
+            Terms
+          </h1>
           <p>
             shoptcg is a hobby project run for a small group of card show
             vendors. It is provided as is, with no guarantee of uptime or

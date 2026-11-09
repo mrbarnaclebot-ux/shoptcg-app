@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect } from "react";
-import { RipMoment } from "@/components/rip-moment";
-import { buttonVariants } from "@/components/ui/button";
+import { ShowMoment } from "@/components/show-moment";
+import { TicketButton } from "@/components/ticket-button";
 import { toast } from "@/lib/toast";
 
 // Rendered once after createStoreAction redirects to ?created=1. The flag is
@@ -19,17 +18,14 @@ export function StoreCreated({ slug }: { slug: string }) {
     toast.storeCreated(slug);
   }, [slug]);
   return (
-    <RipMoment kicker="Store created" headline="You're open">
+    <ShowMoment stamp="Open" headline="You're open" no="0001">
       <p className="text-muted-foreground">
-        shoptcg.app/{slug} is live. <span className="num text-text">0</span>{" "}
-        items. Time to stock it.
+        shoptcg.app/{slug} is live with <span className="num">0</span> items.
+        Time to stock the table.
       </p>
-      <Link
-        href="/dashboard/inventory/add"
-        className={buttonVariants({ size: "lg", className: "self-start" })}
-      >
+      <TicketButton href="/dashboard/inventory/add" className="self-start">
         Add your first card
-      </Link>
-    </RipMoment>
+      </TicketButton>
+    </ShowMoment>
   );
 }

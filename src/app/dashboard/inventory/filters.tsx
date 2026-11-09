@@ -39,11 +39,11 @@ function href(filter: Filter, patch: Partial<Filter>) {
 // A GET form, so search works before hydration and the URL is shareable.
 export function Filters({ filter }: { filter: Filter }) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <form role="search" className="relative">
         <Search
           aria-hidden
-          className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-subtle"
+          className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground"
         />
         <Input
           name="q"
@@ -58,7 +58,7 @@ export function Filters({ filter }: { filter: Filter }) {
           <input type="hidden" name="language" value={filter.language} />
         )}
       </form>
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 py-0.5 md:mx-0 md:flex-wrap md:px-0">
+      <div className="-mx-4 flex gap-8 overflow-x-auto px-4 py-0.5 md:mx-0 md:flex-wrap md:px-0">
         <ContinuousTabs
           id="kind"
           label="Type"

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
+import { Ticket } from "@/components/ticket";
+import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CONDITIONS } from "@/lib/listing-input";
@@ -27,52 +28,56 @@ export function EditPanel({
       onDone();
     });
   return (
-    <form
-      data-panel
-      className="flex flex-col gap-4 rounded-sm bg-surface-2 p-4 lg:max-w-lg lg:basis-full"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const form = new FormData(e.currentTarget);
-        const fixed = String(form.get("overridePrice") ?? "").trim();
-        const change = fixed
-          ? `Fixed price ${fixed.replace("$", "")}.`
-          : "Follows the market.";
-        save(
-          {
-            overridePrice: fixed,
-            ...(row.kind === "raw" && { condition: form.get("condition") }),
-          },
-          () => toast.itemUpdated(row.id, row.name, change),
-        );
-      }}
+    // A paper slip under the row: you are holding this item while you edit it.
+    <Ticket
+      as="div"
+      className="mx-4 mb-4 [--stub:2rem] lg:ml-[76px] lg:max-w-lg"
     >
-      <Fields row={row} />
-      {error && <p className="text-sm text-danger">{error}</p>}
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
-          Save
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="lg"
-          disabled={pending}
-          onClick={() =>
-            save({ active: !row.active }, () =>
-              row.active
-                ? toast.itemHidden(row.id, row.name)
-                : toast.itemUpdated(
-                    row.id,
-                    row.name,
-                    "Back on your public table.",
-                  ),
-            )
-          }
-        >
-          {row.active ? "Hide from store" : "Show in store"}
-        </Button>
-      </div>
-    </form>
+      <form
+        data-panel
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const form = new FormData(e.currentTarget);
+          const fixed = String(form.get("overridePrice") ?? "").trim();
+          const change = fixed
+            ? `Fixed price ${fixed.replace("$", "")}.`
+            : "Follows the market.";
+          save(
+            {
+              overridePrice: fixed,
+              ...(row.kind === "raw" && { condition: form.get("condition") }),
+            },
+            () => toast.itemUpdated(row.id, row.name, change),
+          );
+        }}
+      >
+        <Fields row={row} />
+        {error && <p className="text-sm text-danger">{error}</p>}
+        <div className="flex flex-wrap gap-3">
+          <TicketButton type="submit" disabled={pending} aria-busy={pending}>
+            Save
+          </TicketButton>
+          <TicketButton
+            variant="secondary"
+            disabled={pending}
+            onClick={() =>
+              save({ active: !row.active }, () =>
+                row.active
+                  ? toast.itemHidden(row.id, row.name)
+                  : toast.itemUpdated(
+                      row.id,
+                      row.name,
+                      "Back on your public table.",
+                    ),
+              )
+            }
+          >
+            {row.active ? "Hide from store" : "Show in store"}
+          </TicketButton>
+        </div>
+      </form>
+    </Ticket>
   );
 }
 
@@ -90,7 +95,7 @@ function Fields({ row }: { row: StockRow }) {
           placeholder="Use market price"
           aria-describedby={`${priceId}-hint`}
         />
-        <p id={`${priceId}-hint`} className="text-sm text-subtle">
+        <p id={`${priceId}-hint`} className="text-sm text-muted-foreground">
           Leave blank to follow the market with your store rule.
         </p>
       </div>
@@ -101,7 +106,7 @@ function Fields({ row }: { row: StockRow }) {
             id={`cond-${row.id}`}
             name="condition"
             defaultValue={row.condition ?? "NM"}
-            className="h-12 rounded-md border border-input bg-surface-2 px-3 text-base"
+            className="h-12 bg-bg px-3 text-base shadow-[inset_0_0_0_1.5px_var(--border-strong)] focus-visible:shadow-[inset_0_0_0_2.5px_var(--focus)] focus-visible:outline-none"
           >
             {CONDITIONS.map((c) => (
               <option key={c}>{c}</option>
