@@ -1,131 +1,101 @@
+import { getImageProps } from "next/image";
 import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
-import { SlabHead } from "@/components/slab-head";
+import { TicketButton } from "@/components/ticket-button";
 import { Wordmark } from "@/components/wordmark";
-import { PhonePreview } from "./phone-preview";
+import aisle from "../../public/media/aisle.jpg";
+import poster from "../../public/media/hero-poster.jpg";
+import { HeroVideo } from "./hero-video";
+import { HowItWorks } from "./how-it-works";
+import { RequestTicket } from "./request-ticket";
+import "./landing.css";
 
-const steps = [
-  {
-    title: "Add your stock.",
-    body: "Search by name or number, or import a CSV.",
-  },
-  {
-    title: "Print your table sign.",
-    body: "One QR, A5, any printer.",
-  },
-  {
-    title: "Sell at the table.",
-    body: "Requests ping your phone; confirm and the receipt emails itself.",
-  },
-];
-
-const proof = [
-  "Nightly price sync",
-  "Raw, graded and sealed",
-  "EN, JP and CN",
-  "Your own FX rate",
-];
-
-export default function Home() {
+// Art direction: the aisle runs vertical on a phone, the hall runs wide above.
+// The visible one is the LCP element, so it is fetched eagerly at high priority.
+function HeroPicture() {
+  const common = { alt: "", fetchPriority: "high", loading: "eager" } as const;
+  const wide = getImageProps({ ...common, src: poster, sizes: "100vw" }).props;
+  const tall = getImageProps({ ...common, src: aisle, sizes: "100vw" }).props;
   return (
-    <div className="lab-grid flex flex-1 flex-col overflow-x-clip">
-      <header className="mx-auto flex w-full max-w-[1200px] items-center justify-between px-4 py-3 md:px-6 lg:px-8">
+    <picture>
+      <source media="(min-width: 768px)" srcSet={wide.srcSet} sizes="100vw" />
+      {/* eslint-disable-next-line jsx-a11y/alt-text -- alt is in the props: the photo is decorative */}
+      <img
+        {...tall}
+        className="absolute inset-0 size-full object-cover object-[50%_60%] md:object-[50%_40%]"
+      />
+    </picture>
+  );
+}
+
+function Hero() {
+  return (
+    <section
+      aria-labelledby="hero-h"
+      className="relative overflow-hidden md:h-[min(880px,100svh)] md:min-h-[640px]"
+    >
+      <div className="grain relative h-[560px] overflow-hidden md:absolute md:inset-0 md:h-auto">
+        <HeroPicture />
+        <HeroVideo />
+        <div aria-hidden className="hero-shade absolute inset-0 z-[1]" />
+      </div>
+      <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-2 md:px-14 md:py-6">
         <Wordmark />
         <Link
           href="/login"
-          className={buttonVariants({ variant: "ghost", size: "lg" })}
+          className="inline-flex min-h-11 items-center text-[0.9375rem] font-medium underline decoration-[oklch(1_0_0/0.35)] decoration-[1.5px] underline-offset-[6px] hover:decoration-brand"
         >
           Vendor sign in
         </Link>
       </header>
+      <div
+        aria-hidden
+        className="absolute top-[22%] right-[6%] z-10 hidden rotate-[-2.5deg] drop-shadow-[0_22px_40px_oklch(0_0_0/0.55)] xl:block"
+      >
+        <RequestTicket />
+      </div>
+      <HeroCopy />
+      <p className="absolute right-14 bottom-8 z-10 hidden max-w-[30ch] text-right text-[0.8125rem] text-muted-foreground lg:block">
+        Saturday, 9:14 PM. Zone B, tables 42 and 43.
+      </p>
+    </section>
+  );
+}
 
-      <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 md:px-6 lg:px-8">
-        <section className="grid items-center gap-12 pt-8 pb-16 md:grid-cols-2 md:gap-8 md:pt-0 md:pb-16 lg:grid-cols-[1.1fr_1fr]">
-          <div className="flex flex-col gap-6">
-            <p className="eyebrow self-start">
-              <span aria-hidden className="live-dot" />
-              Market sync nightly
-            </p>
-            <h1 className="text-[2.75rem] leading-[0.96] font-extrabold tracking-[-0.02em] wdth-125 md:text-[clamp(3.5rem,6.4vw,5rem)]">
-              Priced to the cent.{" "}
-              <span className="block text-[0.86em] font-semibold tracking-normal text-muted-foreground wdth-72">
-                Raw, graded, sealed.
-              </span>
-            </h1>
-            <p className="max-w-[44ch] text-lg text-muted-foreground">
-              Every item on your table carries a live market price and your rule
-              on top. Buyers scan, pick and request. You confirm; the receipt
-              files itself.
-            </p>
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-5">
-              <Link
-                href="/login"
-                className={buttonVariants({
-                  size: "lg",
-                  className: "w-full rounded-sm md:w-auto",
-                })}
-              >
-                Create your store
-              </Link>
-              <p className="num text-sm font-semibold text-subtle">
-                50 items in under 15 min
-              </p>
-            </div>
-          </div>
-          <div className="relative isolate py-6 md:py-4">
-            <div
-              aria-hidden
-              className="ruler-y absolute top-[8%] right-0 bottom-[8%] hidden md:block"
-            />
-            <div
-              aria-hidden="true"
-              className="hero-sky absolute inset-x-[-25%] inset-y-[-10%] -z-10"
-            />
-            <PhonePreview />
-          </div>
-        </section>
+function HeroCopy() {
+  return (
+    <div className="relative z-10 -mt-[5.5rem] flex flex-col px-4 md:absolute md:bottom-0 md:left-14 md:mt-0 md:w-[min(860px,calc(100%-7rem))] md:px-0">
+      <h1
+        id="hero-h"
+        className="font-display -ml-1.5 text-[23vw] leading-[0.8] font-black tracking-[-0.012em] whitespace-nowrap md:order-last md:-mb-1.5 md:-ml-3.5 md:text-[min(16.4vw,236px)]"
+      >
+        <span className="block">Your table,</span>
+        <span className="block text-brand">priced live.</span>
+      </h1>
+      <p className="mt-8 max-w-[44ch] text-[1.0625rem] leading-normal md:mt-0 md:text-[1.1875rem]">
+        List your Pokemon cards, slabs and sealed with market prices. Buyers
+        scan your QR, pick what they want and ping you.{" "}
+        <span className="text-brand">You confirm at the table.</span>
+      </p>
+      <div className="mt-6 mb-2 flex flex-col items-stretch gap-1 md:mt-7 md:mb-9 md:flex-row md:items-center md:gap-7">
+        <TicketButton href="/login">Create your store</TicketButton>
+        <a
+          href="#how-it-works"
+          className="inline-flex min-h-11 items-center self-start underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+        >
+          How it works
+        </a>
+      </div>
+    </div>
+  );
+}
 
-        <section aria-labelledby="how-it-works" className="py-12 md:py-16">
-          <SlabHead id="how-it-works" meta="3 steps">
-            How it works
-          </SlabHead>
-          <ol className="mt-6 grid gap-8 md:grid-cols-3">
-            {steps.map((step, i) => (
-              <li key={step.title} className="flex gap-4">
-                <span className="num text-xl text-brand-text wdth-72">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <p className="text-base">
-                  <span className="font-semibold">{step.title}</span>{" "}
-                  <span className="text-muted-foreground">{step.body}</span>
-                </p>
-              </li>
-            ))}
-          </ol>
-          <ul className="mt-12 flex flex-wrap gap-x-6 gap-y-2 text-xs font-bold tracking-[0.1em] text-subtle uppercase">
-            {proof.map((p) => (
-              <li key={p} className="border-l border-border-strong pl-2">
-                {p}
-              </li>
-            ))}
-          </ul>
-        </section>
+export default function Home() {
+  return (
+    <div className="flex flex-1 flex-col overflow-x-clip">
+      <main className="flex-1">
+        <Hero />
+        <HowItWorks />
       </main>
-
-      <footer className="border-t border-border">
-        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-2 px-4 py-6 text-sm text-subtle md:flex-row md:items-center md:justify-between md:px-6 lg:px-8">
-          <Link
-            href="/terms"
-            className="inline-flex min-h-11 items-center hover:text-foreground"
-          >
-            Terms
-          </Link>
-          <p>
-            Not affiliated with Nintendo, Creatures, GAME FREAK or The Pokemon
-            Company.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
