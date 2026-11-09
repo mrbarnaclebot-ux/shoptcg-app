@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { newVendor } from "./auth";
+import { setStore } from "./buyer";
 
 test("a vendor adds a custom item and sees it in inventory", async ({
   page,
@@ -61,19 +62,19 @@ test("store settings keep their choices after saving", async ({ page }) => {
   await expect(page.getByLabel("Price rule (% of market)")).toHaveValue("-10");
 });
 
-test("a new store starts closed and the switch opens it", async ({ page }) => {
+test("a new store starts paused and one tap opens it", async ({ page }) => {
   await newVendor(page);
   await expect(
     page.getByRole("heading", { name: "Your table is set" }),
   ).toBeVisible();
-  const open = page.getByRole("switch", { name: "Store open" });
-  await expect(open).toHaveAttribute("aria-checked", "false");
-  await open.click();
+  const control = page.getByRole("region", { name: "Your store" });
+  await expect(control).toHaveAttribute("data-state", "paused");
+  await setStore(page, "open");
   await expect(
     page.locator(".toasts").getByText("Buyers can send requests now."),
   ).toBeVisible();
   await page.reload();
-  await expect(open).toHaveAttribute("aria-checked", "true");
+  await expect(control).toHaveAttribute("data-state", "open");
 });
 
 test("the sold out toast moves off the row just tapped", async ({ page }) => {

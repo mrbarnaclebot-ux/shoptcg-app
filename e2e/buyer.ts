@@ -9,12 +9,33 @@ export async function openVendor(page: Page) {
   const res = await page.request.post("/api/e2e/seed");
   expect(res.ok()).toBe(true);
   await page.goto("/dashboard");
-  const open = page.getByRole("switch", { name: "Store open" });
-  await open.click();
-  await expect(open).toHaveAttribute("aria-checked", "true");
-  // It flips before the save lands; a buyer loading now could still see it closed.
-  await expect(open).toHaveAttribute("aria-busy", "false");
+  await setStore(page, "open");
   return `e2e-${id}`;
+}
+
+export type StoreTo =
+  "open" | "off" | { pause: "15 min" | "1 hour" | "Until I reopen" };
+
+/** Sets the store from the dashboard control and waits for the save to land. */
+export async function setStore(page: Page, to: StoreTo) {
+  const control = page.getByRole("region", { name: "Your store" });
+  const button = (name: string) =>
+    control.getByRole("button", { name, exact: true });
+  if (to === "open") await button("Open store").click();
+  else if (to === "off") {
+    await button("Not vending").click();
+    await button("Stop vending").click();
+  } else {
+    await button("Pause").click();
+    await control
+      .getByRole("group", { name: "Pause for" })
+      .getByRole("button", { name: to.pause })
+      .click();
+  }
+  const state = to === "open" ? "open" : to === "off" ? "off" : "paused";
+  await expect(control).toHaveAttribute("data-state", state);
+  // It changes before the save lands; a buyer loading now could see the old state.
+  await expect(control).toHaveAttribute("aria-busy", "false");
 }
 
 export async function newBuyer(browser: Browser, slug: string) {
