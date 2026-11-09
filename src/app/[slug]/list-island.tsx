@@ -101,7 +101,7 @@ export function AddButton(props: {
       onClick={toggle}
       aria-pressed={on}
       aria-label={`Add ${props.name} to your list`}
-      className={`grid size-11 shrink-0 place-items-center ${on ? "bg-brand text-on-brand" : "bg-surface text-text shadow-[inset_0_0_0_1px_var(--border)]"}`}
+      className={`grid size-11 shrink-0 place-items-center ${on ? "bg-brand text-on-brand" : "bg-surface text-text shadow-[inset_0_0_0_1px_var(--border-strong)]"}`}
     >
       <Icon aria-hidden className="size-5" strokeWidth={2.3} />
     </button>

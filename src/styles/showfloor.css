@@ -85,7 +85,9 @@
   }
   .btn-ticket:disabled,
   .btn-ticket[aria-disabled="true"] {
-    opacity: 0.45;
+    /* The lamp is off, but the total on it still reads (8:1). */
+    background: var(--night-3);
+    color: var(--on-night-2);
     cursor: not-allowed;
   }
   .btn-ticket-main {

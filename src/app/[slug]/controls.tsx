@@ -47,7 +47,7 @@ export function Controls({ slug, f }: { slug: string; f: PublicFilter }) {
       <form
         action={`/${slug}`}
         role="search"
-        className="flex h-12 items-center gap-2.5 bg-bg px-3.5 shadow-[inset_0_0_0_1px_var(--border)] focus-within:shadow-[inset_0_0_0_2px_var(--focus)] lg:w-80 lg:shrink-0"
+        className="flex h-12 items-center gap-2.5 bg-bg px-3.5 shadow-[inset_0_0_0_1px_var(--border-strong)] focus-within:shadow-[inset_0_0_0_2px_var(--focus)] lg:w-80 lg:shrink-0"
       >
         <Search
           aria-hidden

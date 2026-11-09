@@ -3,7 +3,7 @@
   icon | bold title + sentence | optional button. Good news is paper with a
   receipt-bite top edge; failures are the hall (night) with a red ring.
   Phones: top, under the header. 768 and up: bottom-right, clear of the
-  header actions. [data-flip] moves the stack to the other edge when it would
+  header actions and of the tab bar, which stays until 1024. [data-flip] moves the stack to the other edge when it would
   cover the row the vendor just touched (toast-root.tsx).
 */
 
@@ -24,7 +24,7 @@
 @media (min-width: 768px) {
   .toasts {
     top: auto;
-    bottom: 24px;
+    bottom: 80px;
     left: auto;
     right: 24px;
     width: min(470px, calc(100vw - 48px));
@@ -32,6 +32,11 @@
   .toasts[data-flip] {
     top: 24px;
     bottom: auto;
+  }
+}
+@media (min-width: 1024px) {
+  .toasts {
+    bottom: 24px;
   }
 }
 
@@ -114,7 +119,7 @@
 }
 
 .toasts button {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 14px;
   font-size: 0.875rem;
   font-weight: 600;
