@@ -52,12 +52,17 @@ test("the public send route is closed, so nobody can email links past our limits
   expect(await outboxLines(email)).toBe(0);
 });
 
-test("a mangled invite link opens the join page, not an error", async ({
+test("a mangled link is a join page or a 404, never an error", async ({
   page,
 }) => {
   const res = await page.goto("/join/%E0%A4");
   expect(res?.status()).toBe(200);
+  await expect(page).toHaveURL(/\/join$/);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  expect((await page.request.get("/%E0%A4")).status()).toBe(404);
+  expect((await page.request.get("/some-store/item/%E0%A4")).status()).toBe(
+    404,
+  );
 });
 
 test("a returning vendor signs in with no code; email case doesn't matter", async ({

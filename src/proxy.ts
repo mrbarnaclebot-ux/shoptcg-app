@@ -22,6 +22,14 @@ async function missing(req: NextRequest, slug: string, page?: string, id = "") {
 }
 
 export async function proxy(req: NextRequest) {
+  // Next answers a path it can't decode with a 500; catch it first.
+  try {
+    decodeURIComponent(req.nextUrl.pathname);
+  } catch {
+    if (req.nextUrl.pathname.startsWith("/join/"))
+      return NextResponse.redirect(new URL("/join", req.url));
+    return NextResponse.rewrite(new URL("/_not-found", req.url));
+  }
   const [slug, page, id] = req.nextUrl.pathname.slice(1).split("/");
   if (slug === "dashboard") {
     // Cookie presence only, to skip rendering for signed-out visitors.
@@ -43,5 +51,6 @@ export const config = {
     "/:slug/list",
     "/:slug/item/:id",
     "/:slug/request/:id",
+    "/join/:code",
   ],
 };
