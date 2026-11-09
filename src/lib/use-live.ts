@@ -66,6 +66,26 @@ export function useLive(
   return up;
 }
 
+const REFRESH_MS = 2000;
+const MAX_REFRESHES = 10;
+
+/** Re-reads the page while `active`, for 20 seconds; true once it has given up. */
+export function useRefreshWhile(active: boolean) {
+  const router = useRouter();
+  const [gaveUp, setGaveUp] = useState(false);
+  useEffect(() => {
+    if (!active) return;
+    let n = 0;
+    const t = setInterval(() => {
+      if (++n <= MAX_REFRESHES) return router.refresh();
+      clearInterval(t);
+      setGaveUp(true);
+    }, REFRESH_MS);
+    return () => clearInterval(t);
+  }, [active, router]);
+  return gaveUp;
+}
+
 const tick = (cb: () => void) => {
   const t = setInterval(cb, 1000);
   return () => clearInterval(t);

@@ -93,7 +93,7 @@ export const requestLine = pgTable(
       .references(() => request.id, { onDelete: "cascade" }),
     listingId: uuid("listing_id")
       .notNull()
-      .references(() => listing.id),
+      .references(() => listing.id, { onDelete: "cascade" }),
     qty: integer("qty").notNull(),
     quotedPrice: numeric("quoted_price", { precision: 12, scale: 2 }).notNull(),
   },

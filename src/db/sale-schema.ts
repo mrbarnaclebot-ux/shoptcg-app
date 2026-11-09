@@ -35,6 +35,9 @@ export const sale = pgTable(
       .references(() => request.id),
     seq: integer("seq").notNull(),
     receiptNo: text("receipt_no").notNull(),
+    storeName: text("store_name").notNull(),
+    // The seller's zone when they confirmed: a receipt's time never shifts.
+    timeZone: text("time_zone").notNull().default("UTC"),
     buyerName: text("buyer_name").notNull(),
     buyerEmail: text("buyer_email").notNull(),
     subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull(),

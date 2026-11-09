@@ -1,5 +1,5 @@
 import { CardThumb } from "@/components/card-thumb";
-import { usd } from "@/lib/format";
+import { usd, withLanguage } from "@/lib/format";
 import { altPrice, formatAlt } from "@/lib/fx";
 import { METHOD_LABEL } from "@/lib/receipt-email";
 
@@ -17,6 +17,7 @@ type Sale = {
     setName: string | null;
     number: string | null;
     gradeLabel: string | null;
+    language: string;
     imageUrl: string | null;
     qty: number;
     unitPrice: string;
@@ -48,12 +49,16 @@ export function ReceiptSummary({ sale: s }: { sale: Sale }) {
             <CardThumb
               src={l.imageUrl}
               kind={kindOf(l.gradeLabel)}
+              number={l.number}
               className="w-[34px]"
             />
             <span className="min-w-0">
               {l.name}
-              <small className="block text-[0.78rem] text-muted-foreground">
-                {[l.setName, l.number, l.gradeLabel].filter(Boolean).join(" ")}
+              <small className="block text-sm text-muted-foreground">
+                {withLanguage(
+                  [l.setName, l.number, l.gradeLabel].filter(Boolean).join(" "),
+                  l.language,
+                )}
               </small>
             </span>
             <span className="num">

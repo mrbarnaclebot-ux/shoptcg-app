@@ -35,6 +35,20 @@ export function Ticket(props: {
   );
 }
 
+/** What a route shows while it streams: a ticket being written, not a grey pulse. */
+export function TicketLoading({ children }: { children: ReactNode }) {
+  return (
+    <Ticket as="div" className="w-full">
+      <p
+        role="status"
+        className="font-display text-[2rem] leading-none font-extrabold text-muted-foreground"
+      >
+        {children}
+      </p>
+    </Ticket>
+  );
+}
+
 /** One labelled value on a ticket stub: table, code, hold timer. */
 export function StubValue(props: {
   k: string;

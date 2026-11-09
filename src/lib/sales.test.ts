@@ -6,8 +6,17 @@ import postgres from "postgres";
 import { beforeAll, describe, expect, test } from "vitest";
 import type { Db } from "@/db/open";
 import * as schema from "@/db/schema";
-import { customer, listing, request, sale, saleLine, store } from "@/db/schema";
-import { heldByListing } from "@/lib/request-reads";
+import {
+  customer,
+  listing,
+  receiptEmail,
+  request,
+  sale,
+  saleLine,
+  store,
+  user,
+} from "@/db/schema";
+import { dayStart, heldByListing, storeQueue } from "@/lib/request-reads";
 import { createRequest, type NewRequest } from "@/lib/requests";
 import { confirmSale, optOut, type ConfirmInput } from "@/lib/sales";
 import { addStore, migratedDb } from "@/lib/test-fixtures";
@@ -336,4 +345,84 @@ test("customer consent: tick opts in, untick keeps it, unsubscribe then tick re-
   expect(off.optedOutAt).not.toBeNull();
   await optOut(db, "not-a-token");
   expect(await buy(true)).toMatchObject({ promoOptIn: true, optedOutAt: null });
+});
+
+test("this request's own live hold doesn't block it, even on the last copy", async () => {
+  const db = await migratedDb();
+  const s = await shop(db, 1);
+  const id = await ask(db, s);
+  expect(await confirmSale(db, s.storeId, input(s, id))).toMatchObject({
+    ok: true,
+  });
+  expect(await qtyOf(db, s.listingId)).toBe(0);
+});
+
+test("a receipt keeps the store's name and zone, and no outside image host", async () => {
+  const db = await migratedDb();
+  const s = await shop(db);
+  await db
+    .update(listing)
+    .set({ imageUrl: "https://tracker.example.test/pixel.png" })
+    .where(eq(listing.id, s.listingId));
+  const id = await ask(db, s);
+  await confirmSale(db, s.storeId, input(s, id, { timeZone: "Asia/Tokyo" }));
+  await db
+    .update(store)
+    .set({ name: "Renamed" })
+    .where(eq(store.id, s.storeId));
+  const [row] = await salesOf(db, s.storeId);
+  expect(row.storeName).not.toBe("Renamed");
+  expect(row.timeZone).toBe("Asia/Tokyo");
+  const [line] = await db
+    .select()
+    .from(saleLine)
+    .where(eq(saleLine.saleId, row.id));
+  expect(line.imageUrl).toBeNull();
+});
+
+test("deleting an account takes its store and sales with it", async () => {
+  const db = await migratedDb();
+  const s = await shop(db);
+  await confirmSale(db, s.storeId, input(s, await ask(db, s)));
+  // A second, open request: its line still points at the listing.
+  await ask(db, s);
+  const [{ owner }] = await db
+    .select({ owner: store.ownerUserId })
+    .from(store)
+    .where(eq(store.id, s.storeId));
+  await db.delete(user).where(eq(user.id, owner));
+  expect(await db.select().from(store).where(eq(store.id, s.storeId))).toEqual(
+    [],
+  );
+  expect(await salesOf(db, s.storeId)).toEqual([]);
+  expect(await db.select().from(saleLine)).toEqual([]);
+  expect(await db.select().from(receiptEmail)).toEqual([]);
+});
+
+test("today starts at midnight in the seller's zone", async () => {
+  const db = await migratedDb();
+  const s = await shop(db);
+  const tz = "Asia/Tokyo";
+  const { rows } = (await db.execute(
+    sql`select ${dayStart(tz)} as start`,
+  )) as unknown as { rows: { start: string }[] };
+  const start = new Date(rows[0].start);
+  expect(start.toLocaleTimeString("en-GB", { timeZone: tz })).toBe("00:00:00");
+  expect(Date.now() - start.getTime()).toBeLessThan(86_400_000);
+
+  const id = await ask(db, s);
+  const lapseAt = (at: string) =>
+    db
+      .update(request)
+      .set({
+        expiresAt: sql`now() - interval '1 second'`,
+        createdAt: sql`date_trunc('day', now(), ${tz}) + ${at}::interval`,
+      })
+      .where(eq(request.id, id));
+  const expired = async () =>
+    (await storeQueue(db, s.storeId, tz)).expired.length;
+  await lapseAt("-1 minute");
+  expect(await expired()).toBe(0);
+  await lapseAt("0 seconds");
+  expect(await expired()).toBe(1);
 });

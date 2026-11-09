@@ -23,12 +23,15 @@ export type DraftLine = {
   listingId: string;
   name: string;
   meta: string;
+  number: string | null;
   kind: "raw" | "graded" | "sealed";
   imageUrl: string | null;
   qty: number;
   price: string;
   /** What stock can give this request, after other buyers' holds. */
   left: number;
+  /** Another buyer's live hold takes some of the stock. */
+  held: boolean;
 };
 
 type Edit = { qty: number; price: string; removed: boolean };
@@ -69,57 +72,71 @@ function LineRow(props: {
       </li>
     );
   const short = e.qty > l.left;
+  const stock =
+    l.left === 0
+      ? l.held
+        ? "Held for another buyer. Decline that request or wait."
+        : "No longer in stock"
+      : l.left < l.qty
+        ? `Only ${l.left} of ${l.qty} left`
+        : null;
   const changed = toCents(e.price) !== toCents(l.price);
   const priceId = `price-${l.listingId}`;
   return (
-    <li className="grid grid-cols-[40px_1fr] gap-3 border-t border-border py-3">
-      <CardThumb src={l.imageUrl} kind={l.kind} />
-      <div className="flex min-w-0 flex-col gap-2">
-        <div>
+    <li className="grid grid-cols-[40px_1fr] gap-x-3 gap-y-2 border-t border-border py-3">
+      <CardThumb src={l.imageUrl} kind={l.kind} number={l.number} />
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
           <p className="font-semibold">{l.name}</p>
           <p className="num text-sm text-muted-foreground">{l.meta}</p>
-          {short && (
-            <p role="alert" className="mt-1 font-semibold text-danger">
-              {l.left ? `Only ${l.left} left` : "No longer in stock"}
+          {stock && (
+            <p
+              role={short ? "alert" : "status"}
+              className={`mt-1 font-semibold ${short ? "text-danger" : ""}`}
+            >
+              {stock}
             </p>
           )}
         </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <Stepper
-            label={`Quantity of ${l.name}`}
-            value={e.qty}
-            min={1}
-            max={l.qty}
-            onStep={(d) => props.onChange({ qty: e.qty + d })}
-          />
-          <div className="flex w-28 flex-col gap-1">
-            <Label htmlFor={priceId}>Price each</Label>
-            <Input
-              id={priceId}
-              inputMode="decimal"
-              autoComplete="off"
-              value={e.price}
-              onChange={(v) => props.onChange({ price: v.target.value })}
-              aria-label={`Price each for ${l.name}`}
-              aria-invalid={!PRICE_RE.test(e.price) || undefined}
-              className="num"
-            />
-          </div>
+        {props.canRemove && (
           <button
             type="button"
-            disabled={!props.canRemove}
             onClick={() => props.onChange({ removed: true })}
             aria-label={`Remove ${l.name}`}
-            className="min-h-11 font-semibold underline underline-offset-4 disabled:opacity-40"
+            className="min-h-11 shrink-0 font-semibold underline underline-offset-4"
           >
             Remove
           </button>
-        </div>
-        {changed && (
-          <p className="num text-sm text-muted-foreground">
-            was <s>{usd(Number(l.price))}</s>
-          </p>
         )}
+      </div>
+      <div className="col-span-2 flex items-end justify-between gap-3">
+        <Stepper
+          label={`Quantity of ${l.name}`}
+          value={e.qty}
+          min={1}
+          max={l.qty}
+          onStep={(d) => props.onChange({ qty: e.qty + d })}
+        />
+        <div className="flex max-w-44 min-w-0 flex-1 flex-col gap-1">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+            <Label htmlFor={priceId}>Price</Label>
+            {changed && (
+              <span className="num text-sm whitespace-nowrap text-muted-foreground">
+                was <s>{usd(Number(l.price))}</s>
+              </span>
+            )}
+          </div>
+          <Input
+            id={priceId}
+            inputMode="decimal"
+            autoComplete="off"
+            value={e.price}
+            onChange={(v) => props.onChange({ price: v.target.value })}
+            aria-label={`Price each for ${l.name}`}
+            aria-invalid={!PRICE_RE.test(e.price) || undefined}
+            className="num"
+          />
+        </div>
       </div>
     </li>
   );
@@ -227,11 +244,18 @@ export function SaleForm(props: {
     ? "Pick how they paid."
     : !noteOk
       ? "Say how they paid."
-      : !priced
-        ? "Check the prices and the discount."
-        : shortLines.length
-          ? "Remove what's no longer here."
-          : null;
+      : typing
+        ? "Enter the discount, or pick None."
+        : !priced
+          ? "Check the prices and the discount."
+          : !shortLines.length
+            ? null
+            : kept.length > 1
+              ? "Remove what's no longer here."
+              : "Decline this request, or wait for stock.";
+  // Only the discount: a bad line price is flagged on its own field.
+  const badDiscount =
+    !typing && !priced && Boolean(priceSale(chosen, { kind: "none" }));
 
   const patch = (id: string, p: Partial<Edit>) =>
     setEdits((all) => ({ ...all, [id]: { ...all[id], ...p } }));
@@ -257,7 +281,8 @@ export function SaleForm(props: {
       if (res && ("stock" in res || "gone" in res)) router.refresh();
       else {
         setFailed(true);
-        toast.saleFailed(confirm);
+        // No retry here: it would keep these values after the seller edits.
+        toast.saleFailed();
       }
     });
 
@@ -278,15 +303,11 @@ export function SaleForm(props: {
           items are here.
         </p>
       )}
-      <Ticket
-        as="div"
-        stub={
-          <>
-            <StubValue k="Code" v={r.code} testId="sale-code" />
-            <StubValue k="Hold" v={over ? "Over" : clock(r.expiresAt, now)} />
-          </>
-        }
-      >
+      <div className="flex gap-8">
+        <StubValue k="Code" v={r.code} testId="sale-code" />
+        <StubValue k="Hold" v={over ? "Over" : clock(r.expiresAt, now)} />
+      </div>
+      <Ticket as="div">
         <ul>
           {lines.map((l) => (
             <LineRow
@@ -318,6 +339,7 @@ export function SaleForm(props: {
             className="num"
             value={discountValue}
             onChange={(e) => setValue(e.target.value)}
+            aria-invalid={badDiscount || undefined}
           />
         </div>
       )}
@@ -363,19 +385,22 @@ export function SaleForm(props: {
           </p>
         )}
       </dl>
-      {failed && (
-        <p role="alert" className="font-semibold text-danger">
-          Sale not saved. Nothing was charged or changed.
-        </p>
-      )}
       {!r.isTest && (
-        <div className="flex flex-col gap-2">
+        <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 -mx-4 flex flex-col gap-2 border-t border-border bg-bg px-4 py-3 lg:bottom-0">
+          {failed && (
+            <p role="alert" className="font-semibold text-danger">
+              Couldn&apos;t confirm the sale saved. Tap Confirm again; it
+              won&apos;t record twice.
+            </p>
+          )}
           <TicketButton disabled={!ready || pending} onClick={confirm}>
             {pending
               ? "Recording"
               : `Confirm sale${priced ? `, ${money(priced.total)}` : ""}`}
           </TicketButton>
-          {helper && <p className="text-sm">{helper}</p>}
+          <p className="text-sm">
+            {helper ?? "This can't be changed after you confirm."}
+          </p>
         </div>
       )}
       <DeclineRequest id={r.id} />

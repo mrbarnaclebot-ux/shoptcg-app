@@ -2,12 +2,14 @@ import { Suspense } from "react";
 import { ToastRoot } from "@/components/toast-root";
 import { Wordmark } from "@/components/wordmark";
 import { DashboardNav } from "./nav";
+import { TimeZoneCookie } from "./time-zone-cookie";
 
 export default function DashboardLayout({
   children,
 }: LayoutProps<"/dashboard">) {
   return (
     <ToastRoot>
+      <TimeZoneCookie />
       <div className="flex flex-1 flex-col lg:flex-row">
         {/* usePathname is request data on [id] routes, so the nav streams there. */}
         <Suspense fallback={<div className="hidden lg:block lg:w-24" />}>

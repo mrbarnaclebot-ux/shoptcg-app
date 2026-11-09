@@ -17,7 +17,8 @@ import { gradeLabel } from "@/lib/format";
 import { listStock } from "@/lib/listings";
 import { notifyLive } from "@/lib/live";
 import { fromCents, priceSale, toCents, type Discount } from "@/lib/money";
-import { effectiveStatus } from "@/lib/request-reads";
+import { safeImageUrl } from "@/lib/pricing/images";
+import { dayStart, effectiveStatus } from "@/lib/request-reads";
 
 export type ConfirmInput = {
   requestId: string;
@@ -25,6 +26,8 @@ export type ConfirmInput = {
   discount: Discount;
   method: PaymentMethod;
   note?: string;
+  /** The seller's zone, set by the server action; the client can't send it. */
+  timeZone?: string;
 };
 
 export type ConfirmResult =
@@ -38,7 +41,7 @@ export type ConfirmResult =
 
 export const receiptNo = (seq: number) => `R-${String(seq).padStart(4, "0")}`;
 
-/** What each listing can give this request: stock less every other buyer's hold. */
+/** What each listing can give this request (stock less every other buyer's hold), and whether a hold is in the way. */
 export async function coverage(db: Db, requestId: string, ids: string[]) {
   const held = await db
     .select({
@@ -59,7 +62,10 @@ export async function coverage(db: Db, requestId: string, ids: string[]) {
     .from(listing)
     .where(inArray(listing.id, ids));
   return new Map(
-    rows.map((r) => [r.id, Math.max(0, r.qty - (others.get(r.id) ?? 0))]),
+    rows.map((r) => {
+      const held = others.get(r.id) ?? 0;
+      return [r.id, { left: Math.max(0, r.qty - held), held: held > 0 }];
+    }),
   );
 }
 
@@ -117,6 +123,7 @@ async function recordSale(
   storeId: string,
   s: {
     seq: number;
+    name: string;
     secondCurrency: string | null;
     fxRate: string | null;
   },
@@ -141,6 +148,8 @@ async function recordSale(
       requestId: input.requestId,
       seq,
       receiptNo: no,
+      storeName: s.name,
+      timeZone: input.timeZone,
       buyerName: r.name,
       buyerEmail: r.email,
       subtotal: fromCents(priced.subtotal),
@@ -167,7 +176,8 @@ async function recordSale(
         number: it.number,
         gradeLabel: gradeLabel(it) || null,
         language: it.language,
-        imageUrl: it.imageUrl,
+        // A custom listing can point anywhere; a receipt must not load that host.
+        imageUrl: safeImageUrl(it.imageUrl),
         qty: l.qty,
         unitPrice: fromCents(toCents(l.unitPrice)),
         quotedPrice: asked.find((a) => a.listingId === l.listingId)!
@@ -206,6 +216,7 @@ async function confirmTx(
   const [s] = await tx
     .select({
       seq: store.receiptSeq,
+      name: store.name,
       secondCurrency: store.secondCurrency,
       fxRate: store.fxRate,
     })
@@ -255,7 +266,7 @@ async function confirmTx(
     .for("update");
   const left = await coverage(tx, input.requestId, ids);
   const short = input.lines
-    .filter((l) => l.qty > (left.get(l.listingId) ?? 0))
+    .filter((l) => l.qty > (left.get(l.listingId)?.left ?? 0))
     .map((l) => l.listingId);
   if (short.length) return { stock: short };
   return recordSale(
@@ -326,17 +337,16 @@ export async function saleWithLines(db: Db, storeId: string, id: string) {
     .select({
       sale,
       emailStatus: receiptEmail.status,
-      slug: store.slug,
+      emailAttempts: receiptEmail.attempts,
     })
     .from(sale)
-    .innerJoin(store, eq(store.id, sale.storeId))
     .leftJoin(receiptEmail, eq(receiptEmail.saleId, sale.id))
     .where(and(eq(sale.id, id), eq(sale.storeId, storeId)));
   if (!row) return null;
   return {
     ...row.sale,
     emailStatus: row.emailStatus,
-    slug: row.slug,
+    emailAttempts: row.emailAttempts,
     lines: await saleLines(db, id),
   };
 }
@@ -344,17 +354,20 @@ export async function saleWithLines(db: Db, storeId: string, id: string) {
 /** The sale a buyer's own confirmed request became; the caller checks the cookie. */
 export async function saleForRequest(db: Db, requestId: string) {
   const [row] = await db
-    .select()
+    .select({ sale, emailStatus: receiptEmail.status })
     .from(sale)
+    .leftJoin(receiptEmail, eq(receiptEmail.saleId, sale.id))
     .where(eq(sale.requestId, requestId));
-  return row ? { ...row, lines: await saleLines(db, row.id) } : null;
+  if (!row) return null;
+  return {
+    ...row.sale,
+    emailStatus: row.emailStatus,
+    lines: await saleLines(db, row.sale.id),
+  };
 }
 
-// ponytail: a show day is the server's calendar day, as in the queue; phase 7 brings the vendor's timezone.
-const today = sql`${sale.createdAt} >= date_trunc('day', now())`;
-
 /** Today's sales, newest first, for the Sales tab and the line under the queue. */
-export function salesToday(db: Db, storeId: string) {
+export function salesToday(db: Db, storeId: string, timeZone: string) {
   return db
     .select({
       id: sale.id,
@@ -363,12 +376,18 @@ export function salesToday(db: Db, storeId: string) {
       total: sale.total,
       method: sale.paymentMethod,
       createdAt: sale.createdAt,
+      timeZone: sale.timeZone,
       items:
         sql<number>`(select coalesce(sum(${saleLine.qty}), 0) from ${saleLine} where ${saleLine.saleId} = ${sale.id})`.mapWith(
           Number,
         ),
     })
     .from(sale)
-    .where(and(eq(sale.storeId, storeId), today))
+    .where(
+      and(
+        eq(sale.storeId, storeId),
+        sql`${sale.createdAt} >= ${dayStart(timeZone)}`,
+      ),
+    )
     .orderBy(desc(sale.createdAt));
 }

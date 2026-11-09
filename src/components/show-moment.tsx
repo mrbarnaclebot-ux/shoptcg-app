@@ -18,11 +18,14 @@ export function ShowMoment(props: {
     <Ticket
       no={props.no}
       className="[--stub:4.5rem]"
-      bodyClassName="flex flex-col gap-4"
-      stub={<span aria-hidden className="moment-punch mx-auto" />}
+      bodyClassName="relative flex flex-col gap-4"
+      stub={<span aria-hidden className="moment-punch mx-auto mt-auto" />}
     >
-      <Stamp className="moment-stamp self-start">{props.stamp}</Stamp>
-      <h2 className="font-display text-[2.75rem] leading-[0.85] font-black md:text-[3.5rem]">
+      {/* Lands across the perforation, as a stamp would. */}
+      <Stamp className="moment-stamp absolute top-4 -right-10">
+        {props.stamp}
+      </Stamp>
+      <h2 className="font-display pr-14 text-[2.75rem] leading-[0.85] font-black md:text-[3.5rem]">
         {props.headline}
       </h2>
       {props.children}

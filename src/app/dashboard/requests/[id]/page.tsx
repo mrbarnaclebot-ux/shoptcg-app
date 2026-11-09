@@ -3,8 +3,10 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { metaLine } from "@/app/[slug]/tile";
+import { TicketLoading } from "@/components/ticket";
 import { lineButton } from "@/components/ticket-button";
 import { getDb } from "@/db";
+import { withLanguage } from "@/lib/format";
 import { linesFor } from "@/lib/request-reads";
 import { saleDraft } from "@/lib/sales";
 import { requireStore } from "@/lib/session";
@@ -18,9 +20,7 @@ export default function ReviewSalePage({
 }: PageProps<"/dashboard/requests/[id]">) {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-5 px-4 pt-6 pb-16">
-      <Suspense
-        fallback={<div className="h-[640px] animate-pulse bg-surface" />}
-      >
+      <Suspense fallback={<TicketLoading>Loading request</TicketLoading>}>
         <Review params={params} />
       </Suspense>
     </main>
@@ -61,12 +61,14 @@ async function Review({
       lines={lines.map((l) => ({
         listingId: l.listingId,
         name: l.name,
-        meta: metaLine(l),
+        meta: withLanguage(metaLine(l), l.language),
+        number: l.number,
         kind: l.kind,
         imageUrl: l.imageUrl,
         qty: l.qty,
         price: l.price.toFixed(2),
-        left: draft.left.get(l.listingId) ?? 0,
+        left: draft.left.get(l.listingId)?.left ?? 0,
+        held: draft.left.get(l.listingId)?.held ?? false,
       }))}
       currency={store.secondCurrency}
       fxRate={store.fxRate === null ? null : Number(store.fxRate)}

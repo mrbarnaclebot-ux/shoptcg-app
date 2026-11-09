@@ -1,8 +1,9 @@
 import "server-only";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db";
 import { getAuth } from "@/lib/auth";
+import { safeTimeZone } from "@/lib/format";
 import { getStoreByOwner } from "@/lib/stores";
 
 export async function getCurrentUser() {
@@ -10,6 +11,11 @@ export async function getCurrentUser() {
   const h = await headers();
   const session = await getAuth().api.getSession({ headers: h });
   return session?.user ?? null;
+}
+
+/** The seller's zone from their browser's cookie; UTC until it has set one. */
+export async function sellerTimeZone() {
+  return safeTimeZone((await cookies()).get("tz")?.value);
 }
 
 export async function requireUser() {

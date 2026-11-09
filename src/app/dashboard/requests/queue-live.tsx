@@ -185,11 +185,11 @@ export function QueueTicket({ t }: { t: TicketView }) {
             </>
           ) : (
             <div className="flex flex-wrap gap-3">
-              <TicketButton variant="secondary" onClick={() => setAsking(true)}>
-                Decline
-              </TicketButton>
               <TicketButton href={`/dashboard/requests/${t.id}`}>
                 Review sale
+              </TicketButton>
+              <TicketButton variant="secondary" onClick={() => setAsking(true)}>
+                Decline
               </TicketButton>
             </div>
           )}

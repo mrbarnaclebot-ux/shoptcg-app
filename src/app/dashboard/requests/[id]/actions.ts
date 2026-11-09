@@ -1,16 +1,15 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { after } from "next/server";
 import { z } from "zod";
 import { PAYMENT_METHODS } from "@/db/schema";
 import { getDb } from "@/db";
-import { seedAllowed } from "@/lib/e2e-seed";
+import { mailForcedToFail } from "@/lib/mail-forced";
 import { MAX_LINES } from "@/lib/requests";
 import { deliverReceipt } from "@/lib/receipts";
 import { PRICE_RE } from "@/lib/money";
 import { confirmSale, type ConfirmResult } from "@/lib/sales";
-import { requireStore } from "@/lib/session";
+import { requireStore, sellerTimeZone } from "@/lib/session";
 
 const schema = z
   .object({
@@ -34,12 +33,6 @@ const schema = z
   })
   .refine((v) => v.method !== "other" || v.note, { path: ["note"] });
 
-/** e2e only: a cookie makes the send fail. Never honoured on a deployed service. */
-export async function mailForcedToFail() {
-  if (!seedAllowed(process.env)) return false;
-  return (await cookies()).has("e2e_mail_fail");
-}
-
 /** Totals are recomputed on the server; the client's only choose. */
 export async function confirmSaleAction(
   input: unknown,
@@ -50,7 +43,10 @@ export async function confirmSaleAction(
   const db = getDb();
   let result: ConfirmResult;
   try {
-    result = await confirmSale(db, store.id, parsed.data);
+    result = await confirmSale(db, store.id, {
+      ...parsed.data,
+      timeZone: await sellerTimeZone(),
+    });
   } catch (err) {
     // A failed query's message carries its params: the buyer's name and email.
     const code = (err as { cause?: { code?: string } }).cause?.code;

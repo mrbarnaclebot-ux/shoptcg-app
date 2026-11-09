@@ -5,8 +5,9 @@ import type { ReactNode } from "react";
 import { ReceiptSummary } from "@/components/receipt-summary";
 import { RequestLines } from "@/components/request-lines";
 import { ShowMoment } from "@/components/show-moment";
-import { StubValue, Ticket } from "@/components/ticket";
+import { Ticket } from "@/components/ticket";
 import { lineButton } from "@/components/ticket-button";
+import { receiptTime } from "@/lib/format";
 import { getDb } from "@/db";
 import { readBuyerSid } from "@/lib/buyer-session";
 import { buyerRequest } from "@/lib/request-reads";
@@ -16,6 +17,8 @@ import { storeOr404 } from "../../store-lookup";
 import {
   CancelRequest,
   HoldClock,
+  HoldWarning,
+  ReceiptNote,
   RequestLive,
   SendAgain,
 } from "./request-live";
@@ -59,13 +62,7 @@ export default async function RequestPage({
         <>
           <Ticket
             as="div"
-            stub={
-              <StubValue
-                k="Show the seller this code"
-                v={r.code}
-                testId="request-code"
-              />
-            }
+            stub={<HoldClock at={r.expiresAt.getTime()} table={r.tableLabel} />}
           >
             <h1 className="font-display text-[2.5rem] leading-[0.9] font-black text-balance [overflow-wrap:anywhere]">
               Sent to {store.name}
@@ -74,7 +71,14 @@ export default async function RequestPage({
               Head to the table and show this screen. Your items are held for
               you.
             </p>
-            <HoldClock at={r.expiresAt.getTime()} table={r.tableLabel} />
+            <p className="text-sm font-semibold">Show the seller this code</p>
+            <p
+              data-testid="request-code"
+              className="font-display num text-[4.5rem] leading-none font-black"
+            >
+              {r.code}
+            </p>
+            <HoldWarning at={r.expiresAt.getTime()} table={r.tableLabel} />
             <RequestLines lines={r.lines} />
           </Ticket>
           <CancelRequest id={r.id} />
@@ -108,11 +112,13 @@ async function Sold(props: { requestId: string; slug: string }) {
         headline="Sold. Enjoy your cards!"
         no={sale.receiptNo}
       >
+        <p className="font-semibold [overflow-wrap:anywhere]">
+          {sale.storeName}. {receiptTime(sale.createdAt, sale.timeZone)}.
+          Receipt {sale.receiptNo}
+        </p>
         <ReceiptSummary sale={sale} />
       </ShowMoment>
-      <p className="[overflow-wrap:anywhere]">
-        Your receipt is on its way to {sale.buyerEmail}.
-      </p>
+      <ReceiptNote status={sale.emailStatus} email={sale.buyerEmail} />
       <Link href={`/${props.slug}`} className={`${lineButton} self-start`}>
         Back to store
       </Link>

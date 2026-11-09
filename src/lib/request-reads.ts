@@ -61,6 +61,7 @@ export async function linesFor(db: Db, requestIds: string[]) {
       imageUrl: coalesce<string | null>(listing.imageUrl, catalogItem.imageUrl),
       kind: listing.kind,
       condition: listing.condition,
+      language: listing.language,
     })
     .from(requestLine)
     .innerJoin(listing, eq(listing.id, requestLine.listingId))
@@ -91,6 +92,7 @@ export type Line = {
   imageUrl: string | null;
   kind: "raw" | "graded" | "sealed";
   condition: "NM" | "LP" | "MP" | "HP" | "DMG" | null;
+  language: "en" | "ja" | "zh";
 };
 
 const ticketCols = {
@@ -120,11 +122,13 @@ export async function buyerRequest(db: Db, id: string, sessionId: string) {
   return { ...row, lines };
 }
 
-// ponytail: a show day is the server's calendar day; per-store timezones if vendors span zones.
-const today = sql`${request.createdAt} >= date_trunc('day', now())`;
+/** Midnight today in this zone: a show day is the seller's, not the database's. */
+export const dayStart = (timeZone: string) =>
+  sql`date_trunc('day', now(), ${timeZone})`;
 
 /** The seller queue: active requests newest first, then today's lapsed holds. */
-export async function storeQueue(db: Db, storeId: string) {
+export async function storeQueue(db: Db, storeId: string, timeZone: string) {
+  const today = sql`${request.createdAt} >= ${dayStart(timeZone)}`;
   const rows = await db
     .select({ ...ticketCols, buyerEmail: request.buyerEmail })
     .from(request)

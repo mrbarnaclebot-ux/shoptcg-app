@@ -6,6 +6,7 @@ import { vapid } from "@/lib/push";
 import { usd } from "@/lib/format";
 import { storeQueue, type QueueTicket as Row } from "@/lib/request-reads";
 import { salesToday } from "@/lib/sales";
+import { sellerTimeZone } from "@/lib/session";
 import { AlertsRow, InstallNudge } from "./alerts";
 import { QueueLive, QueueTicket, SendTestRequest } from "./queue-live";
 
@@ -21,11 +22,12 @@ const view = (t: Row) => ({
 });
 
 export async function RequestQueue({ storeId }: { storeId: string }) {
-  const queue = await storeQueue(getDb(), storeId).catch((err) => {
+  const tz = await sellerTimeZone();
+  const queue = await storeQueue(getDb(), storeId, tz).catch((err) => {
     console.error("[queue] load failed", err);
     return null;
   });
-  const sold = await salesToday(getDb(), storeId).catch(() => []);
+  const sold = await salesToday(getDb(), storeId, tz).catch(() => []);
   const takings = sold.reduce((sum, s) => sum + Number(s.total), 0);
   return (
     <section aria-labelledby="requests-h" className="flex flex-col gap-4">

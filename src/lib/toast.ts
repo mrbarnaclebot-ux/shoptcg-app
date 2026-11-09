@@ -88,6 +88,7 @@ function put(t: Input, id: string = crypto.randomUUID()) {
 
 // Escape dismisses only these; sticky errors and offline stay until resolved.
 const transient = new Set<string>();
+let recorded: string | undefined;
 
 function show(
   tone: Tone,
@@ -283,12 +284,18 @@ export const toast = {
     const body = `${total}. The receipt is on its way.`;
     announce(`${title}. ${body}`);
     put({ tone: "ok", title, body, duration: 6000 }, id);
+    recorded = id;
   },
-  saleFailed: (retry: () => void) =>
-    error("Sale not saved", "Nothing was charged or changed.", retry),
+  /** The receipt loaded and says it all; the toast only held the line on slow WiFi. */
+  receiptOpened: () => {
+    if (recorded) dismiss(recorded);
+    recorded = undefined;
+  },
+  saleFailed: () =>
+    error("Sale not confirmed", "Tap Confirm again. It won't record twice."),
   receiptSent: (email: string) =>
     show("ok", "Receipt sent", `Sent to ${email}.`, 4000),
-  receiptFailed: (retry: () => void) =>
+  receiptFailed: (retry?: () => void) =>
     error(
       "Email didn't send",
       "The sale is saved. Try the email again.",

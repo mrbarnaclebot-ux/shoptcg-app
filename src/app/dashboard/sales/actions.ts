@@ -2,10 +2,10 @@
 
 import { z } from "zod";
 import { getDb } from "@/db";
+import { mailForcedToFail } from "@/lib/mail-forced";
 import { deliverReceipt } from "@/lib/receipts";
 import { saleWithLines } from "@/lib/sales";
 import { requireStore } from "@/lib/session";
-import { mailForcedToFail } from "../requests/[id]/actions";
 
 /** Sends the receipt again; false when it failed, wasn't theirs or hit the attempt cap. */
 export async function resendReceipt(saleId: string) {

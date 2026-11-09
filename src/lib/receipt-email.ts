@@ -1,5 +1,5 @@
 import { altPrice, formatAlt } from "@/lib/fx";
-import { usd } from "@/lib/format";
+import { receiptTime, usd } from "@/lib/format";
 
 // Hand-written table HTML: email clients ignore most CSS, and one template
 // doesn't earn a React Email dependency. No remote fonts or tracking pixels.
@@ -16,6 +16,7 @@ export type ReceiptData = {
   receiptNo: string;
   buyerName: string;
   createdAt: Date;
+  timeZone: string;
   subtotal: string;
   discount: string;
   total: string;
@@ -74,11 +75,7 @@ function sumRow(k: string, v: string) {
 
 export function renderReceipt(d: ReceiptData) {
   const store = esc(d.storeName);
-  const when = d.createdAt.toLocaleString("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  });
+  const when = receiptTime(d.createdAt, d.timeZone);
   const hasDiscount = Number(d.discount) > 0;
   const fx = approx(d);
   const unsub = d.unsubscribeUrl
@@ -92,7 +89,7 @@ export function renderReceipt(d: ReceiptData) {
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#f4efe6;border-top:4px solid #e8590c">
 <tr><td style="padding:24px 24px 8px">
 <div style="font:900 34px/1 ${FACE};color:${INK}">${store}</div>
-<div style="padding-top:6px;font:15px/1.4 Arial,sans-serif;color:${SEAL}">Thanks, ${esc(d.buyerName)}. ${esc(when)} UTC</div>
+<div style="padding-top:6px;font:15px/1.4 Arial,sans-serif;color:${SEAL}">Thanks, ${esc(d.buyerName)}. ${esc(when)}</div>
 </td></tr>
 <tr><td style="padding:8px 24px 0">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${d.lines.map(lineRow).join("")}</table>
@@ -116,7 +113,7 @@ ${fx ? `<tr><td colspan="2" align="right" style="font:13px/1.4 Arial,sans-serif;
 </body></html>`;
   const text = [
     `Your receipt from ${d.storeName}`,
-    `${d.receiptNo}, ${when} UTC`,
+    `${d.receiptNo}, ${when}`,
     "",
     ...d.lines.map(
       (l) => `${l.qty} x ${l.name} (${l.meta}): ${money(l.unitPrice)} each`,

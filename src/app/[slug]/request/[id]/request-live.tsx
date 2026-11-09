@@ -2,11 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { StubValue } from "@/components/ticket";
 import { TicketButton } from "@/components/ticket-button";
 import type { RequestStatus } from "@/db/schema";
 import type { Line } from "@/lib/request-reads";
 import { toast } from "@/lib/toast";
-import { clock, useLive, useNow } from "@/lib/use-live";
+import { clock, useLive, useNow, useRefreshWhile } from "@/lib/use-live";
 import { writeList } from "../../list-island";
 import { cancelMyRequest } from "../../list/actions";
 
@@ -68,17 +69,43 @@ export function HoldClock(props: { at: number; table: string | null }) {
     if (over) router.refresh();
   }, [over, router]);
   return (
-    <div>
-      <p className="font-display num text-[3rem] leading-none font-extrabold text-brand-text">
-        Held for {clock(props.at, now)}
-      </p>
-      {warn && (
-        <p className="mt-1 font-semibold">
-          Hold ends soon.
-          {props.table && ` Find the seller at table ${props.table}.`}
-        </p>
-      )}
-    </div>
+    <StubValue
+      k="Held for"
+      v={clock(props.at, now)}
+      hold={warn}
+      testId="hold-clock"
+    />
+  );
+}
+
+export function HoldWarning(props: { at: number; table: string | null }) {
+  const now = useNow();
+  if (!now || props.at - now >= WARN_MS) return null;
+  return (
+    <p className="mt-2 font-semibold text-brand-text">
+      Hold ends soon.
+      {props.table && ` Find the seller at table ${props.table}.`}
+    </p>
+  );
+}
+
+/** The email goes out after the sale saves, so this re-reads until it has landed. */
+export function ReceiptNote(props: {
+  status: "pending" | "sent" | "failed" | null;
+  email: string;
+}) {
+  const { status, email } = props;
+  const gaveUp = useRefreshWhile(status === "pending");
+  return (
+    <p role="status" className="[overflow-wrap:anywhere]">
+      {status === "failed"
+        ? "We couldn't email it. Screenshot this, or ask the seller to resend."
+        : status === "sent"
+          ? `Your receipt went to ${email}.`
+          : gaveUp
+            ? `Your receipt should reach ${email} soon. If it doesn't, ask the seller to resend.`
+            : `Your receipt is on its way to ${email}.`}
+    </p>
   );
 }
 

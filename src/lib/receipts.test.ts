@@ -21,6 +21,7 @@ const data = (over: Partial<ReceiptData> = {}): ReceiptData => ({
   receiptNo: "R-0042",
   buyerName: "Maya",
   createdAt: new Date("2026-11-09T12:00:00Z"),
+  timeZone: "UTC",
   subtotal: "90.00",
   discount: "10.00",
   total: "80.00",

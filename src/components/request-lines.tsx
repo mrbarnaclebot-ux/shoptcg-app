@@ -1,6 +1,6 @@
 import { metaLine } from "@/app/[slug]/tile";
 import { CardThumb } from "@/components/card-thumb";
-import { usd } from "@/lib/format";
+import { usd, withLanguage } from "@/lib/format";
 import type { Line } from "@/lib/request-reads";
 
 /** A request's lines and total, on either ticket. */
@@ -15,11 +15,16 @@ export function RequestLines({ lines }: { lines: Line[] }) {
             key={l.listingId}
             className="grid grid-cols-[34px_1fr_auto] items-center gap-2.5 border-t border-border py-1.5"
           >
-            <CardThumb src={l.imageUrl} kind={l.kind} className="w-[34px]" />
+            <CardThumb
+              src={l.imageUrl}
+              kind={l.kind}
+              number={l.number}
+              className="w-[34px]"
+            />
             <span className="min-w-0">
               {l.name}
-              <small className="block text-[0.78rem] text-muted-foreground">
-                {metaLine(l)}
+              <small className="block text-sm text-muted-foreground">
+                {withLanguage(metaLine(l), l.language)}
               </small>
             </span>
             <span className="num">

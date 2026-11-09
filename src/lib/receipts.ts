@@ -1,27 +1,29 @@
 import "server-only";
 import { and, eq, lt, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
-import { customer, receiptEmail, sale, saleLine, store } from "@/db/schema";
+import { customer, receiptEmail, sale, saleLine } from "@/db/schema";
 import { appUrl } from "@/lib/deployed";
 import { sendReceiptEmail } from "@/lib/email";
+import { withLanguage } from "@/lib/format";
 import { renderReceipt } from "@/lib/receipt-email";
 import { saleLines } from "@/lib/sales";
 
 export const MAX_ATTEMPTS = 5;
 
 const lineMeta = (l: typeof saleLine.$inferSelect) =>
-  [l.setName, l.number, l.gradeLabel].filter(Boolean).join(" ");
+  withLanguage(
+    [l.setName, l.number, l.gradeLabel].filter(Boolean).join(" "),
+    l.language,
+  );
 
 async function compose(db: Db, saleId: string) {
   const [row] = await db
     .select({
       sale,
-      storeName: store.name,
       token: customer.unsubscribeToken,
       optedIn: customer.promoOptIn,
     })
     .from(sale)
-    .innerJoin(store, eq(store.id, sale.storeId))
     .leftJoin(
       customer,
       and(
@@ -40,10 +42,11 @@ async function compose(db: Db, saleId: string) {
     receiptNo: row.sale.receiptNo,
     unsubscribeUrl,
     message: renderReceipt({
-      storeName: row.storeName,
+      storeName: row.sale.storeName,
       receiptNo: row.sale.receiptNo,
       buyerName: row.sale.buyerName,
       createdAt: row.sale.createdAt,
+      timeZone: row.sale.timeZone,
       subtotal: row.sale.subtotal,
       discount: row.sale.discount,
       total: row.sale.total,
@@ -64,9 +67,11 @@ async function compose(db: Db, saleId: string) {
 }
 
 /**
- * Sends a sale's receipt and records how it went. Never throws: the sale is
- * already saved, and a failed email is retried from the receipt. False once
- * the attempts are used up or the email failed.
+ * Sends a sale's receipt and records how it went. A failed send is recorded,
+ * not thrown: the sale is already saved, and the receipt offers a resend. A
+ * database error can still throw and leave it pending, which the receipt page
+ * flags once its re-reads run out. False once the attempts are used up or the
+ * email failed.
  */
 export async function deliverReceipt(
   db: Db,

@@ -28,6 +28,7 @@ type Kind = keyof typeof ASPECT;
 function Placeholder(props: {
   kind: Kind;
   language?: keyof typeof LANGUAGE_LABEL;
+  number?: string | null;
   className: string;
 }) {
   return (
@@ -38,16 +39,23 @@ function Placeholder(props: {
         "relative grid place-items-center text-muted-foreground",
       )}
     >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-        className="w-3/4"
-      >
-        {OUTLINE[props.kind]}
-      </svg>
+      {props.number ? (
+        // Still says which card it is, as the store tile does.
+        <span className="font-display num px-0.5 text-center text-[0.8125rem] leading-none font-black [overflow-wrap:anywhere]">
+          {props.number}
+        </span>
+      ) : (
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+          className="w-3/4"
+        >
+          {OUTLINE[props.kind]}
+        </svg>
+      )}
       {props.language && (
         <span className="absolute bottom-0.5 text-[9px] leading-none font-semibold">
           {LANGUAGE_LABEL[props.language]}
@@ -61,11 +69,13 @@ export function CardThumb({
   src,
   kind,
   language,
+  number,
   className,
 }: {
   src: string | null;
   kind: Kind;
   language?: keyof typeof LANGUAGE_LABEL;
+  number?: string | null;
   className?: string;
 }) {
   const box = cn(
@@ -74,7 +84,14 @@ export function CardThumb({
     className,
   );
   if (!src)
-    return <Placeholder kind={kind} language={language} className={box} />;
+    return (
+      <Placeholder
+        kind={kind}
+        language={language}
+        number={number}
+        className={box}
+      />
+    );
   // Plain img: custom items may point at any https host, which next/image
   // would have to allowlist; thumbs are tiny so optimisation buys little.
   return (
