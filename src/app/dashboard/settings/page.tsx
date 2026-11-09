@@ -3,8 +3,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { lineButton } from "@/components/ticket-button";
 import { requireStore } from "@/lib/session";
-import { signOutAction } from "../actions";
 import { SettingsForm } from "./settings-form";
+import { SignOut } from "./sign-out";
 
 export const metadata: Metadata = { title: "Settings - shoptcg" };
 
@@ -27,11 +27,7 @@ export default function SettingsPage() {
           Sales report
         </Link>
       </nav>
-      <form action={signOutAction} className="border-t border-border pt-6">
-        <button type="submit" className={lineButton}>
-          Sign out
-        </button>
-      </form>
+      <SignOut className={lineButton} />
     </main>
   );
 }
