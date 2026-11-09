@@ -8,6 +8,8 @@ import { toast } from "@/lib/toast";
 /** A plain download link that, with JS, says how many rows came down. */
 export function ExportButton(props: {
   href: string;
+  /** What one row of the file is, for the toast's count. */
+  unit: string;
   disabled?: boolean;
   className?: string;
   children: ReactNode;
@@ -36,8 +38,9 @@ export function ExportButton(props: {
       a.href = url;
       a.download = file ?? "shoptcg.csv";
       a.click();
-      URL.revokeObjectURL(url);
-      toast.exported(a.download, Number(rows));
+      // Some mobile browsers read the blob after click() returns.
+      setTimeout(() => URL.revokeObjectURL(url), 40_000);
+      toast.exported(a.download, Number(rows), props.unit);
     } catch {
       toast.exportFailed(run);
     } finally {

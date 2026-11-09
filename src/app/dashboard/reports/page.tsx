@@ -15,6 +15,7 @@ import {
   parseRange,
   salesReport,
   SALES_SHOWN,
+  weekendLabel,
   weekendOf,
   type Range,
 } from "@/lib/reports";
@@ -115,7 +116,7 @@ function Row(props: { k: string; children: React.ReactNode; big?: boolean }) {
       <dd
         className={
           props.big
-            ? "font-display num text-[2.75rem] leading-none font-extrabold"
+            ? "font-display num text-[1.875rem] leading-none font-extrabold"
             : "num font-semibold"
         }
       >
@@ -133,7 +134,10 @@ const Heading = ({ children }: { children: string }) => (
 
 type Report = Awaited<ReturnType<typeof salesReport>>;
 
-function PaymentTable({ rows }: { rows: Report["byMethod"] }) {
+function PaymentTable(props: {
+  rows: Report["byMethod"];
+  secondCurrency: string | null;
+}) {
   return (
     <div>
       <Heading>How they paid</Heading>
@@ -146,7 +150,7 @@ function PaymentTable({ rows }: { rows: Report["byMethod"] }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((m) => {
+          {props.rows.map((m) => {
             const cash = m.method === "cash";
             return (
               <tr key={m.method} className="border-t border-border">
@@ -162,7 +166,7 @@ function PaymentTable({ rows }: { rows: Report["byMethod"] }) {
                   {m.sales} {m.sales === 1 ? "sale" : "sales"}
                 </td>
                 <td
-                  className={`num pl-4 text-right ${cash ? "font-display text-[1.875rem] leading-none font-extrabold" : "font-semibold"}`}
+                  className={`num pl-4 text-right ${cash ? "font-display text-[2.75rem] leading-none font-extrabold" : "font-semibold"}`}
                 >
                   {usd(Number(m.total))}
                 </td>
@@ -172,7 +176,8 @@ function PaymentTable({ rows }: { rows: Report["byMethod"] }) {
         </tbody>
       </table>
       <p className="mt-2 text-sm text-muted-foreground">
-        Count your cash box against the Cash total.
+        Cash sales only. Take out your starting float before you compare.
+        {props.secondCurrency && " Total is in USD."}
       </p>
     </div>
   );
@@ -185,7 +190,7 @@ function BestSellers({ rows }: { rows: Report["bestSellers"] }) {
       <ul className="mt-2 border-b border-border">
         {rows.map((b) => (
           <li
-            key={[b.name, b.gradeLabel, b.language, b.number].join()}
+            key={[b.name, b.setName, b.gradeLabel, b.language, b.number].join()}
             className="grid grid-cols-[34px_1fr_auto] items-center gap-2.5 border-t border-border py-1.5"
           >
             <CardThumb
@@ -217,7 +222,21 @@ function BestSellers({ rows }: { rows: Report["bestSellers"] }) {
   );
 }
 
-function SaleRow({ s, store }: { s: Report["sales"][number]; store: string }) {
+function SaleRow(props: {
+  s: Report["sales"][number];
+  store: string;
+  oneDay: boolean;
+}) {
+  const { s, store } = props;
+  // The sheet's heading already says the date of a single day.
+  const when = props.oneDay
+    ? s.createdAt.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: s.timeZone,
+        timeZoneName: "short",
+      })
+    : receiptTime(s.createdAt, s.timeZone);
   return (
     <li className="border-t border-border">
       <details className="group">
@@ -225,7 +244,7 @@ function SaleRow({ s, store }: { s: Report["sales"][number]; store: string }) {
           <span className="min-w-0 font-semibold [overflow-wrap:anywhere]">
             {shortName(s.buyerName)}
             <small className="num block text-sm font-normal text-muted-foreground">
-              {s.receiptNo}. {receiptTime(s.createdAt, s.timeZone)}. {paidBy(s)}
+              {paidBy(s)}. {s.receiptNo}. {when}
             </small>
           </span>
           <span className="font-display num text-[1.625rem] leading-none font-extrabold">
@@ -284,7 +303,8 @@ async function Report({ searchParams }: Search) {
   const now = new Date();
   const range = parseRange(await searchParams, timeZone, now);
   const report = await salesReport(getDb(), store.id, range);
-  const weekend = weekendOf(localDate(now, timeZone));
+  const today = localDate(now, timeZone);
+  const weekend = weekendOf(today);
   const { summary: sum } = report;
   return (
     <>
@@ -296,7 +316,7 @@ async function Report({ searchParams }: Search) {
           href={`/dashboard/reports?from=${weekend.from}&to=${weekend.to}`}
           on={range.preset === "weekend"}
         >
-          This weekend
+          {weekendLabel(today)}
         </Preset>
       </nav>
       <section className="paper tally w-full px-5 pt-7 pb-5">
@@ -324,6 +344,10 @@ async function Report({ searchParams }: Search) {
         ) : (
           <>
             <div className="mt-5 grid gap-6 md:grid-cols-2">
+              <PaymentTable
+                rows={report.byMethod}
+                secondCurrency={store.secondCurrency}
+              />
               <dl className="border-b border-border">
                 <Row k="Revenue" big>
                   {usd(Number(sum.revenue))}
@@ -333,28 +357,34 @@ async function Report({ searchParams }: Search) {
                 <Row k="Average sale">{usd(sum.average)}</Row>
                 <Row k="Discounts given">{usd(Number(sum.discounts))}</Row>
               </dl>
-              <PaymentTable rows={report.byMethod} />
             </div>
             <BestSellers rows={report.bestSellers} />
             <div className="mt-6">
-              <Heading>Sales</Heading>
-              <ul className="mt-2 border-b border-border">
-                {report.sales.map((s) => (
-                  <SaleRow key={s.id} s={s} store={store.name} />
-                ))}
-              </ul>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Heading>Sales</Heading>
+                <ExportButton
+                  href={`/dashboard/reports/export?from=${range.from}&to=${range.to}`}
+                  unit="line"
+                >
+                  Export CSV
+                </ExportButton>
+              </div>
               {sum.sales > SALES_SHOWN && (
                 <p className="mt-2 text-sm text-muted-foreground">
                   Showing the newest {SALES_SHOWN}. The CSV has all {sum.sales}.
                 </p>
               )}
+              <ul className="mt-2 border-b border-border">
+                {report.sales.map((s) => (
+                  <SaleRow
+                    key={s.id}
+                    s={s}
+                    store={store.name}
+                    oneDay={range.from === range.to}
+                  />
+                ))}
+              </ul>
             </div>
-            <ExportButton
-              href={`/dashboard/reports/export?from=${range.from}&to=${range.to}`}
-              className="mt-6"
-            >
-              Export CSV
-            </ExportButton>
           </>
         )}
       </section>

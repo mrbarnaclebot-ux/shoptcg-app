@@ -8,6 +8,7 @@ import { getDb } from "@/db";
 import {
   CUSTOMERS_SHOWN,
   listCustomers,
+  maskEmail,
   promoStatus,
   subscribedCount,
 } from "@/lib/customers";
@@ -31,8 +32,15 @@ export default function CustomersPage({ searchParams }: Search) {
   );
 }
 
+// Postgres refuses a NUL in a parameter.
 const param = (v: string | string[] | undefined) =>
-  typeof v === "string" ? v.trim().slice(0, 100) : "";
+  typeof v === "string" ? v.replaceAll("\0", "").trim().slice(0, 100) : "";
+
+const STATUS_CLASS = {
+  subscribed: "text-success",
+  unsubscribed: "text-danger",
+  receipts: "text-muted-foreground",
+};
 
 function Chip(props: { href: string; on: boolean; children: string }) {
   return (
@@ -98,50 +106,7 @@ async function Customers({ searchParams }: Search) {
       </form>
 
       <section className="paper tally w-full px-5 pt-7 pb-5">
-        {rows.length === 0 ? (
-          <>
-            <p className="font-display text-[2rem] leading-none font-extrabold">
-              {q || subscribed ? "No one matches that." : "No customers yet."}
-            </p>
-            <p className="mt-2 text-muted-foreground">
-              Buyers appear here after their first confirmed sale.
-            </p>
-          </>
-        ) : (
-          <ul className="border-b border-border">
-            {rows.map((c) => (
-              <li
-                key={c.id}
-                className="flex flex-col gap-0.5 border-t border-border py-3"
-              >
-                <span className="font-semibold [overflow-wrap:anywhere]">
-                  {c.name}
-                </span>
-                <span className="[overflow-wrap:anywhere]">{c.email}</span>
-                <span className="num text-sm text-muted-foreground">
-                  {c.purchases} {c.purchases === 1 ? "purchase" : "purchases"}.
-                  Last{" "}
-                  {c.lastPurchaseAt.toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    timeZone,
-                  })}
-                  .
-                </span>
-                <span className="text-sm font-semibold">
-                  {promoStatus(c, timeZone)}
-                </span>
-                <RemoveCustomer id={c.id} name={c.name} />
-              </li>
-            ))}
-          </ul>
-        )}
-        {rows.length === CUSTOMERS_SHOWN && (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Showing the latest {CUSTOMERS_SHOWN}. Search to find anyone else.
-          </p>
-        )}
-        <div className="mt-5 flex flex-col items-start gap-2">
+        <div className="mb-5 flex flex-col items-start gap-2">
           <p className="text-sm text-muted-foreground">
             {optedIn === 0
               ? "No one has opted in yet."
@@ -149,11 +114,79 @@ async function Customers({ searchParams }: Search) {
           </p>
           <ExportButton
             href="/dashboard/customers/export"
+            unit="buyer"
             disabled={optedIn === 0}
           >
-            Export promo list
+            {`Export promo list (${optedIn})`}
           </ExportButton>
         </div>
+        {rows.length === CUSTOMERS_SHOWN && (
+          <p className="mb-2 text-sm text-muted-foreground">
+            Showing the latest {CUSTOMERS_SHOWN}. Search to find anyone else.
+          </p>
+        )}
+        {rows.length === 0 ? (
+          q || subscribed ? (
+            <>
+              <p className="font-display text-[2rem] leading-none font-extrabold">
+                No one matches that.
+              </p>
+              <Link
+                href="/dashboard/customers"
+                className="mt-1 inline-flex min-h-11 items-center font-semibold underline underline-offset-4"
+              >
+                Show everyone
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="font-display text-[2rem] leading-none font-extrabold">
+                No customers yet.
+              </p>
+              <p className="mt-2 text-muted-foreground">
+                Buyers appear here after their first confirmed sale.
+              </p>
+            </>
+          )
+        ) : (
+          <ul className="border-b border-border">
+            {rows.map((c) => {
+              const status = promoStatus(c, timeZone);
+              return (
+                <li
+                  key={c.id}
+                  className="flex flex-col gap-0.5 border-t border-border py-3"
+                >
+                  <span className="font-semibold [overflow-wrap:anywhere]">
+                    {c.name}
+                  </span>
+                  <span
+                    className={`text-sm font-semibold ${STATUS_CLASS[status.state]}`}
+                  >
+                    {status.text}
+                  </span>
+                  <details className="text-sm text-muted-foreground">
+                    <summary className="flex min-h-11 cursor-pointer items-center [overflow-wrap:anywhere]">
+                      {maskEmail(c.email)}
+                    </summary>
+                    <span className="[overflow-wrap:anywhere]">{c.email}</span>
+                  </details>
+                  <span className="num text-sm text-muted-foreground">
+                    {c.purchases} {c.purchases === 1 ? "purchase" : "purchases"}
+                    . Last{" "}
+                    {c.lastPurchaseAt.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      timeZone,
+                    })}
+                    .
+                  </span>
+                  <RemoveCustomer id={c.id} name={c.name} />
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
     </>
   );

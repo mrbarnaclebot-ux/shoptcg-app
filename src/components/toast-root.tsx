@@ -62,7 +62,9 @@ let touched: { el: Element; at: DOMRect } | null = null;
 function useTouchedRow() {
   useEffect(() => {
     const mark = (e: Event) => {
-      const el = (e.target as Element).closest?.("li, tr, form, section");
+      const el = (e.target as Element).closest?.(
+        "[download], li, tr, form, section",
+      );
       touched = el ? { el, at: el.getBoundingClientRect() } : null;
     };
     addEventListener("pointerdown", mark, true);

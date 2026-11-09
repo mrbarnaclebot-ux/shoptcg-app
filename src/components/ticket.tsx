@@ -58,7 +58,7 @@ export function StubValue(props: {
 }) {
   return (
     <div>
-      <div className="text-xs leading-tight text-muted-foreground">
+      <div className="text-sm leading-tight text-muted-foreground">
         {props.k}
       </div>
       <div
