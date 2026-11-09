@@ -233,3 +233,24 @@ export type NewListing = typeof listing.$inferInsert;
 export * from "./request-schema";
 
 export * from "./sale-schema";
+
+// An admin's invite to become a vendor. Only the code's hash is kept.
+export const invite = pgTable(
+  "invite",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    codeHash: text("code_hash").notNull().unique(),
+    label: text("label"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    reservedEmail: text("reserved_email"),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    redeemedBy: text("redeemed_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("invite_reserved_email_idx").on(t.reservedEmail)],
+);

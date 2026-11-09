@@ -12,6 +12,8 @@ export const RESERVED_SLUGS = new Set([
   "dashboard",
   "help",
   "icon",
+  "invite",
+  "join",
   "login",
   "logout",
   "new",

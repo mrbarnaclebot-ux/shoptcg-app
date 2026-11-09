@@ -7,6 +7,7 @@ import { signInSend } from "@/db/schema";
 export const LIMITS = {
   email: { max: 3, windowMs: 10 * 60_000 },
   ip: { max: 10, windowMs: 60 * 60_000 },
+  join: { max: 10, windowMs: 60 * 60_000 },
 } as const;
 
 async function under(db: Db, key: string, max: number, windowMs: number) {
@@ -34,6 +35,16 @@ export async function allowMagicLink(db: Db, email: string, ip: string | null) {
   // ponytail: count-then-insert lets concurrent sends overshoot by a few, and
   // rows are never pruned; add a cleanup job if the table grows.
   await db.insert(signInSend).values(keys.map((key) => ({ key })));
+  return true;
+}
+
+/** Every invite code attempt counts, so codes can't be guessed from one address. */
+export async function allowJoin(db: Db, ip: string | null) {
+  if (!ip) return true;
+  const key = `join:${ip}`;
+  if (!(await under(db, key, LIMITS.join.max, LIMITS.join.windowMs)))
+    return false;
+  await db.insert(signInSend).values({ key });
   return true;
 }
 
