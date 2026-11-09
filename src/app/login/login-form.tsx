@@ -36,8 +36,8 @@ export function LoginForm() {
   );
   const expired = useExpiredLink();
   useEffect(() => {
-    if (state.sent) toast.linkSent(state.sent);
-    else if (state.limited) toast.rateLimited();
+    // A sent link swaps the form for the "Check your email" ticket, so no toast.
+    if (state.limited) toast.rateLimited();
     else if (state.failed && state.error) toast.sendFailed(state.error);
   }, [state]);
   if (state.sent) return <Sent email={state.sent} />;
@@ -78,8 +78,10 @@ function Sent({ email }: { email: string }) {
       </p>
       <p className="text-muted-foreground">
         We sent a link to{" "}
-        <span className="font-semibold break-all text-text">{email}</span>. It
-        works once, for 5 minutes.
+        <span className="font-semibold [overflow-wrap:anywhere] text-text">
+          {email}
+        </span>
+        . It works once, for 5 minutes.
       </p>
       <p className="border-t border-dashed border-border pt-3 text-sm text-muted-foreground">
         Didn&apos;t get it? Check spam, or reload this page to send again.

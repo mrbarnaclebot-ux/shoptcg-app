@@ -48,11 +48,18 @@ export function CustomForm() {
   );
   const e = state.errors ?? {};
   useEffect(() => {
-    if (state.added) toast.itemAdded(state.added);
-    else if (state.errors?.form) toast.notSaved(state.errors.form);
+    // A save shows the inline confirmation instead of a toast.
+    if (state.errors?.form) toast.notSaved(state.errors.form);
   }, [state]);
   return (
-    <form key={state.n ?? 0} action={action} className="flex flex-col gap-5">
+    // noValidate: the server's field errors render in the house style instead
+    // of the browser's validation bubble.
+    <form
+      key={state.n ?? 0}
+      action={action}
+      noValidate
+      className="flex flex-col gap-5"
+    >
       {state.added && !pending && (
         <Added name={state.added.name} first={state.added.first} />
       )}
@@ -95,7 +102,7 @@ export function CustomForm() {
 // Type decides which of condition or grader + grade the item carries.
 function KindFields({ errors: e }: { errors: Record<string, string> }) {
   const [kind, setKind] = useState<Kind>("raw");
-  const [language, setLanguage] = useState("zh");
+  const [language, setLanguage] = useState("en");
   const [condition, setCondition] = useState("NM");
   return (
     <>
@@ -116,9 +123,9 @@ function KindFields({ errors: e }: { errors: Record<string, string> }) {
         value={language}
         onChange={setLanguage}
         options={[
-          ["zh", "Chinese"],
-          ["ja", "Japanese"],
           ["en", "English"],
+          ["ja", "Japanese"],
+          ["zh", "Chinese"],
         ]}
       />
       {kind === "raw" && (
