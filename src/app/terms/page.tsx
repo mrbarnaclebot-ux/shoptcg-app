@@ -33,6 +33,14 @@ export default function TermsPage() {
               from any promo email.
             </li>
           </ul>
+          <h2>Buyer requests</h2>
+          <p>
+            When you send a list, the vendor sees your name, your email and what
+            you asked for, and the items are held for 15 minutes. If the request
+            doesn&apos;t end in a sale, your details are deleted after 30 days.
+            Promo emails are separate: they need the optional box, which starts
+            unticked.
+          </p>
           <h2>What we do not do</h2>
           <p>We do not sell your data or share it with anyone else.</p>
           <h2>Payments</h2>
