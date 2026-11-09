@@ -1,5 +1,14 @@
 import { expect, test } from "@playwright/test";
-import { add, newBuyer, openVendor, sendList, sent, setStore } from "./buyer";
+import {
+  add,
+  confirm,
+  newBuyer,
+  openVendor,
+  pay,
+  sendList,
+  sent,
+  setStore,
+} from "./buyer";
 
 const status = (page: import("@playwright/test").Page) =>
   page.locator("header").getByText(/^(Open|Paused|Not vending)$/);
@@ -10,10 +19,11 @@ test("a timed pause reopens by itself, and the buyer's page follows without a re
   baseURL,
 }) => {
   const slug = await openVendor(page);
-  // 15 min becomes 3 s in e2e builds only (seedAllowed).
+  // 15 min becomes 8 s in e2e builds only (seedAllowed): long enough to see
+  // "Paused" on a slow CI build, short enough to watch it end.
   await page
     .context()
-    .addCookies([{ name: "e2e_pause_ms", value: "3000", url: baseURL! }]);
+    .addCookies([{ name: "e2e_pause_ms", value: "8000", url: baseURL! }]);
   const buyer = await newBuyer(browser, slug);
   await expect(status(buyer)).toHaveText("Open");
 
@@ -30,7 +40,7 @@ test("a timed pause reopens by itself, and the buyer's page follows without a re
   ).toHaveCount(0);
 
   // The page's own timer re-reads it once the pause ends.
-  await expect(status(buyer)).toHaveText("Open", { timeout: 10_000 });
+  await expect(status(buyer)).toHaveText("Open", { timeout: 15_000 });
   await add(buyer, "Mew ex");
   await expect(buyer.getByRole("link", { name: "Review list" })).toBeVisible();
 });
@@ -105,7 +115,7 @@ for (const to of ["pause", "off"] as const)
       .click();
     await expect(
       control.getByText(
-        "1 buyer is waiting. Their holds stay until you confirm or decline.",
+        "1 buyer is waiting. Their holds still run out on time. Confirm or decline them first.",
       ),
     ).toBeVisible();
     // Keep backs out without changing anything.
@@ -120,4 +130,40 @@ for (const to of ["pause", "off"] as const)
     await expect(
       page.getByRole("heading", { name: /^Sale for/ }),
     ).toBeVisible();
+    // The buyer is at the table, so the sale still goes through.
+    await pay(page, "Cash");
+    await confirm(page).click();
+    await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
   });
+
+test("a choice closes at once, so a second tap on slow wifi can't queue another save", async ({
+  page,
+}) => {
+  await openVendor(page);
+  const control = page.getByRole("region", { name: "Your store" });
+  // Hold every server action for a while: hall wifi.
+  await page.route("**/dashboard", async (route) => {
+    if (route.request().headers()["next-action"])
+      await new Promise((r) => setTimeout(r, 2500));
+    await route.continue();
+  });
+  await control.getByRole("button", { name: "Pause", exact: true }).click();
+  await control.getByRole("button", { name: "15 min" }).click();
+  await expect(control).toHaveAttribute("aria-busy", "true");
+  await expect(control.getByRole("group", { name: "Pause for" })).toHaveCount(
+    0,
+  );
+  await expect(
+    control.getByRole("button", { name: "Pause", exact: true }),
+  ).toBeDisabled();
+  await expect(control.getByRole("heading", { level: 2 })).toBeFocused();
+  await expect(control).toHaveAttribute("aria-busy", "false", {
+    timeout: 10_000,
+  });
+  await expect(control).toHaveAttribute("data-state", "paused");
+
+  // Paused, another length is one choice away, without opening first.
+  await page.unrouteAll();
+  await setStore(page, { pause: "1 hour" });
+  await expect(control.getByRole("status")).toHaveText(/Opens again in 60 min/);
+});
