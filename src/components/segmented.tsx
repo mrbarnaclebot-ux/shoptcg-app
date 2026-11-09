@@ -3,6 +3,8 @@
 // Native radios styled as a segmented control: keyboard and screen reader
 // behaviour come free. Used for small fixed choices (type, language, condition).
 // Show floor chips: a cut-line box; the picked one is filled with the text colour.
+import { useLayoutEffect, useRef } from "react";
+
 export function Segmented<T extends string>(props: {
   label: string;
   name?: string;
@@ -10,8 +12,18 @@ export function Segmented<T extends string>(props: {
   options: readonly (readonly [T, string])[];
   onChange: (value: T) => void;
 }) {
+  const box = useRef<HTMLFieldSetElement>(null);
+  // A tap before hydration moves the native radio but reaches no handler, and
+  // the next render would undo it. Adopt it, so a seller on slow WiFi taps once.
+  useLayoutEffect(() => {
+    const tapped =
+      box.current?.querySelector<HTMLInputElement>("input:checked");
+    if (tapped && tapped.value !== props.value)
+      props.onChange(tapped.value as T);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, at hydration
+  }, []);
   return (
-    <fieldset className="flex flex-col gap-2">
+    <fieldset ref={box} className="flex flex-col gap-2">
       <legend className="mb-2 text-sm font-semibold">{props.label}</legend>
       <div className="flex flex-wrap gap-2">
         {props.options.map(([value, text]) => (
