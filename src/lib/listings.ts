@@ -24,6 +24,10 @@ export type StockFilter = {
   q?: string;
   kind?: "raw" | "graded" | "sealed" | "hidden";
   language?: "en" | "ja" | "zh";
+  /** Any of these languages (the public page's multi-select chips). */
+  languages?: ("en" | "ja" | "zh")[];
+  /** One listing, for the public item page. */
+  id?: string;
 };
 
 // ponytail: no pagination; vendors hold 50 to 500 items. Page past this cap if one grows.
@@ -58,6 +62,8 @@ function filterConds(storeId: string, f: StockFilter) {
   ];
   if (f.kind && f.kind !== "hidden") conds.push(eq(listing.kind, f.kind));
   if (f.language) conds.push(eq(listing.language, f.language));
+  if (f.languages?.length) conds.push(inArray(listing.language, f.languages));
+  if (f.id) conds.push(eq(listing.id, f.id));
   const q = f.q?.trim();
   if (q) {
     const like = `%${q.replace(/[\\%_]/g, "\\$&")}%`;

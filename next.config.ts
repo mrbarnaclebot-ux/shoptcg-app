@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   reactCompiler: true,
   images: {
+    // Card art never changes at a URL, so optimised copies live a month.
+    minimumCacheTTL: 2_592_000,
+    qualities: [70, 75],
     remotePatterns: IMAGE_HOSTS.map((hostname) => ({
       protocol: "https" as const,
       hostname,

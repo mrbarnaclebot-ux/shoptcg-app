@@ -22,6 +22,6 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120_000,
     // PPT_API_KEY empty: e2e searches use TCGdex and spend no paid credits.
-    env: { MAGIC_LINK_OUTBOX: OUTBOX, PPT_API_KEY: "" },
+    env: { MAGIC_LINK_OUTBOX: OUTBOX, PPT_API_KEY: "", E2E_SEED: "1" },
   },
 });

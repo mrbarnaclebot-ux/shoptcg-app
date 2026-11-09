@@ -201,7 +201,9 @@ export const listing = pgTable(
     index("listing_store_idx").on(t.storeId, t.createdAt),
     index("listing_catalog_item_idx").on(t.catalogItemId),
     // Public reads only ever see active rows.
-    index("listing_store_public_idx").on(t.storeId).where(sql`${t.active}`),
+    index("listing_store_public_idx")
+      .on(t.storeId)
+      .where(sql`${t.active}`),
     check("listing_kind", sql`${t.kind} in ('raw', 'graded', 'sealed')`),
     check("listing_language", sql`${t.language} in ('en', 'ja', 'zh')`),
     check(
