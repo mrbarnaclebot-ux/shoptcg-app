@@ -273,6 +273,27 @@ export const toast = {
     show("info", "Hold ended", "Those items are back in stock.", 6000),
   requestCancelled: () =>
     show("info", "Request cancelled", "Those items are back in stock.", 6000),
+  /** A loading toast that saleRecorded turns into the result. */
+  saleRecording: () => {
+    announce("Recording sale");
+    return put({ tone: "wait", title: "Recording", duration: null });
+  },
+  saleRecorded: (id: string, receiptNo: string, total: string) => {
+    const title = `Sale ${receiptNo} recorded`;
+    const body = `${total}. The receipt is on its way.`;
+    announce(`${title}. ${body}`);
+    put({ tone: "ok", title, body, duration: 6000 }, id);
+  },
+  saleFailed: (retry: () => void) =>
+    error("Sale not saved", "Nothing was charged or changed.", retry),
+  receiptSent: (email: string) =>
+    show("ok", "Receipt sent", `Sent to ${email}.`, 4000),
+  receiptFailed: (retry: () => void) =>
+    error(
+      "Email didn't send",
+      "The sale is saved. Try the email again.",
+      retry,
+    ),
   /** Sticky until the stream is back; returns the toast id to dismiss. */
   liveDropped: (check: () => void) => {
     const body = "New requests may be late.";
