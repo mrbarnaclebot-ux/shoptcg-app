@@ -35,6 +35,8 @@ export const store = pgTable(
     fxRate: numeric("fx_rate"),
     // Shows "Or tap your phone here" on the table sign when the vendor has an NFC tag.
     nfcEnabled: boolean("nfc_enabled").notNull().default(false),
+    // The organiser's table number ("B14"), shown on the store header and sign.
+    tableLabel: text("table_label"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -56,6 +58,10 @@ export const store = pgTable(
     check(
       "store_second_currency_code",
       sql`${t.secondCurrency} ~ '^[A-Z]{3}$'`,
+    ),
+    check(
+      "store_table_label_format",
+      sql`${t.tableLabel} ~ '^[A-Za-z0-9-]{1,8}$'`,
     ),
   ],
 );
@@ -194,6 +200,8 @@ export const listing = pgTable(
   (t) => [
     index("listing_store_idx").on(t.storeId, t.createdAt),
     index("listing_catalog_item_idx").on(t.catalogItemId),
+    // Public reads only ever see active rows.
+    index("listing_store_public_idx").on(t.storeId).where(sql`${t.active}`),
     check("listing_kind", sql`${t.kind} in ('raw', 'graded', 'sealed')`),
     check("listing_language", sql`${t.language} in ('en', 'ja', 'zh')`),
     check(
