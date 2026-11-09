@@ -15,7 +15,7 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   forbidOnly: ci,
   retries: ci ? 1 : 0,
-  use: { baseURL: url, trace: "on-first-retry" },
+  use: { baseURL: url, trace: "on-first-retry", timezoneId: "UTC" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
     // CI builds in an earlier step, so it serves the production build.

@@ -99,7 +99,7 @@ test("a show's report adds up, and its CSV is safe to open", async ({
   await expect(pays.getByRole("row", { name: "Transfer" })).toContainText(
     "$0.00",
   );
-  await expect(page.getByText("Count your cash box")).toBeVisible();
+  await expect(page.getByText("Cash sales only.")).toBeVisible();
   // Best sellers: before discounts, and the language shows.
   const best = page
     .getByRole("heading", { name: "Best sellers" })
@@ -130,7 +130,9 @@ test("a show's report adds up, and its CSV is safe to open", async ({
   expect(rows).toHaveLength(3);
   const first = rows.find((r) => r[2] === "R-0001")!;
   expect(first[3]).toBe("'=cmd|'");
-  expect(first.at(-2)).toBe("90.00");
+  expect(first[head.indexOf("line_total")]).toBe("90.00");
+  expect(first[head.indexOf("sale_total")]).toBe("90.00");
+  expect(first[head.indexOf("payment_method")]).toBe("Cash");
   expect(rows.find((r) => r[2] === "R-0002")![8]).toBe("JP");
   expect(rows.flat().join()).not.toContain("@example.test");
   const res = await page.request.get("/dashboard/reports/export");
@@ -239,12 +241,23 @@ test("the promo list is opted-in buyers only, and unsubscribing leaves it", asyn
   await page.getByRole("button", { name: "Search" }).click();
   await expect(rowOf("Noor No")).toBeVisible();
   await expect(rowOf("Yara Yes")).toHaveCount(0);
+  // The address stays masked until the seller opens it.
+  await expect(page.getByText(no)).toBeHidden();
+  await rowOf("Noor No").locator("summary").click();
+  await expect(page.getByText(no)).toBeVisible();
 
   await page.getByRole("button", { name: "Remove Noor No" }).click();
+  await expect(page.getByRole("button", { name: "Keep" })).toBeFocused();
   await page.getByRole("button", { name: "Keep" }).click();
+  await expect(
+    page.getByRole("button", { name: "Remove Noor No" }),
+  ).toBeFocused();
   await page.getByRole("button", { name: "Remove Noor No" }).click();
   await page.getByRole("button", { name: "Remove", exact: true }).click();
+  await expect(page.locator(".toasts")).toContainText("Customer removed");
   await expect(page.getByText("No one matches that.")).toBeVisible();
+  await page.getByRole("link", { name: "Show everyone" }).click();
+  await expect(rowOf("Yara Yes")).toBeVisible();
 });
 
 test("another vendor's export has none of this vendor's sales", async ({
@@ -252,22 +265,25 @@ test("another vendor's export has none of this vendor's sales", async ({
   browser,
 }) => {
   const slug = await openVendor(page);
+  const email = buyerEmail();
   await sell(page, browser, slug, {
     item: "Gengar",
     price: "1",
     method: "Cash",
     promo: true,
-    email: buyerEmail(),
+    email,
   });
   const other = await (await browser.newContext()).newPage();
   await openVendor(other);
-  for (const path of [
-    "/dashboard/reports/export",
-    "/dashboard/customers/export",
+  for (const [path, mark] of [
+    ["/dashboard/reports/export", "R-0001"],
+    ["/dashboard/customers/export", email],
   ]) {
+    // In the owner's file, so its absence from the other's means something.
+    expect(await (await page.request.get(path)).text()).toContain(mark);
     const res = await other.request.get(path);
     expect(res.headers()["x-row-count"]).toBe("0");
-    expect(await res.text()).not.toContain("R-0001");
+    expect(await res.text()).not.toContain(mark);
   }
 });
 

@@ -9,7 +9,9 @@ export const hasDb = Boolean(process.env.DATABASE_URL);
  * a sale can't be updated. Test-only: refuses to run against a deployed service.
  */
 export async function addPastSale(slug: string, total: string, daysAgo = 7) {
-  if (isDeployed()) throw new Error("e2e/db.ts refuses to run when deployed");
+  const host = new URL(process.env.DATABASE_URL!).hostname;
+  if (isDeployed() || !["localhost", "127.0.0.1"].includes(host))
+    throw new Error("e2e/db.ts only runs against a local database");
   const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
   try {
     const at = new Date(Date.now() - daysAgo * 86_400_000);

@@ -1,5 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
-import { buyerEmail, confirm, openVendor, pay, reviewSale } from "./buyer";
+import {
+  buyerEmail,
+  confirm,
+  openVendor,
+  outboxLine,
+  pay,
+  reviewSale,
+} from "./buyer";
 
 // Phase 7 screenshots, not a regression test:
 //   SHOTS=reports pnpm e2e reports-shots
@@ -40,9 +47,11 @@ for (const width of [390, 768, 1280]) {
       { item: "Pikachu", method: "Cash", promo: false, name: "Theo King" },
       { item: "Gengar", method: "Card", promo: true, name: "Sam Alvarez" },
     ];
+    let last = "";
     for (const s of sales) {
+      last = buyerEmail();
       await reviewSale(page, browser, slug, [s.item], {
-        email: buyerEmail(),
+        email: last,
         promo: s.promo,
         name: s.name,
       });
@@ -51,7 +60,26 @@ for (const width of [390, 768, 1280]) {
       await expect(page.getByTestId("receipt-no")).toBeVisible();
     }
 
+    // Sam opts out, so the customers shot has all three consent states.
+    const reader = await (await browser.newContext()).newPage();
+    await reader.goto((await outboxLine(last)).split(" ")[2]);
+    await reader.getByRole("button", { name: "Unsubscribe" }).click();
+    await expect(
+      reader.getByRole("heading", { name: /^You're off/ }),
+    ).toBeVisible();
+
     await page.goto("/dashboard/reports");
+    if (width === 390) {
+      // What a phone shows without scrolling: Cash has to be above the tab bar.
+      await page.setViewportSize({ width, height: 844 });
+      await page.waitForTimeout(1000);
+      await page.screenshot({ path: `${OUT}/report-fold-${width}.png` });
+      const cash = page.getByRole("row").nth(1);
+      const box = await cash.boundingBox();
+      const bar = await page.locator("nav[aria-label]").last().boundingBox();
+      console.log("[fold] cash", box, "bar", bar);
+      await page.setViewportSize({ width, height: 900 });
+    }
     await page.locator("summary", { hasText: "R-0003." }).click();
     await shot(page, "report", width);
     await page.setViewportSize({ width, height: 700 });
