@@ -70,7 +70,11 @@ export function ListReview(props: {
 
   // The list lives on the phone, so a bare or stale URL asks for what's on it.
   const ids = Object.keys(lines).join(",");
-  const stale = Object.keys(lines).some((id) => !loaded.includes(id));
+  // Against what the server read, not the URL: it reads only the first maxLines.
+  const read = loaded.slice(0, maxLines);
+  const stale = Object.keys(lines)
+    .slice(0, maxLines)
+    .some((id) => !read.includes(id));
   useEffect(() => {
     startBuyerSession().catch(() => {});
   }, []);
