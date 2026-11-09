@@ -7,7 +7,9 @@ export async function signIn(page: Page, email: string) {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Email me a link" }).click();
-  await expect(page.getByText("Link sent.", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Check your email.", { exact: true }),
+  ).toBeVisible();
   let url: string | undefined;
   await expect
     .poll(async () => {
@@ -30,6 +32,6 @@ export async function newVendor(page: Page) {
   await page.getByLabel("Store name").fill(`E2E Cards ${id}`);
   await page.getByLabel("Store link").fill(`e2e-${id}`);
   await page.getByRole("button", { name: "Create store" }).click();
-  await expect(page.getByText("Public page")).toBeVisible();
+  await expect(page.getByText("Your public page")).toBeVisible();
   return id;
 }

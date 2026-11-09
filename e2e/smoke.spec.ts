@@ -4,7 +4,7 @@ test("home loads", async ({ page }) => {
   await page.goto("/");
   await expect(
     page.getByRole("heading", {
-      name: "Priced to the cent. Raw, graded, sealed.",
+      name: "Your table, priced live.",
     }),
   ).toBeVisible();
   await expect(
