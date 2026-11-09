@@ -1,7 +1,7 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
-import { lineButton } from "@/components/ticket-button";
+import { lineButton, TicketButton } from "@/components/ticket-button";
 import type { StoreState } from "@/lib/store-state";
 import { toast } from "@/lib/toast";
 import { setStateAction } from "./actions";
@@ -83,13 +83,12 @@ export function StoreControl(props: {
         </p>
       </div>
       {!open && (
-        <button
-          type="button"
+        <TicketButton
           onClick={() => choose({ state: "open" })}
-          className="btn-ticket min-h-14 w-full text-lg"
+          className="w-full"
         >
           Open store
-        </button>
+        </TicketButton>
       )}
       {asking ? (
         <div className="flex flex-col gap-3 border-t border-dashed border-border pt-3">
