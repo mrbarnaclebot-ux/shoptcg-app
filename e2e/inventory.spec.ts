@@ -30,8 +30,11 @@ test("a vendor adds a custom item and sees it in inventory", async ({
   await expect(row).toContainText("CN");
   await expect(row.locator("output")).toHaveText("2");
 
+  // The digit changes straight away; a reload before the save lands would abort it.
+  const saved = page.waitForResponse((r) => r.request().method() === "POST");
   await row.getByRole("button", { name: "One more" }).click();
   await expect(row.locator("output")).toHaveText("3");
+  await saved;
   await page.reload();
   await expect(
     page
