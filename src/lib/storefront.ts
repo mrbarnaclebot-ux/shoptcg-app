@@ -3,6 +3,7 @@ import type { Db } from "@/db/open";
 import { listing, pricePoint, store } from "@/db/schema";
 import { altPrice } from "@/lib/fx";
 import { listStock, type StockRow } from "@/lib/listings";
+import { heldByListing, type Held } from "@/lib/request-reads";
 import { safeImageUrl } from "@/lib/pricing/images";
 import { underMarket, vendorPrice } from "@/lib/vendor-price";
 
@@ -43,11 +44,6 @@ export type PublicFilter = {
   q?: string;
   sort?: Sort;
 };
-
-/** Units held for other buyers' pending requests, by listing id. */
-type Held = Map<string, { qty: number; endsAt: Date }>;
-// ponytail: holds arrive with requests in phase 5; until then nothing is held.
-const NO_HOLDS: Held = new Map();
 
 function toPublic(s: PublicStore, held: Held) {
   return (r: StockRow) => {
@@ -107,8 +103,9 @@ export async function listPublicStock(
     q: f.q,
   });
   const by = BY[f.sort ?? "price-desc"];
+  const held = await heldByListing(db, s.id);
   return rows
-    .map(toPublic(s, NO_HOLDS))
+    .map(toPublic(s, held))
     .sort((a, b) => Number(!a.qty) - Number(!b.qty) || by(a, b));
 }
 
@@ -135,8 +132,22 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** One active listing of this store, or null (bad id, hidden, other store). */
 export async function getPublicItem(db: Db, s: PublicStore, id: string) {
   if (!UUID.test(id)) return null;
-  const rows = await listStock(db, s.id, { id });
-  return rows[0] ? toPublic(s, NO_HOLDS)(rows[0]) : null;
+  const [rows, held] = await Promise.all([
+    listStock(db, s.id, { id }),
+    heldByListing(db, s.id, [id]),
+  ]);
+  return rows[0] ? toPublic(s, held)(rows[0]) : null;
+}
+
+/** These listings as buyers see them, for the list review. */
+export async function getPublicItems(db: Db, s: PublicStore, ids: string[]) {
+  const ok = ids.filter((id) => UUID.test(id)).slice(0, 30);
+  if (!ok.length) return [];
+  const [rows, held] = await Promise.all([
+    listStock(db, s.id, { ids: ok }),
+    heldByListing(db, s.id, ok),
+  ]);
+  return rows.map(toPublic(s, held));
 }
 
 /** Daily market points for the chart, oldest first. */

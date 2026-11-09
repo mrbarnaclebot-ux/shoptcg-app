@@ -25,7 +25,7 @@ export async function getStoreBySlug(db: Db, slug: string) {
 }
 
 // Drizzle wraps driver errors; postgres-js and PGlite name the constraint field differently.
-function uniqueViolation(err: unknown): string | null {
+export function uniqueViolation(err: unknown): string | null {
   const cause = (err as { cause?: Record<string, unknown> })?.cause ?? err;
   const e = cause as Record<string, unknown>;
   if (e?.code !== "23505") return null;
