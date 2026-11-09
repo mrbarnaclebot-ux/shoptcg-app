@@ -1,3 +1,4 @@
+import { ChevronDown } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -148,14 +149,16 @@ function PaymentTable({ rows }: { rows: Report["byMethod"] }) {
           {rows.map((m) => {
             const cash = m.method === "cash";
             return (
-              <tr
-                key={m.method}
-                className={`border-t border-border ${cash ? "font-bold" : ""}`}
-              >
-                <th scope="row" className="py-1.5 text-left font-[inherit]">
+              <tr key={m.method} className="border-t border-border">
+                <th
+                  scope="row"
+                  className={`py-1.5 text-left ${cash ? "font-bold" : "font-normal"}`}
+                >
                   {METHOD_LABEL[m.method]}
                 </th>
-                <td className="num text-right text-muted-foreground">
+                <td
+                  className={`num text-right text-muted-foreground ${cash ? "font-bold" : ""}`}
+                >
                   {m.sales} {m.sales === 1 ? "sale" : "sales"}
                 </td>
                 <td
@@ -217,8 +220,8 @@ function BestSellers({ rows }: { rows: Report["bestSellers"] }) {
 function SaleRow({ s, store }: { s: Report["sales"][number]; store: string }) {
   return (
     <li className="border-t border-border">
-      <details>
-        <summary className="grid min-h-14 cursor-pointer grid-cols-[1fr_auto] items-center gap-x-3 py-1.5">
+      <details className="group">
+        <summary className="grid min-h-14 cursor-pointer grid-cols-[1fr_auto_auto] items-center gap-x-3 py-1.5">
           <span className="min-w-0 font-semibold [overflow-wrap:anywhere]">
             {shortName(s.buyerName)}
             <small className="num block text-sm font-normal text-muted-foreground">
@@ -228,6 +231,10 @@ function SaleRow({ s, store }: { s: Report["sales"][number]; store: string }) {
           <span className="font-display num text-[1.625rem] leading-none font-extrabold">
             {usd(Number(s.total))}
           </span>
+          <ChevronDown
+            aria-hidden
+            className="size-5 transition-transform group-open:rotate-180"
+          />
         </summary>
         <ul className="pb-1 text-sm">
           {s.lines.map((l) => (

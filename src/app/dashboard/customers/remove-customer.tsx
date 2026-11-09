@@ -24,7 +24,7 @@ export function RemoveCustomer({ id, name }: { id: string; name: string }) {
         type="button"
         onClick={() => setAsking(true)}
         aria-label={`Remove ${name}`}
-        className="min-h-11 font-semibold text-danger underline underline-offset-4"
+        className="min-h-11 self-start font-semibold text-danger underline underline-offset-4"
       >
         Remove customer
       </button>
