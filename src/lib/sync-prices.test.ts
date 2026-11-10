@@ -172,4 +172,18 @@ describe("syncPrices", () => {
     expect(res).toMatchObject({ failed: 6, backfilled: 0 });
     expect(asked).toEqual([]);
   });
+
+  it("prices just the named items, and only if today has no price yet", async () => {
+    const [a] = await list([hit({ provider: "add", providerId: "a" })]);
+    await list([hit({ provider: "add", providerId: "b" })]);
+    const limits = { maxCalls: 200, maxBackfill: 0 };
+    const run = () => syncPrices(db, "2026-11-02", only("add"), limits, [a.id]);
+    expect(await run()).toMatchObject({ items: 1, written: 1 });
+    // Listing it again the same day spends nothing.
+    expect(await run()).toMatchObject({ items: 0, written: 0 });
+    const points = await db.select().from(schema.pricePoint);
+    expect(
+      points.filter((p) => p.date === "2026-11-02").map((p) => p.catalogItemId),
+    ).toEqual([a.id]);
+  });
 });

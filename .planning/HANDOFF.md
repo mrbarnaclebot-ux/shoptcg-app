@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-10. `main` and `production` are level; the last code change is `ee5a100` (PR #16)._
+_Last updated: 2026-11-10. `main` and `production` are level; the last code change is PR #18 (price on add)._
 
 ## Where things stand
 
@@ -15,6 +15,7 @@ _Last updated: 2026-11-10. `main` and `production` are level; the last code chan
   - migration `0016`, which dropped `stores.is_open` (PR #15)
 - **Phase 8 (PR #16):** `e2e/run-a-show.spec.ts` takes one vendor through a whole show at phone, tablet and desktop size, with an accessibility scan on each screen. Differences from the plan are under "As built" in `.planning/phases/08-e2e/PLAN.md`.
 - **Prices:** production runs on the PPT Pro plan ($9.99/mo, 20,000 credits a day), the owner's decision on 2026-11-10. `PPT_API_KEY` is set on `web` and on the new `price-sync` cron service, which runs `pnpm sync:prices` at 02:00 UTC. A manual run on 2026-11-10 connected and finished with 0 items, because no store has stock yet.
+- **Price on add (PR #18):** a catalog card is priced, with 90 days of history, right after a vendor adds or imports it (`priceNewListings` in `src/lib/sync-prices.ts`, run with `after()`). It costs 1 credit for the price and 2 for history, nothing if the card already has today's price, and at most 200 credits per add or import; the nightly run picks up the rest.
 - **Invites:** the owner created the first one on production.
 - **Nothing is built or planned beyond this.** The repo has one branch (`main`, plus `production`) and no worktrees.
 
@@ -48,6 +49,7 @@ Railway notes (more in memory `railway-config-ignored`):
 - **The server checks its environment at boot** (`src/lib/env-check.ts`). Half a VAPID key set, or `MAGIC_LINK_OUTBOX` or `E2E_SEED` on Railway, stops the deploy.
 - **`/api/health` needs the LISTEN connection.** It returns `live: true`, and 503 if the listener can't start. `pnpm smoke` checks both.
 - **The e2e projects are `desktop`, `phone` and `tablet`.** Only the journey runs on the last two.
+- **PPT calls share one throttle per process.** The web app now makes sync-rate calls after an add, so a big import during the 02:00 run could briefly pass PPT's 60 calls a minute; the client backs off on 429.
 - **The journey's accessibility scan fails CI** on any serious or critical axe violation on the screens it visits.
 
 ## Owner to-dos
@@ -60,7 +62,7 @@ Railway notes (more in memory `railway-config-ignored`):
 ## Next up
 
 - [ ] On a phone, "New request" toasts stack over the Confirm sale bar while the seller is on a sale (see `.planning/phases/08-e2e/shots/phone-confirm.png`). Decide whether they should hide on the sale screen.
-- [ ] Prices and history only arrive with the nightly run. A card added at a show has no market price until 02:00 UTC. Pricing it on add would cost 1 to 2 credits a card.
+- [ ] Price on add has only run against TCGdex (free). Add one real card on production and check it shows a market price and a chart within a minute.
 
 ## Kept on purpose (don't "fix" without a reason)
 

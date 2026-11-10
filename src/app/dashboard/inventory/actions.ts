@@ -1,6 +1,7 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db";
 import type { Db } from "@/db/open";
@@ -29,6 +30,7 @@ import {
 } from "@/lib/listings";
 import { defaultProvider } from "@/lib/pricing/provider";
 import { requireStore } from "@/lib/session";
+import { priceNewListings } from "@/lib/sync-prices";
 
 // Every action resolves the store from the session; ids from the browser are
 // only ever used together with that store id (see lib/listings.ts).
@@ -86,6 +88,8 @@ export async function addCatalogAction(
   try {
     const db = getDb();
     const row = await addCatalogListing(db, store.id, parsed.data);
+    // After the response: the vendor doesn't wait on the price provider.
+    after(() => priceNewListings(db, [parsed.data.catalogItemId]));
     return { id: row.id, first: await isFirst(db, store.id) };
   } catch (err) {
     if (err instanceof ListingError) return { error: err.message };
@@ -163,7 +167,12 @@ export async function importCsvAction(
   if (!parsed.success)
     return { error: "Some rows changed. Preview the file again." };
   try {
-    const count = await importListings(getDb(), store.id, parsed.data);
+    const db = getDb();
+    const count = await importListings(db, store.id, parsed.data);
+    const ids = parsed.data.flatMap((r) =>
+      r.kind === "catalog" ? [r.input.catalogItemId] : [],
+    );
+    after(() => priceNewListings(db, ids));
     return { count };
   } catch (err) {
     if (err instanceof ListingError) return { error: err.message };
