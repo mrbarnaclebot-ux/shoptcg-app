@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { cache } from "react";
 import { getDb } from "@/db";
+import { previewing } from "@/lib/preview";
 import { slugSchema } from "@/lib/slug";
 import { getPublicStore } from "@/lib/storefront";
 
@@ -14,5 +15,13 @@ export const storeOr404 = cache(async (slug: string) => {
   await connection();
   const store = await getPublicStore(getDb(), slug);
   if (!store) notFound();
-  return store;
+  if (!(await previewing(slug))) return store;
+  // The owner's preview: their store as it looks open, whatever it is now.
+  return {
+    ...store,
+    state: "open" as const,
+    isOpen: true,
+    resumesInMin: null,
+    changesInMs: null,
+  };
 });

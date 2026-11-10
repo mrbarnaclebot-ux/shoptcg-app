@@ -7,6 +7,7 @@ import { getDb } from "@/db";
 import { ensureBuyerSid, readBuyerSid } from "@/lib/buyer-session";
 import { outboxPath } from "@/lib/email";
 import { seedAllowed } from "@/lib/e2e-seed";
+import { previewing } from "@/lib/preview";
 import { pushNewRequest } from "@/lib/push";
 import { ipHash } from "@/lib/request-limit";
 import {
@@ -87,7 +88,9 @@ export async function sendRequest(
   if (!lines.success) return { empty: true };
   const db = getDb();
   const store = await getPublicStore(db, slug);
-  if (store?.state !== "open") return { closed: true };
+  // The owner's preview sends a test request, open or not.
+  const isTest = Boolean(store) && (await previewing(slug));
+  if (!store || (store.state !== "open" && !isTest)) return { closed: true };
   const sessionId = await ensureBuyerSid();
   const ip = await addressHash();
   const hold = await holdMs();
@@ -102,6 +105,7 @@ export async function sendRequest(
       buyerEmail: fields.data.email,
       promo: fields.data.promo === "on",
       holdMs: hold,
+      isTest,
     });
   } catch (err) {
     // A failed query's message carries its params: the buyer's name and email.

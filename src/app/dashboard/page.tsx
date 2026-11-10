@@ -133,6 +133,12 @@ function StoreSummary({
             {origin.replace(/^https?:\/\//, "")}/{store.slug}
           </Link>
           <CopyLink url={`${origin}/${store.slug}`} />
+          <Link
+            href="/dashboard/preview"
+            className="inline-flex min-h-11 items-center text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+          >
+            Preview
+          </Link>
         </div>
       </div>
     </section>
