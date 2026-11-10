@@ -31,8 +31,49 @@ export function StoreHeader(props: {
   updatedOn?: string | null;
 }) {
   const { store } = props;
+  // A store with no images keeps exactly the header it always had.
+  const art = Boolean(store.bannerUrl || store.avatarUrl);
   return (
-    <header className="grid grid-cols-[1fr_auto] items-start gap-x-4 gap-y-2 pt-6 pb-4 md:pt-10">
+    <>
+      {store.bannerUrl && (
+        // Edge to edge on a phone. Already 1500 x 500 WebP, so no optimiser pass.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={store.bannerUrl}
+          alt=""
+          width={1500}
+          height={500}
+          fetchPriority="high"
+          className={`-mx-4 block aspect-[3/1] w-[calc(100%+2rem)] max-w-none bg-surface object-cover md:mx-0 md:mt-6 md:w-full lg:aspect-[4/1] ${store.state === "off" ? "grayscale" : ""}`}
+        />
+      )}
+      {store.avatarUrl && (
+        // A square print on paper stock, set two degrees off true like the stamps.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={store.avatarUrl}
+          alt=""
+          width={1000}
+          height={1000}
+          className={`relative z-[1] size-[72px] -rotate-2 border-4 border-[var(--paper)] bg-surface object-cover lg:size-28 ${store.bannerUrl ? "-mt-9 ml-1 lg:-mt-14" : "mt-6 md:mt-10"}`}
+        />
+      )}
+      <StoreTitle {...props} tight={art} />
+    </>
+  );
+}
+
+function StoreTitle(props: {
+  store: PublicStore;
+  items?: number;
+  updatedOn?: string | null;
+  tight: boolean;
+}) {
+  const { store } = props;
+  return (
+    <header
+      className={`grid grid-cols-[1fr_auto] items-start gap-x-4 gap-y-2 pb-4 ${props.tight ? "pt-4" : "pt-6 md:pt-10"}`}
+    >
       <h1 className="font-display text-[2.5rem] leading-[0.9] font-black text-balance md:text-[4rem]">
         {store.name}
       </h1>

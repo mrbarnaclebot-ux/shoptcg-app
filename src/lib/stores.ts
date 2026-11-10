@@ -181,3 +181,33 @@ export async function updateSettings(
     .returning({ id: store.id });
   return rows.length > 0;
 }
+
+/**
+ * Sets or clears (null) the store's banner or profile image. Returns the file
+ * id it replaced, so the caller can delete that file from storage.
+ */
+export async function setStoreImage(
+  db: Db,
+  storeId: string,
+  kind: "banner" | "avatar",
+  image: { url: string; fileId: string | null } | null,
+) {
+  const url = image?.url ?? null;
+  const fileId = image?.fileId ?? null;
+  return db.transaction(async (tx) => {
+    const [old] = await tx
+      .select({ banner: store.bannerFileId, avatar: store.avatarFileId })
+      .from(store)
+      .where(eq(store.id, storeId))
+      .for("update");
+    await tx
+      .update(store)
+      .set(
+        kind === "banner"
+          ? { bannerUrl: url, bannerFileId: fileId }
+          : { avatarUrl: url, avatarFileId: fileId },
+      )
+      .where(eq(store.id, storeId));
+    return old?.[kind] ?? null;
+  });
+}

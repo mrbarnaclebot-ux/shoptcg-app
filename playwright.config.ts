@@ -52,6 +52,9 @@ export default defineConfig({
     env: {
       MAGIC_LINK_OUTBOX: OUTBOX,
       PPT_API_KEY: "",
+      // Empty: uploads stay in the database row and nothing reaches Pinata.
+      PINATA_JWT: "",
+      PINATA_GATEWAY_URL: "",
       E2E_SEED: "1",
       BETTER_AUTH_URL: url,
       // Signs in without an invite; e2e/invites.spec.ts uses it for /admin.

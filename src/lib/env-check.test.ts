@@ -10,6 +10,8 @@ const ok = {
   VAPID_PUBLIC_KEY: "a",
   VAPID_PRIVATE_KEY: "b",
   VAPID_SUBJECT: "mailto:o@example.test",
+  PINATA_JWT: "j",
+  PINATA_GATEWAY_URL: "x.mypinata.cloud",
 };
 
 describe("checkEnv", () => {
@@ -34,6 +36,12 @@ describe("checkEnv", () => {
     });
     expect(none.errors).toEqual([]);
     expect(none.warnings).toHaveLength(2);
+  });
+
+  it("refuses half the Pinata pair", () => {
+    expect(
+      checkEnv({ ...ok, PINATA_GATEWAY_URL: undefined }).errors[0],
+    ).toMatch(/both of PINATA/);
   });
 
   it("refuses test hooks on a deployed service only", () => {
