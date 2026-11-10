@@ -5,7 +5,14 @@ if (!base) throw new Error("usage: pnpm smoke <url>");
 
 const missing = `smoke-${Date.now().toString(36)}`;
 const checks = [
-  ["/api/health", 200, (t) => JSON.parse(t).ok === true],
+  [
+    "/api/health",
+    200,
+    (t) => {
+      const body = JSON.parse(t);
+      return body.ok === true && body.live === true;
+    },
+  ],
   [`/${missing}`, 404],
   ["/login", 200],
   ["/", 200],

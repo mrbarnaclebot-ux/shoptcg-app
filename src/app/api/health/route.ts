@@ -2,8 +2,10 @@ import { sql } from "drizzle-orm";
 import { connection } from "next/server";
 import { getDb } from "@/db";
 import { store } from "@/db/schema";
+import { liveHub } from "@/lib/live";
 
-// Railway's healthcheck: a deploy whose database is unreachable or unmigrated must fail, not go green.
+// Railway's healthcheck: a deploy whose database is unreachable or unmigrated,
+// or that can't LISTEN (so no seller would hear a request), must fail, not go green.
 export async function GET() {
   await connection(); // never prerender: must hit the live database
   try {
@@ -11,7 +13,8 @@ export async function GET() {
       .select({ one: sql`1` })
       .from(store)
       .limit(1);
-    return Response.json({ ok: true });
+    await liveHub(getDb()).ready;
+    return Response.json({ ok: true, live: true });
   } catch {
     return Response.json({ ok: false }, { status: 503 });
   }

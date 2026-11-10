@@ -14,6 +14,7 @@ export const OUTBOX = join(tmpdir(), "shoptcg-magic-links.txt");
 // E2E_PORT lets two checkouts run e2e side by side.
 const port = Number(process.env.E2E_PORT ?? 3000);
 const url = `http://localhost:${port}`;
+const JOURNEY = /run-a-show\.spec\.ts/;
 
 export default defineConfig({
   testDir: "e2e",
@@ -21,7 +22,25 @@ export default defineConfig({
   forbidOnly: ci,
   retries: ci ? 1 : 0,
   use: { baseURL: url, trace: "on-first-retry", timezoneId: "UTC" },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // Every spec runs on desktop; the run-a-show journey also runs at phone and
+  // tablet size, where a show actually happens.
+  projects: [
+    { name: "desktop", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "phone",
+      testMatch: JOURNEY,
+      use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } },
+    },
+    {
+      name: "tablet",
+      testMatch: JOURNEY,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 768, height: 1024 },
+        hasTouch: true,
+      },
+    },
+  ],
   webServer: {
     // CI builds in an earlier step, so it serves the production build.
     command: `${ci ? "pnpm start" : "pnpm dev"} -p ${port}`,
