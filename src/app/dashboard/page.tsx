@@ -100,12 +100,27 @@ function StoreSummary({
         </div>
         <TableNumber label="Store" value={initials} />
       </div>
-      <StoreControl
-        live={store.live}
-        resumesInMin={store.resumesInMin}
-        autoPaused={store.autoPaused}
-        waiting={waiting}
-      />
+      {store.suspendedAt ? (
+        <section
+          aria-label="Your store"
+          className="flex flex-col gap-1 px-5 py-4 shadow-[inset_0_0_0_1.5px_var(--border-strong)]"
+        >
+          <h2 className="font-display text-[2rem] leading-none font-black">
+            Stopped by an admin
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Your page shows no stock and buyers can&apos;t send requests. Ask
+            the person who invited you.
+          </p>
+        </section>
+      ) : (
+        <StoreControl
+          live={store.live}
+          resumesInMin={store.resumesInMin}
+          autoPaused={store.autoPaused}
+          waiting={waiting}
+        />
+      )}
       <RefreshAt inMs={store.changesInMs} />
       <div className="flex flex-col gap-1 border-t border-border pt-4">
         <p className="text-sm text-muted-foreground">Your public page</p>

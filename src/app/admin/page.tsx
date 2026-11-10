@@ -11,9 +11,14 @@ import {
   listAccounts,
   listInvites,
 } from "@/lib/invites";
+import { checkEnv } from "@/lib/env-check";
 import { requireAdmin, sellerTimeZone } from "@/lib/session";
+import { lastPriceDate } from "@/lib/sync-prices";
 import { CreateInvite } from "./create-invite";
 import { RevokeInvite } from "./revoke-invite";
+import { VendorControls } from "./vendor-controls";
+
+const LIVE = { open: "Open", paused: "Paused", off: "Not vending" } as const;
 
 export const metadata: Metadata = {
   title: "Admin - shoptcg",
@@ -24,7 +29,7 @@ export default function AdminPage() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 pt-8 pb-16">
       <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
-        Invites
+        Admin
       </h1>
       <Suspense fallback={<TicketLoading>Checking who you are</TicketLoading>}>
         <Admin />
@@ -36,11 +41,17 @@ export default function AdminPage() {
 async function Admin() {
   await requireAdmin();
   const db = getDb();
-  const [invites, accounts, timeZone] = await Promise.all([
+  const [invites, accounts, timeZone, priced] = await Promise.all([
     listInvites(db),
     listAccounts(db),
     sellerTimeZone(),
+    lastPriceDate(db),
   ]);
+  const { warnings } = checkEnv(process.env);
+  if (!process.env.EMAIL_FROM)
+    warnings.push(
+      "EMAIL_FROM unset: mail goes out from Resend's test address and only reaches the Resend account owner",
+    );
   const day = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -53,12 +64,37 @@ async function Admin() {
       <Ticket as="div" className="w-full [--stub:2rem]">
         <CreateInvite />
       </Ticket>
+      <section aria-labelledby="system" className="flex w-full flex-col gap-3">
+        <h2
+          id="system"
+          className="font-display text-[2rem] leading-none font-black"
+        >
+          System
+        </h2>
+        <ul className="divide-y divide-border border-y border-border">
+          <li className="py-3">
+            {priced
+              ? `Card prices last updated ${priced}.`
+              : "No card prices stored yet."}
+          </li>
+          {warnings.map((w) => (
+            <li key={w} className="py-3 [overflow-wrap:anywhere]">
+              {w}.
+            </li>
+          ))}
+          {warnings.length === 0 && (
+            <li className="py-3">
+              Mail, push alerts, image uploads and paid prices are all set up.
+            </li>
+          )}
+        </ul>
+      </section>
       <section aria-labelledby="invites" className="flex w-full flex-col gap-3">
         <h2
           id="invites"
           className="font-display text-[2rem] leading-none font-black"
         >
-          Sent
+          Invites sent
         </h2>
         {invites.length === 0 ? (
           <p className="text-muted-foreground">No invites yet.</p>
@@ -106,13 +142,31 @@ async function Admin() {
                   ? `Invited${a.invite ? `: ${a.invite}` : ""}.`
                   : "No invite."}
               </p>
-              {a.slug ? (
-                <Link
-                  href={`/${a.slug}`}
-                  className="inline-flex min-h-11 items-center self-start text-sm underline underline-offset-4"
-                >
-                  /{a.slug}
-                </Link>
+              {a.slug && a.storeId ? (
+                <>
+                  <p className="text-sm [overflow-wrap:anywhere]">
+                    <Link
+                      href={`/${a.slug}`}
+                      className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4"
+                    >
+                      {a.storeName}
+                    </Link>{" "}
+                    <span className="text-muted-foreground">
+                      /{a.slug}.{" "}
+                      {a.suspended ? "Stopped by admin" : LIVE[a.live]}.{" "}
+                      {a.inStock} in stock.{" "}
+                      {a.lastSale
+                        ? `Last sale ${day.format(a.lastSale)}.`
+                        : "No sales yet."}
+                    </span>
+                  </p>
+                  <VendorControls
+                    storeId={a.storeId}
+                    name={a.storeName ?? a.slug}
+                    suspended={a.suspended}
+                    hasImages={a.hasImages}
+                  />
+                </>
               ) : (
                 <p className="text-sm text-muted-foreground">No store.</p>
               )}

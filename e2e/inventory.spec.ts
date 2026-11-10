@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { newVendor } from "./auth";
 import { setStore } from "./buyer";
+import { saveSettings } from "./settings";
 
 test("a vendor adds a custom item and sees it in inventory", async ({
   page,
@@ -47,11 +48,7 @@ test("a vendor adds a custom item and sees it in inventory", async ({
 
 test("store settings keep their choices after saving", async ({ page }) => {
   await newVendor(page);
-  await page.goto("/dashboard/settings");
-  await page.getByLabel("Price rule (% of market)").fill("-10");
-  await page.getByText("Nearest $0.50").click();
-  await page.getByRole("button", { name: "Save settings" }).click();
-  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+  await saveSettings(page, { rule: "-10", rounding: "Nearest $0.50" });
   await expect(
     page.getByRole("radio", { name: "Nearest $0.50" }),
   ).toBeChecked();

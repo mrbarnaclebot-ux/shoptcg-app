@@ -33,8 +33,8 @@ export function StoreImages(props: {
 }) {
   return (
     <section aria-labelledby="look-h" className="flex flex-col gap-4">
-      <SectionMark n={4} id="look-h">
-        Your store page
+      <SectionMark n={2} id="look-h">
+        Banner and profile image
       </SectionMark>
       <p className="text-sm text-muted-foreground">
         Shown at the top of your public page. JPEG, PNG or WebP, up to 4 MB

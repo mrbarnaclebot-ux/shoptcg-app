@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-10. `main` and `production` are level; the last code change is store images (banner and profile image on Pinata)._
+_Last updated: 2026-11-10. `main` and `production` are level; the last code change is the settings and admin rework (step 1 of the plan under "Next up")._
 
 ## Where things stand
 
@@ -21,8 +21,14 @@ _Last updated: 2026-11-10. `main` and `production` are level; the last code chan
   - Files live on the owner's Pinata account (`src/lib/image-store.ts`). `PINATA_JWT` and `PINATA_GATEWAY_URL` are set on `web` and `web-staging`. The URL holds the content hash, so it never changes; replacing or removing an image deletes the old file from Pinata.
   - Without the Pinata variables a deployed server refuses uploads. Locally and in e2e the image is kept in the row as a data URL, so tests never reach Pinata.
   - Migration `0017` added `banner_url`, `banner_file_id`, `avatar_url`, `avatar_file_id`. `stores.logo_url` is no longer read; drop it in the next release.
+- **Settings and admin:**
+  - "More" (`/dashboard/settings`) is a menu on a phone and a side list on desktop (`settings/menu.tsx`, `settings/layout.tsx`). Each section is its own page with its own Save: `store` (name, images), `pricing`, `table`, `alerts`. The menu works without a store, so an admin with no store can reach `/admin`.
+  - The store name can be changed. The link (slug) can't, and old receipts keep the old name.
+  - `/admin` now also shows each vendor's store, state, stock count and last sale, with "Stop store" and "Remove images", and a System list (last price date, plus the boot warnings from `env-check.ts`).
+  - "Stop store" sets `stores.suspended_at` (migration `0018`). While set, `storeState` is `off` whatever the vendor chose, and the vendor's dashboard says so in place of the open/pause control.
+  - Admins are still the `ADMIN_EMAILS` variable (the owner's address on both environments).
 - **Invites:** the owner created the first one on production.
-- **Nothing else is built.** Search and graded-card work is researched but not started (see "Next up"). The repo has one branch (`main`, plus `production`) and no worktrees.
+- **In progress:** the five-step plan under "Next up"; step 1 is shipped. Search and graded-card work is researched but not started. The repo has one branch (`main`, plus `production`) and no worktrees.
 
 ## How to ship
 
@@ -68,8 +74,14 @@ Railway notes (more in memory `railway-config-ignored`):
 
 - [ ] On a phone, "New request" toasts stack over the Confirm sale bar while the seller is on a sale (see `.planning/phases/08-e2e/shots/phone-confirm.png`). Decide whether they should hide on the sale screen.
 - [ ] Price on add has only run against TCGdex (free). Add one real card on production and check it shows a market price and a chart within a minute.
+- [ ] The owner's plan from 2026-11-10, one PR per step:
+  1. ~~Settings and nav rework, admin entry and vendor controls.~~ Shipped.
+  2. Preview mode: `/dashboard/preview` renders the storefront as open for the owner only, in a phone-width frame with a phone/desktop switch. It must not count as a visit, and a list sent from it becomes a test request.
+  3. Live baskets and visitor counts. A random first-party device id (not the IP: a whole venue shares one) drives both. Baskets are stored server-side with a short tag ("K7") shown to buyer and vendor, hold no stock, grey after 5 minutes idle and go after 30, and never chime. "On site now" is a 30 s ping with a 90 s window. Keep a daily row per store (visitors, baskets, requests, sales). Limits are per store, not per IP. The terms need a line about the id and that the seller sees the list.
+  4. Ledger part one: an append-only `stock_move` row for every quantity change, a "quick sale" for walk-up buyers (makes `sale.request_id` and the buyer fields optional), optional unit cost copied onto the sale line for profit, and voids as new records.
+  5. Ledger part two: buys and trade-ins, float and a cash check at close. This reverses "No float field" below; the owner agreed.
+  - Sales tax is left out unless the owner asks for it.
 - [ ] Drop `stores.logo_url` (unused since store images shipped).
-- [ ] An admin can't remove a vendor's banner or profile image yet. Until that exists, clear the four columns in the database and delete the file in the Pinata dashboard.
 - [ ] Graded cards show cropped: the scan sits in a 3:5 box with `object-cover` (`ART_ASPECT.graded` in `src/app/[slug]/tile.tsx`, and `card-thumb.tsx`). Use the card's own shape, `aspect-[63/88]`.
 - [ ] Catalog search, from the 2026-11-10 review, in this order:
   1. Small bugs: a "busy" search still counts as an hourly miss, and the LIKE escape in `src/lib/catalog.ts` does nothing. Show "no price yet" on a card added moments ago.

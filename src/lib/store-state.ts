@@ -10,10 +10,11 @@ const openedFrom = sql`case when ${store.state} = 'open' then ${store.openedAt} 
 /**
  * What buyers get, from what the vendor chose plus the clock: a timed pause
  * that has run out is open again, and any open window ends 14 hours after it
- * began. Computed on every read so no job has to flip rows. Every reader and
+ * began. An admin's stop wins over all of it. Computed on every read so no job has to flip rows. Every reader and
  * createRequest use this, so a store can never be open in one place and not another.
  */
 export const storeState = sql<StoreState>`case
+  when ${store.suspendedAt} is not null then 'off'
   when ${store.state} = 'off' then 'off'
   when ${store.state} = 'open' and ${store.openedAt} > now() - ${WINDOW} then 'open'
   when ${store.state} = 'paused' and ${store.pausedUntil} <= now()

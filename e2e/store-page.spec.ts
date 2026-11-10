@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { newVendor } from "./auth";
 import { setStore } from "./buyer";
+import { saveSettings } from "./settings";
 
 type Seeded = { zard: string; thin: string; sold: string; hidden: string };
 
@@ -10,22 +11,6 @@ async function seededVendor(page: Page) {
   const res = await page.request.post("/api/e2e/seed");
   expect(res.ok()).toBe(true);
   return { slug: `e2e-${id}`, ids: (await res.json()) as Seeded };
-}
-
-/** Saves the settings form with the given changes. */
-async function saveSettings(
-  page: Page,
-  set: { currency?: [string, string]; nfc?: boolean },
-) {
-  await page.goto("/dashboard/settings");
-  if (set.currency) {
-    await page.getByLabel("Code").fill(set.currency[0]);
-    await page.getByLabel("Your rate for 1 USD").fill(set.currency[1]);
-  }
-  if (set.nfc !== undefined)
-    await page.getByLabel("I have an NFC tag on my table").setChecked(set.nfc);
-  await page.getByRole("button", { name: "Save settings" }).click();
-  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
 }
 
 async function openStore(page: Page) {

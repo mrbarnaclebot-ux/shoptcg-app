@@ -58,7 +58,7 @@ export default defineConfig({
       E2E_SEED: "1",
       BETTER_AUTH_URL: url,
       // Signs in without an invite; e2e/invites.spec.ts uses it for /admin.
-      ADMIN_EMAILS: [0, 1, 2, 3].map(admin).join(","),
+      ADMIN_EMAILS: [0, 1, 2, 3, 4].map(admin).join(","),
     },
   },
 });

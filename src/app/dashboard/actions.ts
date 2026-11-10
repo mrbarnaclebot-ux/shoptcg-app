@@ -11,6 +11,7 @@ import { removePush } from "@/lib/push";
 import { getCurrentUser, requireUser } from "@/lib/session";
 import {
   createStore,
+  getStoreByOwner,
   setStoreState,
   SLUG_TAKEN,
   type FieldErrors,
@@ -78,6 +79,8 @@ export async function setStateAction(
   if (!parsed.success) return { error: "Pick open, pause or not vending." };
   const v = parsed.data;
   const ms = v.state === "paused" ? await pauseMs(v.minutes) : null;
+  if ((await getStoreByOwner(getDb(), user.id))?.suspendedAt)
+    return { error: "An admin has stopped this store." };
   const ok = await setStoreState(getDb(), user.id, v.state, ms);
   if (!ok) return { error: "Create your store first." };
   refresh();

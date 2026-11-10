@@ -1,6 +1,7 @@
-import { expect, test, type Page } from "@playwright/test";
+import { test, type Page } from "@playwright/test";
 import { newVendor } from "./auth";
 import { setStore } from "./buyer";
+import { saveSettings } from "./settings";
 
 // Phase 4 screenshots, not a regression test:
 //   SHOTS=store pnpm e2e store-shots
@@ -22,13 +23,11 @@ async function shot(page: Page, name: string, width: number) {
 }
 
 async function settings(page: Page, open: boolean) {
-  await page.goto("/dashboard/settings");
-  await page.getByLabel("Code").fill("AUD");
-  await page.getByLabel("Your rate for 1 USD").fill("1.52");
-  await page.getByLabel("Table number").fill("B14");
-  await page.getByLabel("I have an NFC tag on my table").setChecked(true);
-  await page.getByRole("button", { name: "Save settings" }).click();
-  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+  await saveSettings(page, {
+    currency: ["AUD", "1.52"],
+    table: "B14",
+    nfc: true,
+  });
   await page.goto("/dashboard");
   if (open) await setStore(page, "open");
 }
