@@ -193,8 +193,11 @@ function backfillBudget(limits: SyncLimits, result: SyncResult) {
   );
 }
 
-/** Up to `limit` catalog items behind an active, in-stock listing. */
-function listedItems(db: Db, limit: number) {
+/**
+ * Up to `limit` catalog items behind an active, in-stock listing. With `only`,
+ * just those items, and just the ones `date` has no price for yet.
+ */
+function listedItems(db: Db, limit: number, date: string, only?: string[]) {
   // ponytail: least recently refreshed first, so a run that hits maxCalls rotates
   // through the rest tomorrow; per-store fairness if one store hogs the budget.
   const listed = db
@@ -205,7 +208,14 @@ function listedItems(db: Db, limit: number) {
   return db
     .select()
     .from(catalogItem)
-    .where(inArray(catalogItem.id, listed))
+    .where(
+      and(
+        inArray(catalogItem.id, listed),
+        only && inArray(catalogItem.id, only),
+        only &&
+          sql`not exists (select 1 from ${pricePoint} where ${pricePoint.catalogItemId} = ${catalogItem.id} and ${pricePoint.date} = ${date})`,
+      ),
+    )
     .orderBy(
       sql`(select max(${pricePoint.date}) from ${pricePoint} where ${pricePoint.catalogItemId} = ${catalogItem.id}) asc nulls first`,
       asc(catalogItem.id),
@@ -219,8 +229,9 @@ export async function syncPrices(
   date = new Date().toISOString().slice(0, 10),
   pick: (name: string) => PriceProvider | null = providerByName,
   limits: SyncLimits = envLimits(),
+  only?: string[],
 ): Promise<SyncResult> {
-  const items = await listedItems(db, limits.maxCalls);
+  const items = await listedItems(db, limits.maxCalls, date, only);
   const result: SyncResult = {
     items: items.length,
     written: 0,
@@ -247,4 +258,30 @@ export async function syncPrices(
     result.backfilled += await backfillHistory(db, provider, fresh, budget);
   }
   return result;
+}
+
+// ponytail: one add or import prices at most this much straight away (about 4
+// minutes of calls); the rest of a big import waits for the nightly run, which
+// takes unpriced items first. Raise it if vendors import hundreds mid-show.
+const ADD_LIMITS: SyncLimits = { maxCalls: 200, maxBackfill: 20 };
+
+/**
+ * Prices cards a vendor has just listed, with history for a chart, so they
+ * don't sit unpriced until the nightly run. A card already priced today costs
+ * nothing. Never throws: the listing is saved either way.
+ */
+export async function priceNewListings(db: Db, catalogItemIds: string[]) {
+  if (!catalogItemIds.length) return;
+  try {
+    const res = await syncPrices(
+      db,
+      undefined,
+      undefined,
+      ADD_LIMITS,
+      catalogItemIds,
+    );
+    if (res.items) console.log("[price-on-add]", res);
+  } catch (err) {
+    console.error("[price-on-add] failed", err);
+  }
 }
