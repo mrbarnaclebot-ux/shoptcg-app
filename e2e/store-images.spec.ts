@@ -25,7 +25,7 @@ test("a vendor sets, replaces and removes their store images", async ({
   browser,
 }) => {
   const slug = `e2e-${await newVendor(page)}`;
-  await page.goto("/dashboard/settings");
+  await page.goto("/dashboard/settings/store");
   await page
     .getByLabel("Choose banner")
     .setInputFiles(await file("table.jpg", photo(3000, 2000, "#c0572b")));
@@ -63,7 +63,7 @@ test("a bad file is refused with the reason, and nothing is saved", async ({
   page,
 }) => {
   await newVendor(page);
-  await page.goto("/dashboard/settings");
+  await page.goto("/dashboard/settings/store");
   const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>');
   await page
     .getByLabel("Choose banner")

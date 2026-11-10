@@ -2,6 +2,7 @@ import { createHash, randomInt } from "node:crypto";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { invite, store, user } from "@/db/schema";
+import { storeState } from "@/lib/store-state";
 
 const VALID_MS = 14 * 86_400_000;
 // Crockford base32: 32 symbols, so 16 characters are 80 bits.
@@ -131,6 +132,18 @@ export function listAccounts(db: Db) {
       email: user.email,
       joined: user.createdAt,
       slug: store.slug,
+      storeId: store.id,
+      storeName: store.name,
+      // Null store columns fall through to "paused"; only read with a slug.
+      live: storeState,
+      suspended: sql<boolean>`${store.suspendedAt} is not null`,
+      hasImages: sql<boolean>`${store.bannerUrl} is not null or ${store.avatarUrl} is not null`,
+      inStock: sql<number>`(select count(*)::int from listing l where l.store_id = ${store.id} and l.active and l.qty > 0)`,
+      lastSale: sql<
+        string | null
+      >`(select max(s.created_at) from sale s where s.store_id = ${store.id})`.mapWith(
+        (v: string | Date) => new Date(v),
+      ),
       invite: invite.label,
       invited: sql<boolean>`${invite.id} is not null`,
     })

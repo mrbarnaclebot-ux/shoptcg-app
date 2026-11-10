@@ -7,6 +7,7 @@ import {
   pay,
   reviewSale,
 } from "./buyer";
+import { saveSettings } from "./settings";
 
 // Phase 7 screenshots, not a regression test:
 //   SHOTS=reports pnpm e2e reports-shots
@@ -28,10 +29,7 @@ for (const width of [390, 768, 1280]) {
   test(`report screens at ${width}`, async ({ page, browser }) => {
     await page.setViewportSize({ width, height: 900 });
     const slug = await openVendor(page);
-    await page.goto("/dashboard/settings");
-    await page.getByLabel("Table number").fill("B-14");
-    await page.getByRole("button", { name: /^Save/ }).click();
-    await expect(page.getByText("Saved.")).toBeVisible();
+    await saveSettings(page, { table: "B-14" });
     await page.goto("/dashboard/reports");
     await shot(page, "report-empty", width);
     await page.goto("/dashboard/customers");

@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { newVendor, signIn } from "./auth";
+import { saveSettings } from "./settings";
 
 // Phase screenshots, not a regression test. Two stages so the nightly sync can
 // run in between and the list shows market prices:
@@ -34,14 +35,13 @@ test("setup: settings, search, CSV preview", async ({ page }) => {
   const id = await newVendor(page);
   await writeFile(ID_FILE, id);
 
-  await page.goto("/dashboard/settings");
-  await page.getByLabel("Price rule (% of market)").fill("-10");
-  await page.getByText("Nearest $0.50").click();
-  await page.getByLabel("Code").fill("AUD");
-  await page.getByLabel("Your rate for 1 USD").fill("1.52");
-  await page.getByText("I have an NFC tag on my table").click();
-  await page.getByRole("button", { name: "Save settings" }).click();
-  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+  await saveSettings(page, {
+    nfc: true,
+    rule: "-10",
+    rounding: "Nearest $0.50",
+    currency: ["AUD", "1.52"],
+  });
+  await page.goto("/dashboard/settings/pricing");
   await shoot(page, "settings");
 
   await page.goto("/dashboard/inventory/add");

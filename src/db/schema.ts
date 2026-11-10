@@ -40,6 +40,8 @@ export const store = pgTable(
     state: text("state", { enum: ["open", "paused", "off"] })
       .notNull()
       .default("paused"),
+    // Set by an admin: the store reads as "off" until cleared, whatever the vendor chose.
+    suspendedAt: timestamp("suspended_at", { withTimezone: true }),
     // A timed pause resumes by itself once now() passes this.
     pausedUntil: timestamp("paused_until", { withTimezone: true }),
     // An open store pauses itself 14 hours after this, so nobody pings a vendor who went home.

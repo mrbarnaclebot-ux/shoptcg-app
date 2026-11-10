@@ -127,6 +127,13 @@
       "when": 1794310505448,
       "tag": "0017_store_images",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794318031465,
+      "tag": "0018_store_suspended",
+      "breakpoints": true
     }
   ]
 }

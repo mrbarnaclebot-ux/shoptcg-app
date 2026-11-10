@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { newVendor } from "./auth";
 import { setStore } from "./buyer";
+import { saveSettings } from "./settings";
 
 // Show floor screenshots, not a regression test:
 //   SHOTS=showfloor pnpm e2e showfloor-shots
@@ -54,11 +55,7 @@ for (const width of [390, 1280]) {
     ).toBeVisible();
     await shot(page, "open-toast", width, MID_ANIMATION_MS);
 
-    await page.goto("/dashboard/settings");
-    await page.getByLabel("Price rule (% of market)").fill("-10");
-    await page.getByText("Nearest $0.50").click();
-    await page.getByRole("button", { name: "Save settings" }).click();
-    await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+    await saveSettings(page, { rule: "-10", rounding: "Nearest $0.50" });
     await shot(page, "settings", width, MID_ANIMATION_MS);
 
     await page.goto("/dashboard/inventory/import");

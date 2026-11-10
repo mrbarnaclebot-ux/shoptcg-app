@@ -285,3 +285,11 @@ export async function priceNewListings(db: Db, catalogItemIds: string[]) {
     console.error("[price-on-add] failed", err);
   }
 }
+
+/** The newest day any card has a price for ("2026-11-10"), or null with none stored. */
+export async function lastPriceDate(db: Db) {
+  const [row] = await db
+    .select({ date: sql<string | null>`max(${pricePoint.date})` })
+    .from(pricePoint);
+  return row?.date ?? null;
+}

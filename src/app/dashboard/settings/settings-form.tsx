@@ -1,6 +1,12 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useState } from "react";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import { Segmented } from "@/components/segmented";
 import { HangTag } from "@/components/hang-tag";
 import { SectionMark } from "@/components/section-mark";
@@ -10,15 +16,18 @@ import { Label } from "@/components/ui/label";
 import { usd } from "@/lib/format";
 import { toast } from "@/lib/toast";
 import { vendorPrice } from "@/lib/vendor-price";
-import { saveSettingsAction, type SettingsState } from "./actions";
+import {
+  saveNameAction,
+  savePricingAction,
+  saveTableAction,
+  type SettingsState,
+} from "./actions";
 
-type Values = {
+type PricingValues = {
   priceRulePct: number;
   rounding: string;
   secondCurrency: string;
   fxRate: string;
-  tableLabel: string;
-  nfcEnabled: boolean;
 };
 
 const ROUNDING = [
@@ -35,9 +44,17 @@ function Err({ id, msg }: { id: string; msg?: string }) {
   ) : null;
 }
 
-export function SettingsForm({ values }: { values: Values }) {
+/**
+ * One settings page's form: its own action, its own Save. Submitted by hand,
+ * because a form action would reset the fields after saving and desync the
+ * controlled inputs.
+ */
+function SettingsShell(props: {
+  action: (prev: SettingsState, form: FormData) => Promise<SettingsState>;
+  children: (errors: Record<string, string>) => ReactNode;
+}) {
   const [state, action, pending] = useActionState<SettingsState, FormData>(
-    saveSettingsAction,
+    props.action,
     {},
   );
   const e = state.errors ?? {};
@@ -48,58 +65,98 @@ export function SettingsForm({ values }: { values: Values }) {
   return (
     <form
       className="flex flex-col gap-10"
-      // Submitted by hand: a form action would auto-reset the fields after
-      // saving and desync the controlled rule and rounding inputs.
       onSubmit={(ev) => {
         ev.preventDefault();
         const data = new FormData(ev.currentTarget);
         startTransition(() => action(data));
       }}
     >
-      <PricingFields values={values} errors={e} />
-      <CurrencyFields values={values} errors={e} />
-
-      <fieldset className="flex flex-col gap-2">
-        <SectionMark n={3} level="legend" className="mb-4">
-          At the table
-        </SectionMark>
-        <div className="mb-2 flex flex-col gap-2">
-          <Label htmlFor="tableLabel">Table number</Label>
-          <Input
-            id="tableLabel"
-            name="tableLabel"
-            defaultValue={values.tableLabel}
-            maxLength={8}
-            placeholder="B14"
-            autoCapitalize="characters"
-            aria-invalid={e.tableLabel ? true : undefined}
-            aria-describedby="table-hint table-error"
-            className="max-w-32"
-          />
-          <p id="table-hint" className="text-sm text-muted-foreground">
-            The number the organiser gave your table. Shown on your sign and
-            store page.
-          </p>
-          <Err id="table-error" msg={e.tableLabel} />
-        </div>
-        <Toggle
-          name="nfcEnabled"
-          checked={values.nfcEnabled}
-          label="I have an NFC tag on my table"
-          hint={`Adds "Or tap your phone here" to your printed table sign.`}
-        />
-      </fieldset>
-
+      {props.children(e)}
       <Err id="form-error" msg={e.form} />
       <div className="flex items-center gap-4">
         <TicketButton type="submit" disabled={pending} aria-busy={pending}>
-          {pending ? "Saving" : "Save settings"}
+          {pending ? "Saving" : "Save"}
         </TicketButton>
         <p role="status" className="text-sm font-semibold text-success">
           {state.saved && !pending ? "Saved." : ""}
         </p>
       </div>
     </form>
+  );
+}
+
+export function PricingForm({ values }: { values: PricingValues }) {
+  return (
+    <SettingsShell action={savePricingAction}>
+      {(e) => (
+        <>
+          <PricingFields values={values} errors={e} />
+          <CurrencyFields values={values} errors={e} />
+        </>
+      )}
+    </SettingsShell>
+  );
+}
+
+export function TableForm(props: { tableLabel: string; nfcEnabled: boolean }) {
+  return (
+    <SettingsShell action={saveTableAction}>
+      {(e) => (
+        <div className="flex flex-col gap-2">
+          <div className="mb-2 flex flex-col gap-2">
+            <Label htmlFor="tableLabel">Table number</Label>
+            <Input
+              id="tableLabel"
+              name="tableLabel"
+              defaultValue={props.tableLabel}
+              maxLength={8}
+              placeholder="B14"
+              autoCapitalize="characters"
+              aria-invalid={e.tableLabel ? true : undefined}
+              aria-describedby="table-hint table-error"
+              className="max-w-32"
+            />
+            <p id="table-hint" className="text-sm text-muted-foreground">
+              The number the organiser gave your table. Shown on your sign and
+              store page.
+            </p>
+            <Err id="table-error" msg={e.tableLabel} />
+          </div>
+          <Toggle
+            name="nfcEnabled"
+            checked={props.nfcEnabled}
+            label="I have an NFC tag on my table"
+            hint={`Adds "Or tap your phone here" to your printed table sign.`}
+          />
+        </div>
+      )}
+    </SettingsShell>
+  );
+}
+
+export function NameForm({ name }: { name: string }) {
+  return (
+    <SettingsShell action={saveNameAction}>
+      {(e) => (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="name">Store name</Label>
+          <Input
+            id="name"
+            name="name"
+            defaultValue={name}
+            maxLength={80}
+            required
+            aria-invalid={e.name ? true : undefined}
+            aria-describedby="name-hint name-error"
+          />
+          <p id="name-hint" className="text-sm text-muted-foreground">
+            Shown on your store page, sign and receipts. Your link stays the
+            same, and old receipts keep the old name.
+          </p>
+          <Err id="name-error" msg={e.name} />
+        </div>
+      )}
+    </SettingsShell>
   );
 }
 
@@ -131,7 +188,7 @@ function Toggle(props: {
   );
 }
 
-type FieldsProps = { values: Values; errors: Record<string, string> };
+type FieldsProps = { values: PricingValues; errors: Record<string, string> };
 
 function PricingFields({ values, errors: e }: FieldsProps) {
   const [pct, setPct] = useState(String(values.priceRulePct));
@@ -140,7 +197,7 @@ function PricingFields({ values, errors: e }: FieldsProps) {
   return (
     <fieldset className="flex flex-col gap-4">
       <SectionMark n={1} level="legend" className="mb-4">
-        Pricing
+        Price rule
       </SectionMark>
       <div className="flex flex-col gap-2">
         <Label htmlFor="priceRulePct">Price rule (% of market)</Label>

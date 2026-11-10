@@ -12,6 +12,7 @@ import {
   sendList,
   setStore,
 } from "./buyer";
+import { saveSettings } from "./settings";
 
 // One vendor runs one whole show against two buyers. Runs at phone, tablet and
 // desktop size (playwright.config.ts): `pnpm e2e run-a-show`.
@@ -57,15 +58,13 @@ test("a vendor runs a whole show", async ({ page, browser }) => {
 
   await test.step("sign up, create the store, save settings", async () => {
     slug = `e2e-${await newVendor(page)}`;
-    await page.goto("/dashboard/settings");
-    await page.getByLabel("Price rule (% of market)").fill("-10");
-    await page.getByText("Nearest $0.50").click();
-    await page.getByLabel("Code").fill("AUD");
-    await page.getByLabel("Your rate for 1 USD").fill("1.52");
-    await page.getByLabel("Table number").fill("B14");
-    await page.getByLabel("I have an NFC tag on my table").check();
-    await page.getByRole("button", { name: "Save settings" }).click();
-    await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+    await saveSettings(page, {
+      rule: "-10",
+      rounding: "Nearest $0.50",
+      currency: ["AUD", "1.52"],
+      table: "B14",
+      nfc: true,
+    });
   });
 
   await test.step("stock the table", async () => {
