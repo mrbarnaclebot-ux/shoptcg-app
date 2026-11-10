@@ -105,3 +105,17 @@ Rollout:
 - axe: no serious or critical violations on the listed screens.
 - Production deployed via the checklist with every box ticked (or a noted reason), healthcheck green, real 404 for unknown slugs, cron run succeeded once.
 - Seller ping < 3 s and LCP < 2.5 s measured on production.
+
+## As built (2026-11-10)
+
+Where the build differs from the plan above, and why:
+
+- **Stock comes from the seed route plus the real UI.** The plan asked for two catalog adds through TCGdex. That would put a live third-party API in CI, and TCGdex prices are never shown, so there would be no market price, stamp or chart to check. The journey seeds priced catalog cards (`/api/e2e/seed`, what a nightly sync leaves behind), then adds one custom item and imports three CSV rows through the UI. The CSV rows are Chinese, which are never looked up.
+- **Projects are `desktop`, `phone` and `tablet`.** `desktop` replaces `chromium` and runs every spec; the other two run only the journey.
+- **No `e2e/show.ts`.** The shared helpers already lived in `e2e/buyer.ts`; the report helpers moved there.
+- **Env checks are `src/lib/env-check.ts`.** `HOLD_MINUTES` and `RECEIPT_EMAIL_FAIL` no longer exist (they became cookies honoured only by E2E builds), so the deployed refusals are `MAGIC_LINK_OUTBOX` and `E2E_SEED`.
+- **Shots are opt-in:** `SHOTS=journey pnpm e2e run-a-show`.
+- **The accessibility scan found three real faults,** all fixed: the set name on a sold-out tile was faded below readable contrast, and the totals lists on the sale form and the receipt held a paragraph where only term and value pairs are valid.
+- **Deploy** went through the pipeline in `HANDOFF.md` (PR, CI, staging, `production` branch), not `railway up`. The price-sync cron service runs on the PPT Pro plan by the owner's decision.
+
+Not done here, owner only: the real-phone checks, the printed sign scan, Lighthouse on a live store page.

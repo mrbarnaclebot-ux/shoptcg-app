@@ -1,6 +1,7 @@
 import { expect, type Browser, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { OUTBOX } from "../playwright.config";
+import { parseCsv } from "../src/lib/csv";
 import { newVendor } from "./auth";
 
 /** A signed-in vendor with demo stock and an open store. */
@@ -123,4 +124,29 @@ export async function outboxLine(email: string) {
     })
     .toBeTruthy();
   return line!;
+}
+
+/** One figure on the report, by its label. */
+export const reportRow = (page: Page, label: string) =>
+  page
+    .locator("dl > div")
+    .filter({ has: page.getByText(label, { exact: true }) });
+
+/** Clicks an export and returns the file's rows without the header. */
+export async function exported(page: Page, name: string) {
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("link", { name }).click(),
+  ]);
+  const text = await readFile(await download.path(), "utf8");
+  expect(text.startsWith("﻿")).toBe(true);
+  const rows = parseCsv(text).map((r) => r.cells);
+  await expect(
+    page.getByRole("status").getByText(download.suggestedFilename()).first(),
+  ).toBeVisible();
+  return {
+    file: download.suggestedFilename(),
+    head: rows[0],
+    rows: rows.slice(1),
+  };
 }

@@ -79,10 +79,13 @@ export function ReceiptSummary({ sale: s }: { sale: Sale }) {
           </dd>
         </div>
         {s.secondCurrency && alt !== null && (
-          <p className="num text-right text-sm text-muted-foreground">
-            approx. {formatAlt(s.secondCurrency, alt)} at {Number(s.fxRate)} to
-            1 USD
-          </p>
+          <div className="num text-right text-sm text-muted-foreground">
+            <dt className="sr-only">In {s.secondCurrency}</dt>
+            <dd>
+              approx. {formatAlt(s.secondCurrency, alt)} at {Number(s.fxRate)}{" "}
+              to 1 USD
+            </dd>
+          </div>
         )}
       </dl>
       <p className="font-semibold">Paid by {paidBy(s)}</p>

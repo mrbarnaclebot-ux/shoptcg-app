@@ -48,6 +48,8 @@ export function Art(props: {
   sizes: string;
   eager?: boolean;
   className?: string;
+  /** Sold out: fades the art, but never the small print, which must stay readable. */
+  dim?: boolean;
 }) {
   const { it } = props;
   return (
@@ -66,14 +68,20 @@ export function Art(props: {
           sizes={props.sizes}
           quality={70}
           loading={props.eager ? "eager" : "lazy"}
-          className={
-            it.kind === "sealed" ? "object-contain p-3" : "object-cover"
-          }
+          className={cn(
+            it.kind === "sealed" ? "object-contain p-3" : "object-cover",
+            props.dim && DIM,
+          )}
         />
       ) : (
         // No photo: an empty case well that still says which card it is.
         <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 p-3 text-center shadow-[inset_0_0_0_1px_var(--border)]">
-          <span className="font-display num text-[2rem] leading-none font-black text-muted-foreground">
+          <span
+            className={cn(
+              "font-display num text-[2rem] leading-none font-black text-muted-foreground",
+              props.dim && DIM,
+            )}
+          >
             {it.number ?? PLACEHOLDER[it.kind]}
           </span>
           {it.setName && (
@@ -92,6 +100,8 @@ export function Art(props: {
   );
 }
 
+const DIM = "opacity-60 grayscale-[0.8]";
+
 export function Tile(props: {
   it: PublicItem;
   slug: string;
@@ -107,7 +117,7 @@ export function Tile(props: {
       it={it}
       eager={props.eager}
       sizes="(min-width:1024px) 180px, 45vw"
-      className={soldOut ? "opacity-60 grayscale-[0.8]" : undefined}
+      dim={soldOut}
     />
   );
   return (

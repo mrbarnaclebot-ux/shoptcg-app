@@ -1,12 +1,12 @@
-import { readFile } from "node:fs/promises";
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { parseCsv } from "../src/lib/csv";
 import {
   buyerEmail,
   confirm,
+  exported,
   openVendor,
   outboxLine,
   pay,
+  reportRow as row,
   reviewSale,
 } from "./buyer";
 import { addPastSale, hasDb } from "./db";
@@ -31,30 +31,6 @@ async function sell(page: Page, browser: Browser, slug: string, s: Sale) {
   await pay(page, s.method);
   await confirm(page).click();
   await expect(page.getByTestId("receipt-no")).toBeVisible();
-}
-
-const row = (page: Page, label: string) =>
-  page
-    .locator("dl > div")
-    .filter({ has: page.getByText(label, { exact: true }) });
-
-/** Clicks an export and returns the file's rows without the header. */
-async function exported(page: Page, name: string) {
-  const [download] = await Promise.all([
-    page.waitForEvent("download"),
-    page.getByRole("link", { name }).click(),
-  ]);
-  const text = await readFile(await download.path(), "utf8");
-  expect(text.startsWith("﻿")).toBe(true);
-  const rows = parseCsv(text).map((r) => r.cells);
-  await expect(
-    page.getByRole("status").getByText(download.suggestedFilename()).first(),
-  ).toBeVisible();
-  return {
-    file: download.suggestedFilename(),
-    head: rows[0],
-    rows: rows.slice(1),
-  };
 }
 
 test("a show's report adds up, and its CSV is safe to open", async ({

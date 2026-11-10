@@ -390,9 +390,10 @@ export function SaleForm(props: {
           </dd>
         </div>
         {props.currency && alt !== null && (
-          <p className="num text-right text-sm text-muted-foreground">
-            approx. {formatAlt(props.currency, alt)}
-          </p>
+          <div className="num text-right text-sm text-muted-foreground">
+            <dt className="sr-only">In {props.currency}</dt>
+            <dd>approx. {formatAlt(props.currency, alt)}</dd>
+          </div>
         )}
       </dl>
       {!r.isTest && (

@@ -1,4 +1,4 @@
-// Nightly price sync. Railway cron runs `pnpm sync:prices` at 06:00 UTC.
+// Nightly price sync. Railway cron runs `pnpm sync:prices` at 02:00 UTC.
 import { openDb } from "@/db/open";
 import { syncPrices } from "@/lib/sync-prices";
 

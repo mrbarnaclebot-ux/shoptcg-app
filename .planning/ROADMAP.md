@@ -16,7 +16,7 @@ Source of truth for scope: `PROJECT.md`. Current state, how to ship and what's n
 | -   | Known-gap fixes: erasure, push, buyer list, report reads               | shipped     | #11 |
 | -   | Vendor invites: sign-up by code, `/admin`                              | shipped     | #12 |
 | -   | Store states: open, paused with auto-resume, not vending               | shipped     | #13 |
-| 8   | Run-a-show journey at three viewports, deploy guards, price-sync cron  | in progress | -   |
+| 8   | Run-a-show journey at three viewports, deploy guards, price-sync cron  | shipped     | #16 |
 
 ## Open items
 
