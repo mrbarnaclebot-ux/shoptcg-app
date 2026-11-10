@@ -1,6 +1,7 @@
 import { and, lte, ne, or, sql, isNotNull, eq } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { request } from "@/db/schema";
+import { sweepFloor } from "@/lib/floor";
 import { notifyLive } from "@/lib/live";
 
 export const SWEEP_MS = 60_000;
@@ -42,6 +43,7 @@ export async function sweepRequests(db: Db) {
       ),
     )
     .returning({ id: request.id });
+  await sweepFloor(db);
   return { expired, purged: purged.length };
 }
 

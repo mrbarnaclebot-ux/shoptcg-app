@@ -134,6 +134,13 @@
       "when": 1794318031465,
       "tag": "0018_store_suspended",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794325522315,
+      "tag": "0019_floor",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   pgView,
@@ -118,6 +119,50 @@ export const activeHold = pgView("active_hold", {
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 }).as(
   sql`select rl.listing_id, rl.request_id, r.store_id, rl.qty, r.expires_at from request_line rl join request r on r.id = rl.request_id where r.status = 'pending' and r.expires_at > now()`,
+);
+
+// One row per stay on a store's pages: a device seen again within 30 minutes
+// extends its row, later it starts a new one. device_id is a random id the
+// buyer's browser keeps for this store only; no IP, since a venue shares one.
+export const visit = pgTable(
+  "visit",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => store.id, { onDelete: "cascade" }),
+    deviceId: text("device_id").notNull(),
+    firstSeen: timestamp("first_seen", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastSeen: timestamp("last_seen", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("visit_store_seen_idx").on(t.storeId, t.lastSeen),
+    index("visit_store_device_idx").on(t.storeId, t.deviceId, t.lastSeen),
+  ],
+);
+
+export type BasketLine = { id: string; qty: number };
+
+// A buyer's list before they send it, mirrored from their browser so the
+// vendor can see who is building what. It holds no stock and names nobody.
+export const basket = pgTable(
+  "basket",
+  {
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => store.id, { onDelete: "cascade" }),
+    deviceId: text("device_id").notNull(),
+    lines: jsonb("lines").$type<BasketLine[]>().notNull(),
+    seenAt: timestamp("seen_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ name: "basket_pk", columns: [t.storeId, t.deviceId] }),
+    index("basket_store_seen_idx").on(t.storeId, t.seenAt),
+  ],
 );
 
 // One row per browser that allowed request alerts; the endpoint is the identity.

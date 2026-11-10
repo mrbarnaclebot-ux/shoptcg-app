@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-10. `main` and `production` are level; the last code change is preview mode (step 2 of the plan under "Next up")._
+_Last updated: 2026-11-10. `main` and `production` are level; the last code change is live baskets and visitor counts (step 3 of the plan under "Next up")._
 
 ## Where things stand
 
@@ -31,9 +31,15 @@ _Last updated: 2026-11-10. `main` and `production` are level; the last code chan
   - The page sets a `preview` cookie in the browser (`src/lib/preview-cookie.ts`). `previewing(slug)` in `src/lib/preview.ts` honours it only for the signed-in owner of that store, so the cookie alone opens nothing. `storeOr404` then reports the store as open.
   - A list sent in preview is a test request (`isTest`), open or not.
   - Outside the frame the store page carries an orange strip that says what buyers get right now, with "Exit preview" (`/dashboard/preview/exit` clears the cookie). The cookie lasts an hour.
-  - Step 3 must skip the visitor ping while `previewing` is true.
+- **Live baskets and visitor counts ("the floor"):** the dashboard has a second section, "At your table", with how many people are on the store page now, how many today, and every unsent list.
+  - A buyer's browser keeps a random id per store (`deviceId` in `src/app/[slug]/list-island.tsx`) and `presence.tsx` posts it with the unsent list to `POST /api/visit`: on load, every 30 seconds in view, and just after the list changes. Not the IP, because a whole venue shares one.
+  - Tables `visit` and `basket` (migration `0019`), logic in `src/lib/floor.ts`. "On the page now" means a ping in the last 90 seconds. A list stays 30 minutes after the buyer leaves, marked "Left the page".
+  - Each list has a three-character tag (`src/lib/basket-tag.ts`) shown on the buyer's list bar and on the vendor's card, so the vendor can match a list to a person. A list holds no stock; the same item on two lists is flagged "Also on 1 other list".
+  - The vendor's own visits never count (owner session check in the route). Lists exist only while the store is open. Nothing chimes; the dashboard re-reads on a `floor` live event and at least once a minute.
+  - Limits are per store (60 open lists, 2,000 new visits a day). Visits are deleted after 30 days. The terms have a "Browsing a store" section.
+  - Not built: a stored daily total. Counts older than 30 days are gone; add a daily row when the ledger wants a funnel.
 - **Invites:** the owner created the first one on production.
-- **In progress:** the five-step plan under "Next up"; steps 1 and 2 are shipped. Search and graded-card work is researched but not started. The repo has one branch (`main`, plus `production`) and no worktrees.
+- **In progress:** the five-step plan under "Next up"; steps 1 to 3 are shipped. Search and graded-card work is researched but not started. The repo has one branch (`main`, plus `production`) and no worktrees.
 
 ## How to ship
 
@@ -82,7 +88,7 @@ Railway notes (more in memory `railway-config-ignored`):
 - [ ] The owner's plan from 2026-11-10, one PR per step:
   1. ~~Settings and nav rework, admin entry and vendor controls.~~ Shipped.
   2. ~~Preview mode.~~ Shipped.
-  3. Live baskets and visitor counts. A random first-party device id (not the IP: a whole venue shares one) drives both. Baskets are stored server-side with a short tag ("K7") shown to buyer and vendor, hold no stock, grey after 5 minutes idle and go after 30, and never chime. "On site now" is a 30 s ping with a 90 s window. Keep a daily row per store (visitors, baskets, requests, sales). Limits are per store, not per IP. The terms need a line about the id and that the seller sees the list.
+  3. ~~Live baskets and visitor counts.~~ Shipped.
   4. Ledger part one: an append-only `stock_move` row for every quantity change, a "quick sale" for walk-up buyers (makes `sale.request_id` and the buyer fields optional), optional unit cost copied onto the sale line for profit, and voids as new records.
   5. Ledger part two: buys and trade-ins, float and a cash check at close. This reverses "No float field" below; the owner agreed.
   - Sales tax is left out unless the owner asks for it.
