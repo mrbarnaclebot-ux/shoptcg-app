@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-10. `main` and `production` are level; the last code change is live baskets and visitor counts (step 3 of the plan under "Next up")._
+_Last updated: 2026-11-10. `main` and `production` are level; the last code change is the ledger (first half of step 4 of the plan under "Next up")._
 
 ## Where things stand
 
@@ -38,8 +38,12 @@ _Last updated: 2026-11-10. `main` and `production` are level; the last code chan
   - The vendor's own visits never count (owner session check in the route). Lists exist only while the store is open. Nothing chimes; the dashboard re-reads on a `floor` live event and at least once a minute.
   - Limits are per store (60 open lists, 2,000 new visits a day). Visits are deleted after 30 days. The terms have a "Browsing a store" section.
   - Not built: a stored daily total. Counts older than 30 days are gone; add a daily row when the ledger wants a funnel.
+- **Ledger (step 4, first half):** `/dashboard/ledger`, linked from Sales and More, shows for any day range: takings after discounts, what the sold items cost, profit, stock on hand valued at market and at cost, and every stock change.
+  - Every quantity change writes a `stock_move` row from a database trigger (`listing_stock_move`, migration `0020`), so no code path can skip it. The reason comes from a transaction setting: call `stockReason(tx, "sold", saleId)` in `src/lib/ledger.ts` before changing quantities. Unlabelled changes are "added" (new listing) or "adjusted". Existing stock got an "opening" row.
+  - Cost is optional per listing (`listing.cost`, private to the vendor), set in the inventory edit panel or a `cost` CSV column. It is copied to `sale_line.unit_cost` when sold. Profit only counts lines that have a cost and says how many were left out.
+  - Not built yet from step 4: the walk-up "quick sale" and voids. The cost field is not in the two "add item" panels.
 - **Invites:** the owner created the first one on production.
-- **In progress:** the five-step plan under "Next up"; steps 1 to 3 are shipped. Search and graded-card work is researched but not started. The repo has one branch (`main`, plus `production`) and no worktrees.
+- **In progress:** the five-step plan under "Next up"; steps 1 to 3 and the first half of step 4 are shipped. Search and graded-card work is researched but not started. The repo has one branch (`main`, plus `production`) and no worktrees.
 
 ## How to ship
 
@@ -89,7 +93,10 @@ Railway notes (more in memory `railway-config-ignored`):
   1. ~~Settings and nav rework, admin entry and vendor controls.~~ Shipped.
   2. ~~Preview mode.~~ Shipped.
   3. ~~Live baskets and visitor counts.~~ Shipped.
-  4. Ledger part one: an append-only `stock_move` row for every quantity change, a "quick sale" for walk-up buyers (makes `sale.request_id` and the buyer fields optional), optional unit cost copied onto the sale line for profit, and voids as new records.
+  4. Ledger part one. Shipped: stock moves, cost and profit, the ledger page. Left:
+     - Quick sale for walk-up buyers. Plan: a vendor-made request (`request.walk_up`) built by tapping "Sell" on inventory rows, then confirmed on the existing sale screen. `sale.buyer_email` becomes optional; skip the receipt email and customer record without one; don't chime for it.
+     - Voids as a new `sale_void` record with a "put back in stock" choice (`stockReason(tx, "voided", saleId)`), netted out of the report, ledger, sales list and CSV.
+     - Cost field in the catalog and custom "add item" panels.
   5. Ledger part two: buys and trade-ins, float and a cash check at close. This reverses "No float field" below; the owner agreed.
   - Sales tax is left out unless the owner asks for it.
 - [ ] Drop `stores.logo_url` (unused since store images shipped).

@@ -11,7 +11,7 @@ const TABS = [
     href: "/dashboard/sales",
     label: "Sales",
     icon: ReceiptText,
-    also: ["/dashboard/reports"],
+    also: ["/dashboard/reports", "/dashboard/ledger"],
   },
   {
     href: "/dashboard/settings",

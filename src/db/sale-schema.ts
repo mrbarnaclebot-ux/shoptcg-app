@@ -101,6 +101,8 @@ export const saleLine = pgTable(
     unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
     quotedPrice: numeric("quoted_price", { precision: 12, scale: 2 }).notNull(),
     marketUsd: numeric("market_usd", { precision: 12, scale: 2 }),
+    // The listing's cost when it sold, for profit. Null when none was entered.
+    unitCost: numeric("unit_cost", { precision: 12, scale: 2 }),
   },
   (t) => [
     primaryKey({ name: "sale_line_pk", columns: [t.saleId, t.lineNo] }),

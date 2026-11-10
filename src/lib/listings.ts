@@ -93,6 +93,7 @@ function columns(latest: ReturnType<typeof latestPrices>) {
     condition: listing.condition,
     qty: listing.qty,
     overridePrice: listing.overridePrice,
+    cost: listing.cost,
     active: listing.active,
     market: latest.market,
     asOf: latest.asOf,
@@ -115,6 +116,7 @@ export async function listStock(db: Db, storeId: string, f: StockFilter = {}) {
   return rows.map((r) => ({
     ...r,
     overridePrice: num(r.overridePrice),
+    cost: num(r.cost),
     market: num(r.market),
   }));
 }

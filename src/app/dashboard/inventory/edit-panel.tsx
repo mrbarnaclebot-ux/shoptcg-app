@@ -46,6 +46,7 @@ export function EditPanel({
           save(
             {
               overridePrice: fixed,
+              cost: form.get("cost"),
               ...(row.kind === "raw" && { condition: form.get("condition") }),
             },
             () => toast.itemUpdated(row.name, change),
@@ -93,6 +94,20 @@ function Fields({ row }: { row: StockRow }) {
         />
         <p id={`${priceId}-hint`} className="text-sm text-muted-foreground">
           Leave blank to follow the market with your store rule.
+        </p>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={`cost-${row.id}`}>What you paid, each (USD)</Label>
+        <Input
+          id={`cost-${row.id}`}
+          name="cost"
+          inputMode="decimal"
+          defaultValue={row.cost?.toFixed(2) ?? ""}
+          placeholder="Optional"
+          aria-describedby={`cost-${row.id}-hint`}
+        />
+        <p id={`cost-${row.id}-hint`} className="text-sm text-muted-foreground">
+          Only you see this. It gives your ledger a profit figure.
         </p>
       </div>
       {row.kind === "raw" && (

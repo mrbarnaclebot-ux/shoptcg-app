@@ -19,9 +19,14 @@ export default function SalesPage() {
         <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
           Sales
         </h1>
-        <Link href="/dashboard/reports" className={lineButton}>
-          Report
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/dashboard/ledger" className={lineButton}>
+            Ledger
+          </Link>
+          <Link href="/dashboard/reports" className={lineButton}>
+            Report
+          </Link>
+        </div>
       </div>
       <Suspense fallback={<TicketLoading>Loading sales</TicketLoading>}>
         <Today />

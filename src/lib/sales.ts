@@ -15,6 +15,7 @@ import {
 } from "@/db/schema";
 import { gradeLabel } from "@/lib/format";
 import { listStock } from "@/lib/listings";
+import { stockReason } from "@/lib/ledger";
 import { notifyLive } from "@/lib/live";
 import { fromCents, priceSale, toCents, type Discount } from "@/lib/money";
 import { safeImageUrl } from "@/lib/pricing/images";
@@ -183,9 +184,11 @@ async function recordSale(
         quotedPrice: asked.find((a) => a.listingId === l.listingId)!
           .quotedPrice,
         marketUsd: it.market === null ? null : fromCents(toCents(it.market)),
+        unitCost: it.cost === null ? null : fromCents(toCents(it.cost)),
       };
     }),
   );
+  await stockReason(tx, "sold", row.id);
   for (const l of input.lines)
     await tx
       .update(listing)
