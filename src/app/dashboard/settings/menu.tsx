@@ -11,6 +11,11 @@ type Row = { href: string; label: string; hint: string; wide?: true };
 
 const STORE: Row[] = [
   {
+    href: "/dashboard/preview",
+    label: "Preview store",
+    hint: "Your page as buyers see it",
+  },
+  {
     href: `${HOME}/store`,
     label: "Store profile",
     hint: "Name, banner and profile image",

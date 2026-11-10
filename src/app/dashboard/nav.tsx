@@ -11,13 +11,13 @@ const TABS = [
     href: "/dashboard/sales",
     label: "Sales",
     icon: ReceiptText,
-    also: "/dashboard/reports",
+    also: ["/dashboard/reports"],
   },
   {
     href: "/dashboard/settings",
     label: "More",
     icon: Ellipsis,
-    also: "/dashboard/customers",
+    also: ["/dashboard/customers", "/dashboard/preview"],
   },
 ];
 
@@ -25,10 +25,10 @@ const TABS = [
 // The current tab gets a lamp-orange bar under its label, like the tabs sheet.
 export function DashboardNav() {
   const path = usePathname();
-  const current = (href: string, also?: string) =>
+  const current = (href: string, also: string[] = []) =>
     href === "/dashboard"
       ? path === href
-      : path.startsWith(href) || Boolean(also && path.startsWith(also));
+      : path.startsWith(href) || also.some((a) => path.startsWith(a));
   return (
     <nav
       aria-label="Dashboard"

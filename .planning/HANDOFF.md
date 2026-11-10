@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-10. `main` and `production` are level; the last code change is the settings and admin rework (step 1 of the plan under "Next up")._
+_Last updated: 2026-11-10. `main` and `production` are level; the last code change is preview mode (step 2 of the plan under "Next up")._
 
 ## Where things stand
 
@@ -27,8 +27,13 @@ _Last updated: 2026-11-10. `main` and `production` are level; the last code chan
   - `/admin` now also shows each vendor's store, state, stock count and last sale, with "Stop store" and "Remove images", and a System list (last price date, plus the boot warnings from `env-check.ts`).
   - "Stop store" sets `stores.suspended_at` (migration `0018`). While set, `storeState` is `off` whatever the vendor chose, and the vendor's dashboard says so in place of the open/pause control.
   - Admins are still the `ADMIN_EMAILS` variable (the owner's address on both environments).
+- **Preview mode:** `/dashboard/preview` shows the vendor's real store page in a frame (phone width by default, with a desktop switch), as it looks open, whatever state it is in.
+  - The page sets a `preview` cookie in the browser (`src/lib/preview-cookie.ts`). `previewing(slug)` in `src/lib/preview.ts` honours it only for the signed-in owner of that store, so the cookie alone opens nothing. `storeOr404` then reports the store as open.
+  - A list sent in preview is a test request (`isTest`), open or not.
+  - Outside the frame the store page carries an orange strip that says what buyers get right now, with "Exit preview" (`/dashboard/preview/exit` clears the cookie). The cookie lasts an hour.
+  - Step 3 must skip the visitor ping while `previewing` is true.
 - **Invites:** the owner created the first one on production.
-- **In progress:** the five-step plan under "Next up"; step 1 is shipped. Search and graded-card work is researched but not started. The repo has one branch (`main`, plus `production`) and no worktrees.
+- **In progress:** the five-step plan under "Next up"; steps 1 and 2 are shipped. Search and graded-card work is researched but not started. The repo has one branch (`main`, plus `production`) and no worktrees.
 
 ## How to ship
 
@@ -76,7 +81,7 @@ Railway notes (more in memory `railway-config-ignored`):
 - [ ] Price on add has only run against TCGdex (free). Add one real card on production and check it shows a market price and a chart within a minute.
 - [ ] The owner's plan from 2026-11-10, one PR per step:
   1. ~~Settings and nav rework, admin entry and vendor controls.~~ Shipped.
-  2. Preview mode: `/dashboard/preview` renders the storefront as open for the owner only, in a phone-width frame with a phone/desktop switch. It must not count as a visit, and a list sent from it becomes a test request.
+  2. ~~Preview mode.~~ Shipped.
   3. Live baskets and visitor counts. A random first-party device id (not the IP: a whole venue shares one) drives both. Baskets are stored server-side with a short tag ("K7") shown to buyer and vendor, hold no stock, grey after 5 minutes idle and go after 30, and never chime. "On site now" is a 30 s ping with a 90 s window. Keep a daily row per store (visitors, baskets, requests, sales). Limits are per store, not per IP. The terms need a line about the id and that the seller sees the list.
   4. Ledger part one: an append-only `stock_move` row for every quantity change, a "quick sale" for walk-up buyers (makes `sale.request_id` and the buyer fields optional), optional unit cost copied onto the sale line for profit, and voids as new records.
   5. Ledger part two: buys and trade-ins, float and a cash check at close. This reverses "No float field" below; the owner agreed.
