@@ -1,21 +1,25 @@
 # Roadmap
 
-Source of truth for scope: `PROJECT.md`. One branch and one PR per phase.
+Source of truth for scope: `PROJECT.md`. Current state, how to ship and what's next: `HANDOFF.md`. One branch and one PR per phase.
 
-| # | Phase | Status | Branch |
-| - | ----- | ------ | ------ |
-| 1 | Foundation: scaffold, vendor auth, create store, T&C, design tokens, CI | built, reviewed, awaiting PR | phase-1-foundation |
-| 2 | Catalog + nightly price sync | research spike in progress | - |
-| 3 | Inventory: search-add, custom items, CSV import, pricing rule, FX | built, awaiting review (shots in phases/03-inventory/shots) | phase-3-inventory |
-| 4 | Public store page + QR sign | planned | - |
-| 5 | Interest flow + seller ping (holds, SSE, push) | planned | - |
-| 6 | Confirm sale + receipts | planned | - |
-| 7 | Reports + customers | planned | - |
+| #   | Phase                                                                  | Status      | PR  |
+| --- | ---------------------------------------------------------------------- | ----------- | --- |
+| 1   | Foundation: scaffold, vendor auth, create store, T&C, design tokens, CI | shipped     | #1  |
+| 2   | Catalog + nightly price sync                                           | shipped     | #2  |
+| 3   | Inventory: search-add, custom items, CSV import, pricing rule, FX      | shipped     | #3  |
+| -   | Personality pass, then the Show floor visual direction                 | shipped     | #4, #5 |
+| 4   | Public store page + QR sign                                            | shipped     | #6  |
+| 5   | Interest flow + seller ping (holds, SSE, push)                         | shipped     | #7  |
+| 6   | Confirm sale + receipts                                                | shipped     | #8  |
+| 7   | Reports + customers                                                    | shipped     | #9  |
+| -   | CI pipeline: secret scan, migration guards, staging then production    | shipped     | #10 |
+| -   | Known-gap fixes: erasure, push, buyer list, report reads               | shipped     | #11 |
+| -   | Vendor invites: sign-up by code, `/admin`                              | shipped     | #12 |
+| -   | Store states: open, paused with auto-resume, not vending               | shipped     | #13 |
+| 8   | Run-a-show journey at three viewports, deploy guards, price-sync cron  | in progress | -   |
 
 ## Open items
-- Railway CLI login expired on dev machine: owner runs `railway login` before first deploy.
-- Domain shoptcg.app ownership unconfirmed: use Resend test sender until DNS is set.
-- PokemonPriceTracker API key: owner adds to `.env` (never committed).
-- Price API licence: build on Free/Pro (dev allowed). Decide Business ($99/mo) vs alternative BEFORE the first real show. See research/PRICING-API.md.
-- Polish pass before v1 ship: original abstract holo card art (no Pokemon IP) for landing preview + holo shimmer; tighten desktop hero vertical rhythm.
-- instrumentation.ts logs invalid env but does not exit; Railway healthcheck on `/` can still pass. Revisit with a `/api/health` that checks DB when deploying.
+
+- Price API licence: the owner chose to run on the PPT Pro plan ($9.99/mo, 20k credits a day) on 2026-11-10. PPT's terms reserve Pro for hobby and pre-launch use and ask for Business ($99/mo) once vendors sell commercially. Revisit before the first public show. See `research/PRICING-API.md`.
+- Domain: none yet, so `EMAIL_FROM` stays on the Resend test sender and mail only reaches the Resend account owner. Buyer receipts will show "Email didn't send" until a domain is verified.
+- Not checked on real hardware: push and the chime on a phone, the printed sign scanned from 1 m, both CSV exports in Excel and Sheets.

@@ -19,14 +19,10 @@ export type CreateStoreResult =
   { ok: true; store: Store } | { ok: false; errors: FieldErrors };
 
 /** The owner's store, with what buyers get now (live) next to what was chosen (state). */
-// is_open is deprecated (see schema); left out so nothing reads it by mistake.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- dropped on purpose
-const { isOpen: _deprecated, ...storeColumns } = getTableColumns(store);
-
 export async function getStoreByOwner(db: Db, ownerUserId: string) {
   const rows = await db
     .select({
-      ...storeColumns,
+      ...getTableColumns(store),
       live: storeState,
       resumesInMin,
       changesInMs,
