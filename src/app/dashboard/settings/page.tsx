@@ -6,6 +6,7 @@ import { isAdminEmail } from "@/lib/admin";
 import { requireStore } from "@/lib/session";
 import { SettingsForm } from "./settings-form";
 import { SignOut } from "./sign-out";
+import { StoreImages } from "./store-images";
 
 export const metadata: Metadata = { title: "Settings - shoptcg" };
 
@@ -51,6 +52,7 @@ async function Settings() {
           nfcEnabled: store.nfcEnabled,
         }}
       />
+      <StoreImages banner={store.bannerUrl} avatar={store.avatarUrl} />
       {isAdminEmail(user.email) && (
         <Link href="/admin" className={`${lineButton} self-start`}>
           Invites and accounts

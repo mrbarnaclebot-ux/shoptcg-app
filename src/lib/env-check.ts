@@ -4,6 +4,7 @@ import { isDeployed } from "@/lib/deployed";
 type Env = Record<string, string | undefined>;
 
 const VAPID = ["VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT"];
+const PINATA = ["PINATA_JWT", "PINATA_GATEWAY_URL"];
 // Test hooks: sign-in links written to a file, and the routes that mint invites and stock.
 const TEST_ONLY = ["MAGIC_LINK_OUTBOX", "E2E_SEED"];
 
@@ -27,6 +28,10 @@ export function checkEnv(env: Env) {
   if (vapid.length && vapid.length < VAPID.length)
     errors.push(`Set all of ${VAPID.join(", ")} or none`);
   if (!vapid.length) warnings.push("VAPID keys unset: push alerts are off");
+  const pinata = PINATA.filter((k) => env[k]);
+  if (pinata.length === 1) errors.push(`Set both of ${PINATA.join(", ")}`);
+  if (!pinata.length)
+    warnings.push("Pinata unset: store image uploads are off");
   if (!env.PPT_API_KEY)
     warnings.push("PPT_API_KEY unset: catalog search falls back to TCGdex");
   if (isDeployed(env))

@@ -27,7 +27,14 @@ export const store = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     slug: text("slug").notNull().unique(),
     name: text("name").notNull(),
+    // Deprecated and never written: replaced by avatarUrl. Dropped next release.
     logoUrl: text("logo_url"),
+    // Vendor images, re-encoded by us (src/lib/store-image.ts). The file id is
+    // the storage handle used to delete the old file on replace or removal.
+    bannerUrl: text("banner_url"),
+    bannerFileId: text("banner_file_id"),
+    avatarUrl: text("avatar_url"),
+    avatarFileId: text("avatar_file_id"),
     // What the vendor chose. What buyers get is storeState in src/lib/store-state.ts:
     // timers (auto-resume, auto-pause) are computed on read, never by a job.
     state: text("state", { enum: ["open", "paused", "off"] })

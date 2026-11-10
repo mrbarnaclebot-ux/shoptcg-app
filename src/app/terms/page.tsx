@@ -41,6 +41,12 @@ export default function TermsPage() {
             Promo emails are separate: they need the optional box, which starts
             unticked.
           </p>
+          <h2>Store images</h2>
+          <p>
+            A vendor&apos;s banner and profile image are public and are kept
+            with our file storage provider. Only upload images you have the
+            right to use. We may remove any image.
+          </p>
           <h2>What we do not do</h2>
           <p>We do not sell your data or share it with anyone else.</p>
           <h2>Payments</h2>
