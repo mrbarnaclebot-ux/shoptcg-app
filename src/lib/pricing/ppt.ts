@@ -31,23 +31,51 @@ export interface Rate {
   gapMs: number;
   /** Fail instead of queueing behind more than this much throttle wait. */
   maxWaitMs: number;
+  /**
+   * Background work (sync, price on add): never books a slot ahead and steps
+   * aside while a search waits, so a vendor's search isn't "busy" behind a
+   * big import. Spacing still holds: every call waits out the last one's gap.
+   */
+  yields?: boolean;
 }
 export const SEARCH_RATE: Rate = { gapMs: 4_000, maxWaitMs: 5_000 };
-export const SYNC_RATE: Rate = { gapMs: 1_334, maxWaitMs: Infinity };
+export const SYNC_RATE: Rate = {
+  gapMs: 1_334,
+  maxWaitMs: Infinity,
+  yields: true,
+};
 const MAX_RETRIES = 3;
 const MAX_RETRY_AFTER_S = 60;
 // Consecutive failed calls in one price batch before giving up on the rest.
 const MAX_FAILS_IN_ROW = 3;
 // Shared by every adapter instance in this process.
 let nextCallAt = 0;
+let searchesWaiting = 0;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function throttle(rate: Rate) {
+  if (rate.yields) {
+    // Take a slot only once it is free now and no search is queued for it.
+    for (;;) {
+      const wait = nextCallAt - Date.now();
+      if (wait <= 0 && !searchesWaiting) break;
+      await sleep(Math.max(wait, 50));
+    }
+    nextCallAt = Date.now() + rate.gapMs;
+    return;
+  }
   const now = Date.now();
   const wait = nextCallAt - now;
   if (wait > rate.maxWaitMs)
     throw new SearchBusyError("Price search is busy. Try again in a minute.");
   nextCallAt = Math.max(nextCallAt, now) + rate.gapMs;
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  if (wait <= 0) return;
+  searchesWaiting++;
+  try {
+    await sleep(wait);
+  } finally {
+    searchesWaiting--;
+  }
 }
 
 /** Seconds from Retry-After (capped at 60), else exponential backoff: 5s, 10s, 20s. */

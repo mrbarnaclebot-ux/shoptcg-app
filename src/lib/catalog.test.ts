@@ -6,11 +6,20 @@ import {
   gradedItem,
   MISSES_PER_HOUR,
   missLimit,
+  mergeRows,
   parseQuery,
+  rank,
+  searchCached,
   searchCatalog,
+  searchFresh,
   upsertHits,
+  withMarket,
 } from "@/lib/catalog";
-import { SearchBusyError, SearchError } from "@/lib/pricing/errors";
+import {
+  SearchBusyError,
+  SearchError,
+  SearchLimitError,
+} from "@/lib/pricing/errors";
 import type { CatalogHit } from "@/lib/pricing/provider";
 import { fakeProvider, hit, migratedDb } from "@/lib/test-fixtures";
 
@@ -62,15 +71,7 @@ describe("searchCatalog", () => {
     const opts = { kind: "raw", language: "en" } as const;
     const first = await searchCatalog(db, "pikachu detective", opts, provider);
     const again = await searchCatalog(db, "Pikachu  Detective", opts, provider);
-    const more = await searchCatalog(
-      db,
-      "pikachu detective",
-      {
-        ...opts,
-        force: true,
-      },
-      provider,
-    );
+    const more = await searchFresh(db, "pikachu detective", opts, provider);
     expect(again.map((r) => r.id)).toEqual(first.map((r) => r.id));
     expect(more.map((r) => r.id)).toEqual(first.map((r) => r.id));
     expect(provider.search).toHaveBeenCalledTimes(1);
@@ -208,5 +209,136 @@ describe("searchCatalog", () => {
       hit({ providerId: "z", kind: "graded", grader: "PSA", grade: "11" }),
     ])
       await expect(db.insert(schema.catalogItem).values(bad)).rejects.toThrow();
+  });
+});
+
+describe("matching and ranking", () => {
+  const opts = { kind: "raw", language: "en" } as const;
+  const names = async (q: string) =>
+    (await searchCached(db, q, opts, "m")).items.map((r) => r.name);
+
+  beforeAll(async () => {
+    const card = (
+      providerId: string,
+      name: string,
+      setName: string,
+      number: string,
+    ) => hit({ provider: "m", providerId, name, setName, number });
+    await upsertHits(db, [
+      card("1", "Charizard ex", "151", "199/165"),
+      card("2", "Charizard", "Base Set", "4/102"),
+      card("3", "Mew ex", "151", "205/165"),
+      card("4", "Charmander", "Base Set", "46/102"),
+      card("5", "Dark Charizard", "Team Rocket", "21/82"),
+    ]);
+  });
+
+  it.each([
+    ["ex charizard", ["Charizard ex"]],
+    ["char 199", ["Charizard ex"]],
+    ["mew 151", ["Mew ex"]],
+    ["151 mew", ["Mew ex"]],
+    ["base set charizard", ["Charizard"]],
+    ["199/165", ["Charizard ex"]],
+    ["0199/0165", ["Charizard ex"]],
+    ["charizard 4", ["Charizard"]],
+    // Number match, then name starts with a word, then contains.
+    ["charizard", ["Charizard", "Charizard ex", "Dark Charizard"]],
+    ["char", ["Charizard", "Charizard ex", "Charmander", "Dark Charizard"]],
+    ["4 base", ["Charizard"]],
+    ["199/999", []],
+  ])("finds %j", async (q, want) => expect(await names(q)).toEqual(want));
+
+  it("ranks an exact number over the name, and the name over contains", () => {
+    const row = (name: string, number: string | null = null) => ({
+      name,
+      setName: "Base Set",
+      number,
+    });
+    expect(rank(row("Dark Charizard", "4/102"), "charizard 4")).toBe(0);
+    expect(rank(row("Charizard"), "zard charizard")).toBe(1);
+    expect(rank(row("Dark Charizard"), "charizard base")).toBe(2);
+    expect(rank(row("Lizardon"), "charizard")).toBe(3);
+  });
+
+  it("merges one row per id, best rank first, local before provider on ties", () => {
+    const [ex, base, dark] = [
+      { ...hit(), id: "a", name: "Charizard ex" },
+      { ...hit(), id: "b", name: "Charizard", number: "4" },
+      { ...hit(), id: "c", name: "Dark Charizard" },
+    ] as schema.CatalogItem[];
+    const odd = { ...ex, id: "d", name: "Lizardon" };
+    expect(
+      mergeRows("charizard", [dark, ex], [odd, ex, base]).map((r) => r.id),
+    ).toEqual(["a", "b", "c", "d"]);
+    expect(mergeRows("charizard 4", [ex], [base]).map((r) => r.id)).toEqual([
+      "b",
+      "a",
+    ]);
+  });
+});
+
+describe("two-phase search", () => {
+  const opts = { kind: "raw", language: "en" } as const;
+  const card = (providerId: string, name: string) =>
+    hit({ provider: "two", providerId, name, number: providerId });
+
+  it("answers from the cache first, then merges the provider's answer once", async () => {
+    await upsertHits(db, [card("10", "Gardevoir ex")]);
+    const provider = {
+      ...fakeProvider([card("10", "Gardevoir ex"), card("11", "Gardevoir")]),
+      name: "two",
+    };
+    // One cached card no longer hides the rest.
+    const first = await searchCached(db, "gardevoir", opts, "two");
+    expect(first.items.map((r) => r.name)).toEqual(["Gardevoir ex"]);
+    expect(first.answered).toBe(false);
+    const fresh = await searchFresh(db, "gardevoir", opts, provider);
+    expect(fresh.map((r) => r.name)).toEqual(["Gardevoir", "Gardevoir ex"]);
+    // The whole query is answered now: the cache says so and no new call goes out.
+    const again = await searchCached(db, "Gardevoir ", opts, "two");
+    expect(again.answered).toBe(true);
+    expect(again.items.map((r) => r.id)).toEqual(fresh.map((r) => r.id));
+    await searchFresh(db, "gardevoir", opts, provider);
+    expect(provider.search).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the cached answer when the hourly limit is reached", async () => {
+    await upsertHits(db, [card("20", "Kirlia")]);
+    const provider = { ...fakeProvider([]), name: "two" };
+    const limit = {
+      check: vi.fn(async () => {
+        throw new SearchLimitError("limit");
+      }),
+      record: vi.fn(async () => {}),
+    };
+    await expect(
+      searchFresh(db, "kirlia", opts, provider, limit),
+    ).rejects.toBeInstanceOf(SearchLimitError);
+    expect(provider.search).not.toHaveBeenCalled();
+    expect((await searchCached(db, "kirlia", opts, "two")).items).toHaveLength(
+      1,
+    );
+  });
+
+  it("adds the latest market price", async () => {
+    const [row] = await upsertHits(db, [card("30", "Ralts")]);
+    await db.insert(schema.pricePoint).values([
+      {
+        catalogItemId: row.id,
+        date: "2026-11-01",
+        marketUsd: "1.00",
+        source: "two",
+      },
+      {
+        catalogItemId: row.id,
+        date: "2026-11-02",
+        marketUsd: "1.25",
+        source: "two",
+      },
+    ]);
+    const [other] = await upsertHits(db, [card("31", "Ralts")]);
+    const priced = await withMarket(db, [row, other]);
+    expect(priced.map((r) => r.market)).toEqual(["1.25", null]);
   });
 });

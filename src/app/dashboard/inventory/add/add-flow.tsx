@@ -8,11 +8,7 @@ export function AddFlow() {
   const [mode, setMode] = useState<"search" | "custom">("search");
   return (
     <div className="flex flex-col gap-6">
-      {mode === "search" ? (
-        <CatalogSearch onCustom={() => setMode("custom")} />
-      ) : (
-        <CustomForm />
-      )}
+      {mode === "search" ? <CatalogSearch /> : <CustomForm />}
       <button
         type="button"
         onClick={() => setMode(mode === "search" ? "custom" : "search")}
