@@ -50,8 +50,29 @@ describe("searchCatalog", () => {
     ]);
     const opts = { kind: "raw", language: "en" } as const;
     const [row] = await searchCatalog(db, "199/165", opts, provider);
-    const again = await searchCatalog(db, "charizard 199", opts, provider);
+    const again = await searchCatalog(db, "charizard 0199", opts, provider);
     expect(again.map((r) => r.id)).toContain(row.id);
+    expect(provider.search).toHaveBeenCalledTimes(1);
+  });
+
+  it("serves a repeat of a whole query the prefix cache can't, even on Search more", async () => {
+    const provider = fakeProvider([
+      hit({ providerId: "q1", name: "Detective Pikachu" }),
+    ]);
+    const opts = { kind: "raw", language: "en" } as const;
+    const first = await searchCatalog(db, "pikachu detective", opts, provider);
+    const again = await searchCatalog(db, "Pikachu  Detective", opts, provider);
+    const more = await searchCatalog(
+      db,
+      "pikachu detective",
+      {
+        ...opts,
+        force: true,
+      },
+      provider,
+    );
+    expect(again.map((r) => r.id)).toEqual(first.map((r) => r.id));
+    expect(more.map((r) => r.id)).toEqual(first.map((r) => r.id));
     expect(provider.search).toHaveBeenCalledTimes(1);
   });
 

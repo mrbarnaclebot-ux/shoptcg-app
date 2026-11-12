@@ -1,4 +1,4 @@
-import { and, count, eq, gt, sql } from "drizzle-orm";
+import { and, count, eq, gt, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { catalogItem, searchMiss, type CatalogItem } from "@/db/schema";
 import { SearchBusyError, SearchLimitError } from "@/lib/pricing/errors";
@@ -17,9 +17,11 @@ const LIMIT = 10;
 const NUMBER = /^([a-z]{0,3}\d+)(?:\/([a-z]{0,3}\d+))?$/i;
 // Provider calls (cache misses) each signed-in user may cause per hour.
 export const MISSES_PER_HOUR = 30;
-const EMPTY_TTL_MS = 10 * 60_000;
-// ponytail: per-process negative cache, cleared wholesale when big; move to the DB if it must survive restarts.
-const emptyUntil = new Map<string, number>();
+const QUERY_TTL_MS = 10 * 60_000;
+// The provider's answer to each whole query (catalog row ids, maybe none), so
+// a repeat costs no provider call and no throttle wait.
+// ponytail: per-process, cleared wholesale when big; move to the DB if it must survive restarts.
+const answered = new Map<string, { until: number; ids: string[] }>();
 
 /** Splits "charizard 199" or "199/165" into a name and a card number. */
 export function parseQuery(text: string) {
@@ -163,7 +165,8 @@ export function missLimit(db: Db, userId: string): MissLimit {
 }
 
 /**
- * Local cache first, then the provider, upserting what it returns.
+ * The provider's answer to the same query in the last 10 minutes, else the
+ * local cache, else the provider, upserting what it returns.
  * `limit` is checked before a provider call and charged after it, unless the
  * throttle refused the call as busy (nothing was sent).
  * Any local hit wins, so a partly cached name returns only what was cached;
@@ -184,14 +187,16 @@ export async function searchCatalog(
   const opts = { ...rest, kind: wanted === "graded" ? "raw" : wanted };
   const q = parseQuery(text);
   if (!q.name && !q.number) return [];
+  const key = [provider.name, opts.kind, opts.language, q.text.toLowerCase()]
+    .join("|")
+    .replace(/\s+/g, " ");
+  // The provider's own recent answer beats a partial prefix match.
+  const seen = answered.get(key);
+  if (seen && seen.until > Date.now()) return byIds(db, seen.ids);
   if (!opts.force) {
     const local = await searchLocal(db, provider.name, q, opts);
     if (local.length) return local;
   }
-  const key = [provider.name, opts.kind, opts.language, q.text.toLowerCase()]
-    .join("|")
-    .replace(/\s+/g, " ");
-  if ((emptyUntil.get(key) ?? 0) > Date.now()) return [];
   await limit.check();
   const hits = await provider
     .search({ ...q, kind: opts.kind, language: opts.language, limit: LIMIT })
@@ -201,9 +206,18 @@ export async function searchCatalog(
     });
   await limit.record();
   const rows = await upsertHits(db, hits);
-  if (!rows.length) {
-    if (emptyUntil.size > 10_000) emptyUntil.clear();
-    emptyUntil.set(key, Date.now() + EMPTY_TTL_MS);
-  }
+  if (answered.size > 10_000) answered.clear();
+  const ids = rows.map((r) => r.id);
+  answered.set(key, { until: Date.now() + QUERY_TTL_MS, ids });
   return rows;
+}
+
+/** Catalog rows in the given order. */
+async function byIds(db: Db, ids: string[]) {
+  if (!ids.length) return [];
+  const rows = await db
+    .select()
+    .from(catalogItem)
+    .where(inArray(catalogItem.id, ids));
+  return rows.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
 }
