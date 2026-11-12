@@ -87,7 +87,7 @@ export function Art(props: {
             {it.number ?? PLACEHOLDER[it.kind]}
           </span>
           {it.setName && (
-            <span className="line-clamp-2 text-xs text-subtle">
+            <span className="line-clamp-2 text-xs text-muted-foreground">
               {it.setName}
             </span>
           )}
@@ -182,7 +182,7 @@ export function Tile(props: {
           it.available === 1 && !onHold
             ? "font-semibold text-text"
             : "text-muted-foreground",
-          soldOut && "text-subtle",
+          soldOut && "text-muted-foreground",
         )}
       >
         {stockLine(it, true)}

@@ -160,13 +160,13 @@ test("a vendor runs a whole show", async ({ page, browser }) => {
     ).toBeVisible();
   });
 
-  await test.step("buyer A sends a list; the seller hears in 3 seconds", async () => {
+  await test.step("buyer A sends a cart; the seller hears in 3 seconds", async () => {
     await a.goto(`/${slug}`);
     await a.getByRole("button", { name: "Add Mew ex to your cart" }).click();
     await a.getByRole("button", { name: `Add ${CUSTOM} to your cart` }).click();
     await a.getByRole("link", { name: "Review cart" }).click();
     await expect(a.getByRole("heading", { name: "Your cart" })).toBeVisible();
-    await check(a, "list");
+    await check(a, "cart");
     codeA = await sendList(a, slug, [], {
       name: "Ana Reyes",
       email: emailA,

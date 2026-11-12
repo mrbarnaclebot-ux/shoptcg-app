@@ -11,7 +11,7 @@ import {
   type PublicStore,
 } from "@/lib/storefront";
 import { Controls, SortMenu } from "./controls";
-import { ListBar } from "./list-island";
+import { ListBar, RememberStore } from "./list-island";
 import { filterHref, parseFilter } from "./params";
 import { storeOr404 } from "./store-lookup";
 import { NotVending, StoreHeader } from "./store-header";
@@ -26,8 +26,20 @@ export async function generateMetadata({
   params,
 }: PageProps<"/[slug]">): Promise<Metadata> {
   const store = await storeOr404((await params).slug);
+  const description = `Pokemon cards from ${store.name}: prices next to market, stock and price history.`;
+  // The banner reads best in a link preview; the profile image is next best.
+  const image = store.bannerUrl ?? store.avatarUrl;
   return {
     title: `${store.name} - shoptcg`,
+    description,
+    openGraph: {
+      title: store.name,
+      description,
+      // Data URLs (local and e2e uploads) mean nothing to another site.
+      ...(image?.startsWith("https://") && {
+        images: [{ url: image, alt: store.name }],
+      }),
+    },
     // Nothing to index while not vending, and no stale prices in search results.
     ...(store.state === "off" && { robots: { index: false } }),
   };
@@ -70,6 +82,7 @@ export default async function StorePage({
         </Link>
       </footer>
       {store.isOpen && <ListBar slug={store.slug} />}
+      <RememberStore slug={store.slug} href={filterHref(store.slug, f)} />
     </main>
   );
 }

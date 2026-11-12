@@ -1,8 +1,10 @@
 "use client";
 
-import { Check, Plus } from "lucide-react";
+import { ArrowLeft, Check, Plus, Share } from "lucide-react";
 import Link from "next/link";
-import { useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { Stepper } from "@/components/stepper";
 import { basketTag, DEVICE_ID } from "@/lib/basket-tag";
 
 // The buyer's list lives on this phone only, per store, for 24 hours
@@ -85,16 +87,12 @@ export function useLines(slug: string) {
   return parse(raw);
 }
 
-/**
- * Add toggle: a 44px square on tiles, or the full-width ticket on the item
- * page. Pressed, it turns lamp orange with a check.
- */
+/** A 44px add toggle on tiles. Pressed, it turns lamp orange with a check. */
 export function AddButton(props: {
   slug: string;
   id: string;
   name: string;
   price: number | null;
-  big?: boolean;
 }) {
   const lines = useLines(props.slug);
   const on = Boolean(lines[props.id]);
@@ -105,22 +103,6 @@ export function AddButton(props: {
     writeList(props.slug, next);
   };
   const Icon = on ? Check : Plus;
-  if (props.big)
-    return (
-      <button
-        type="button"
-        onClick={toggle}
-        aria-pressed={on}
-        className="btn-ticket w-full"
-      >
-        <span className="btn-ticket-main">
-          {on ? "In your cart" : "Add to cart"}
-        </span>
-        <span aria-hidden className="btn-ticket-stub">
-          <Icon className="size-[18px]" strokeWidth={2.4} />
-        </span>
-      </button>
-    );
   return (
     <button
       type="button"
@@ -130,6 +112,164 @@ export function AddButton(props: {
       className={`grid size-11 shrink-0 place-items-center ${on ? "bg-brand text-on-brand" : "bg-surface text-text shadow-[inset_0_0_0_1px_var(--border-strong)]"}`}
     >
       <Icon aria-hidden className="size-5" strokeWidth={2.3} />
+    </button>
+  );
+}
+
+/**
+ * The item page's add: a quantity when more than one is free, then the
+ * full-width ticket. Once in the cart the quantity edits the cart line and the
+ * ticket goes to the cart; Remove takes it out.
+ */
+export function CartAction(props: {
+  slug: string;
+  id: string;
+  name: string;
+  price: number;
+  available: number;
+}) {
+  const { slug, id, available } = props;
+  const lines = useLines(slug);
+  const line = lines[id];
+  const [pick, setPick] = useState(1);
+  const qty = Math.min(line?.qty ?? pick, available);
+  const put = (q: number) =>
+    writeList(slug, {
+      ...lines,
+      [id]: { qty: q, price: props.price, name: props.name },
+    });
+  const remove = () => {
+    const next = { ...lines };
+    delete next[id];
+    writeList(slug, next);
+  };
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3">
+        {available > 1 && (
+          <Stepper
+            label={`Quantity of ${props.name}`}
+            value={qty}
+            min={1}
+            max={available}
+            onStep={(d) => (line ? put(qty + d) : setPick(qty + d))}
+          />
+        )}
+        {line ? (
+          <Link
+            href={`/${slug}/cart?ids=${Object.keys(lines).join(",")}`}
+            className="btn-ticket min-w-0 flex-1"
+          >
+            <span className="btn-ticket-main">Review cart</span>
+            <span aria-hidden className="btn-ticket-stub">
+              <Check className="size-[18px]" strokeWidth={2.4} />
+            </span>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => put(qty)}
+            className="btn-ticket min-w-0 flex-1"
+          >
+            <span className="btn-ticket-main">Add to cart</span>
+            <span aria-hidden className="btn-ticket-stub">
+              <Plus className="size-[18px]" strokeWidth={2.4} />
+            </span>
+          </button>
+        )}
+      </div>
+      <p role="status" className="flex min-h-6 items-center gap-3 text-sm">
+        {line && (
+          <>
+            <span className="font-semibold">
+              {qty === 1 ? "In your cart" : `${qty} in your cart`}
+            </span>
+            <button
+              type="button"
+              onClick={remove}
+              className="min-h-11 underline decoration-brand decoration-[1.5px] underline-offset-4"
+            >
+              Remove
+            </button>
+          </>
+        )}
+      </p>
+    </div>
+  );
+}
+
+const backKey = (slug: string) => `back:${slug}`;
+
+/** The store page notes where the buyer is (filters, sort) for the item page's back link. */
+export function RememberStore(props: { slug: string; href: string }) {
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(backKey(props.slug), props.href);
+    } catch {}
+  }, [props.slug, props.href]);
+  return null;
+}
+
+/**
+ * Back to the store as the buyer left it: a history step when they came from
+ * it (scroll kept), else a link to the filters they last used.
+ */
+export function BackToStore({ slug }: { slug: string }) {
+  const router = useRouter();
+  const saved = useSyncExternalStore(
+    noop,
+    () => {
+      try {
+        return sessionStorage.getItem(backKey(slug));
+      } catch {
+        return null;
+      }
+    },
+    () => null,
+  );
+  return (
+    <Link
+      href={saved ?? `/${slug}`}
+      onClick={(e) => {
+        const from = document.referrer && new URL(document.referrer);
+        const cameFromStore =
+          window.history.length > 1 &&
+          (!from ||
+            (from.origin === location.origin && from.pathname === `/${slug}`));
+        if (saved && cameFromStore) {
+          e.preventDefault();
+          router.back();
+        }
+      }}
+      className="flex min-h-11 items-center gap-2 self-start font-semibold lg:col-span-2"
+    >
+      <ArrowLeft aria-hidden className="size-5" />
+      Back to store
+    </Link>
+  );
+}
+const noop = () => () => {};
+
+/** The phone's share sheet, or a copied link where there is none. */
+export function ShareItem(props: { title: string }) {
+  const [copied, setCopied] = useState(false);
+  const share = async () => {
+    const url = location.href.split("?")[0];
+    if (navigator.share)
+      return navigator.share({ title: props.title, url }).catch(() => {});
+    await navigator.clipboard.writeText(url).then(
+      () => setCopied(true),
+      () => setCopied(false),
+    );
+  };
+  return (
+    <button
+      type="button"
+      onClick={share}
+      className="inline-flex min-h-11 items-center gap-2 self-start text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+    >
+      <Share aria-hidden className="size-4" />
+      <span aria-live="polite">{copied ? "Link copied" : "Share"}</span>
     </button>
   );
 }
