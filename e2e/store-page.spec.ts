@@ -56,6 +56,13 @@ test("a buyer browses, filters and opens an item", async ({
   await buyer.getByRole("link", { name: "Graded", exact: true }).click();
   await expect(buyer).toHaveURL(/type=graded/);
   await expect(count(buyer)).toHaveCount(1);
+  // A slab's scan is the card's own shape, so none of it is cropped away.
+  const art = await count(buyer)
+    .first()
+    .locator("span[class*=aspect-]")
+    .first()
+    .boundingBox();
+  expect(art!.width / art!.height).toBeCloseTo(63 / 88, 2);
   await buyer.getByRole("link", { name: "All", exact: true }).click();
   await expect(buyer).not.toHaveURL(/type=/);
   await buyer.getByRole("link", { name: "JP", exact: true }).click();
