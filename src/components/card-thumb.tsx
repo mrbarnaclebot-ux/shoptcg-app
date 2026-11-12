@@ -1,13 +1,8 @@
 import { cn } from "cn";
 import { LANGUAGE_LABEL } from "@/lib/format";
 
-// A slab's scan is the card itself, so it keeps the card's shape and shows
-// whole; sealed product is roughly square.
-const ASPECT = {
-  raw: "aspect-[63/88]",
-  graded: "aspect-[63/88]",
-  sealed: "aspect-square",
-} as const;
+// Every thumb is card-shaped so rows line up; sealed shows whole inside it.
+type Kind = "raw" | "graded" | "sealed";
 
 // Outline drawings for items with no photo, one per kind, in a 0 0 24 24 box.
 // ponytail: line placeholders until the item has a photo.
@@ -23,8 +18,6 @@ const OUTLINE = {
     <path d="M3.5 8 12 4l8.5 4v9L12 21l-8.5-4zM3.5 8 12 12l8.5-4M12 12v9" />
   ),
 } as const;
-
-type Kind = keyof typeof ASPECT;
 
 function Placeholder(props: {
   kind: Kind;
@@ -88,8 +81,7 @@ export function CardThumb({
   className?: string;
 }) {
   const box = cn(
-    "w-10 shrink-0 overflow-hidden bg-surface-2",
-    ASPECT[kind],
+    "aspect-[63/88] w-10 shrink-0 overflow-hidden bg-surface-2",
     className,
   );
   if (!src)

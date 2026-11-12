@@ -102,3 +102,24 @@ export async function invitesLabelled(label: string) {
     await sql.end();
   }
 }
+
+/**
+ * Mixed art for layout checks: a wide product shot on the sealed box and a
+ * hand-added item with a long name and an odd-ratio photo.
+ */
+export async function mixStock(slug: string) {
+  const sql = localDb();
+  try {
+    const [{ id: storeId }] =
+      await sql`select id from store where slug = ${slug}`;
+    await sql`update listing set image_url = 'https://assets.tcgdex.net/en/swsh/swsh7/logo.png'
+      where store_id = ${storeId} and kind = 'sealed'`;
+    const [{ id }] = await sql`
+      insert into listing (store_id, kind, language, name, set_name, number, condition, qty, override_price, image_url)
+      values (${storeId}, 'raw', 'en', 'Pikachu with Grey Felt Hat, Van Gogh Museum promo in its sleeve', 'SVP Black Star Promos', '085', 'NM', 2, '120', 'https://assets.tcgdex.net/en/sv/sv03.5/symbol.png')
+      returning id`;
+    return id as string;
+  } finally {
+    await sql.end();
+  }
+}
