@@ -83,12 +83,17 @@ async function request(c: Client, path: string, params: Params) {
 }
 
 // One item per call with limit=1: PPT bills on the requested limit, not results.
-function fetchOne(c: Client, ref: PriceRef, extra: Params = {}) {
+async function fetchOne(c: Client, ref: PriceRef, extra: Params = {}) {
   const language = LANG[ref.language] ?? "english";
   const base = { tcgPlayerId: ref.providerId, language, limit: 1, ...extra };
-  if (ref.kind === "sealed") return request(c, "/sealed-products", base);
   const graded: Params = ref.kind === "graded" ? { includeEbay: true } : {};
-  return request(c, "/cards", { ...base, ...graded });
+  const data =
+    ref.kind === "sealed"
+      ? await request(c, "/sealed-products", base)
+      : await request(c, "/cards", { ...base, ...graded });
+  // The docs say a tcgPlayerId lookup returns one object; /cards does (checked
+  // live), /sealed-products is unverified, so a one-item list is read too.
+  return Array.isArray(data) ? (data[0] ?? null) : data;
 }
 
 async function search(c: Client, q: SearchQuery): Promise<CatalogHit[]> {

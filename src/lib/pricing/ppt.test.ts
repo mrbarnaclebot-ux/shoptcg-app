@@ -3,6 +3,7 @@ import gradedCard from "./fixtures/ppt-card-graded.json";
 import history from "./fixtures/ppt-card-history.json";
 import jaCards from "./fixtures/ppt-cards-ja.json";
 import rawCards from "./fixtures/ppt-cards-search.json";
+import sealedOne from "./fixtures/ppt-sealed-one-docs.json";
 import sealed from "./fixtures/ppt-sealed-search.json";
 import { PartialPricesError } from "./errors";
 import { ppt } from "./ppt";
@@ -123,6 +124,23 @@ describe("ppt adapter (recorded fixtures)", () => {
       { date: "2026-11-04", marketUsd: 1250 },
       { date: "2026-11-05", marketUsd: 1200 },
     ]);
+  });
+
+  // Shaped per the docs (llms-full.txt, 2026-11-12), not recorded: no live
+  // single-item /sealed-products response has been seen yet.
+  it("prices sealed and reads its history from one object or a one-item list", async () => {
+    const box = { ...raw, providerId: "506640", kind: "sealed" as const };
+    const calls = serve([["/sealed-products?", sealedOne]]);
+    expect((await client.getPrices([box]))[0].marketUsd).toBe(6750);
+    expect(calls[0].searchParams.get("tcgPlayerId")).toBe("506640");
+    expect(await client.getHistory(box, 90)).toEqual([
+      { date: "2026-11-05", marketUsd: 6700 },
+      { date: "2026-11-07", marketUsd: 6750 },
+    ]);
+    serve([["/sealed-products?", { data: [sealedOne.data] }]]);
+    expect((await client.getPrices([box]))[0].marketUsd).toBe(6750);
+    serve([["/sealed-products?", { data: [] }]]);
+    expect(await client.getPrices([box])).toEqual([]);
   });
 
   it("retries a 429 after Retry-After, then fails after max retries", async () => {
