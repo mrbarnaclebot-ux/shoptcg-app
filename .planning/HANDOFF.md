@@ -2,11 +2,11 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-12. Step 4 is finished on `main` (table sale #23, voids #24, cost on add #25), plus the search fixes (#27) and the `logo_url` drop (#26). Step 5 (buys, float, cash check) is in PR #28. Production still runs the ledger build until `main` is pushed to `production`._
+_Last updated: 2026-11-12. `main` and `production` are level at `3e74f8f` (PR #28): the whole five-step plan is live on both._
 
 ## Where things stand
 
-- **Live:** production https://web-production-2d3b0.up.railway.app and staging https://web-staging-staging-6b4e.up.railway.app both run the phase 8 build. CI is green and `pnpm smoke <url>` passes on both.
+- **Live:** production https://web-production-2d3b0.up.railway.app and staging https://web-staging-staging-6b4e.up.railway.app both run `3e74f8f` (migrations up to `0024`), deployed and smoked on 2026-11-12. Before that, production was still on PR #19, so settings, preview, the floor and the ledger reached it on the same day.
 - **Shipped:** all eight phases, plus:
   - the CI pipeline
   - the known-gap fixes (PR #11)
@@ -65,7 +65,7 @@ _Last updated: 2026-11-12. Step 4 is finished on `main` (table sale #23, voids #
   - Not done: trigram matching (the migration is sketched in PR #27). Price on add shares the search throttle, so searches say "busy" during a big import.
   - Unverified live: the shape of a sealed lookup by id and its history. The parser now accepts an object or a one-item list. One real sealed price on production settles it.
 - **Invites:** the owner created the first one on production.
-- **In progress:** nothing; the five-step plan is done once #28 merges.
+- **In progress:** nothing. The five-step plan is done; what's left is under "Next up" and "Owner to-dos".
 
 ## How to ship
 
