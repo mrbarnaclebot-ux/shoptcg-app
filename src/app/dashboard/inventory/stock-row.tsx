@@ -16,7 +16,7 @@ import {
 import type { StockRow as Row } from "@/lib/listings";
 import { toast } from "@/lib/toast";
 import { underMarket } from "@/lib/vendor-price";
-import { stepQtyAction, updateListingAction } from "./actions";
+import { sellAction, stepQtyAction, updateListingAction } from "./actions";
 import { EditPanel } from "./edit-panel";
 
 // Synced nightly, so two days without a new point means the sync is missing it.
@@ -49,6 +49,7 @@ export function StockRow(props: {
         </span>
         <div className="col-start-2 row-start-2 flex items-center gap-3 lg:col-start-4 lg:row-start-1">
           <Qty row={row} />
+          {row.active && row.qty > 0 && price !== null && <Sell row={row} />}
         </div>
         <PriceTag {...props} />
         <button
@@ -118,6 +119,27 @@ function PriceTag({ row, price, today }: Parameters<typeof StockRow>[0]) {
         </span>
       )}
     </div>
+  );
+}
+
+/** One tap per unit onto the table sale, for a buyer standing at the table. */
+function Sell({ row }: { row: Row }) {
+  const [pending, start] = useTransition();
+  const sell = () =>
+    start(async () => {
+      const ok = await sellAction(row.id).catch(() => false);
+      if (!ok) toast.notSaved("None free to sell. A buyer may be holding it.");
+    });
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      aria-label={`Sell ${row.name}`}
+      onClick={sell}
+      className="inline-flex min-h-11 items-center px-3 font-semibold shadow-[inset_0_0_0_1.5px_var(--border-strong)] disabled:opacity-50"
+    >
+      Sell
+    </button>
   );
 }
 

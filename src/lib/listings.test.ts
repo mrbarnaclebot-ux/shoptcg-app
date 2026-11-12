@@ -72,6 +72,7 @@ describe("listings", () => {
       condition: "LP",
       qty: 3,
       overridePrice: null,
+      cost: null,
     });
     const [row] = await listStock(db, a, { q: "chari" });
     expect(row).toMatchObject({
@@ -94,6 +95,7 @@ describe("listings", () => {
         condition: null,
         qty: 1,
         overridePrice: null,
+        cost: null,
       }),
     ).rejects.toThrow(ListingError);
   });
@@ -132,6 +134,7 @@ describe("listings", () => {
         condition: null,
         qty: 1,
         overridePrice: null,
+        cost: null,
       },
     };
     await expect(importListings(db, a, [good, bad])).rejects.toThrow();

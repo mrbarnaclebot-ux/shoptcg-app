@@ -54,6 +54,7 @@ const stock = {
   condition: conditionSchema.default(null),
   qty: qtySchema.default(1),
   overridePrice: priceSchema.default(null),
+  cost: priceSchema.default(null),
 };
 
 export const catalogListingSchema = z.object({
@@ -100,6 +101,7 @@ export const listingPatchSchema = z.object({
   qty: qtySchema.optional(),
   condition: conditionSchema.optional(),
   overridePrice: priceSchema.optional(),
+  cost: priceSchema.optional(),
   active: z.boolean().optional(),
 });
 

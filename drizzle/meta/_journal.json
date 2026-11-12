@@ -134,6 +134,27 @@
       "when": 1794318031465,
       "tag": "0018_store_suspended",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794325522315,
+      "tag": "0019_floor",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794325941797,
+      "tag": "0020_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794326289823,
+      "tag": "0021_table_sale",
+      "breakpoints": true
     }
   ]
 }

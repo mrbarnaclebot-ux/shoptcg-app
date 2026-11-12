@@ -208,6 +208,8 @@ export const listing = pgTable(
     condition: text("condition", { enum: ["NM", "LP", "MP", "HP", "DMG"] }),
     qty: integer("qty").notNull().default(1),
     overridePrice: numeric("override_price", { precision: 12, scale: 2 }),
+    // What the vendor paid per unit. Private: it never reaches a buyer.
+    cost: numeric("cost", { precision: 12, scale: 2 }),
     active: boolean("active").notNull().default(true),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -242,6 +244,44 @@ export const listing = pgTable(
     check("listing_qty_nonneg", sql`${t.qty} >= 0`),
     check("listing_qty_max", sql`${t.qty} <= 9999`),
     check("listing_override_positive", sql`${t.overridePrice} > 0`),
+    check("listing_cost_positive", sql`${t.cost} > 0`),
+  ],
+);
+
+export const STOCK_REASONS = [
+  "opening",
+  "added",
+  "adjusted",
+  "sold",
+  "voided",
+] as const;
+
+// Every change to a listing's quantity, written by the listing_stock_move
+// trigger so no code path can skip it. The reason and ref come from
+// transaction settings (see stockReason in src/lib/ledger.ts); without them a
+// new listing is "added" and any other change is "adjusted".
+export const stockMove = pgTable(
+  "stock_move",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => store.id, { onDelete: "cascade" }),
+    // A plain uuid, like sale_line: history outlives the listing.
+    listingId: uuid("listing_id").notNull(),
+    delta: integer("delta").notNull(),
+    qtyAfter: integer("qty_after").notNull(),
+    reason: text("reason", { enum: STOCK_REASONS }).notNull(),
+    // The sale behind a "sold" or "voided" move.
+    ref: uuid("ref"),
+    at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("stock_move_store_at_idx").on(t.storeId, t.at.desc()),
+    check(
+      "stock_move_reason",
+      sql`${t.reason} in ('opening', 'added', 'adjusted', 'sold', 'voided')`,
+    ),
   ],
 );
 

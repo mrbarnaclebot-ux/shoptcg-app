@@ -46,6 +46,7 @@ function toInput(cells: Record<string, string>) {
     grade: cells.grade,
     qty: cells.qty?.trim() || 1,
     overridePrice: cells.price,
+    cost: cells.cost,
   });
 }
 
@@ -111,10 +112,10 @@ export function toImportRow(
   match: CatalogItem | null,
 ): ImportRow {
   if (!match) return { kind: "custom", input };
-  const { qty, condition, overridePrice } = input;
+  const { qty, condition, overridePrice, cost } = input;
   return {
     kind: "catalog",
-    input: { catalogItemId: match.id, qty, condition, overridePrice },
+    input: { catalogItemId: match.id, qty, condition, overridePrice, cost },
   };
 }
 

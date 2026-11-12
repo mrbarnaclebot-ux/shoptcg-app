@@ -38,6 +38,11 @@ const STORE: Row[] = [
 ];
 const RECORDS: Row[] = [
   {
+    href: "/dashboard/ledger",
+    label: "Ledger",
+    hint: "Profit, stock value, stock in and out",
+  },
+  {
     href: "/dashboard/customers",
     label: "Customers",
     hint: "Buyers and who takes your emails",

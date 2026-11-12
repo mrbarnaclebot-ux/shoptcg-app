@@ -12,6 +12,7 @@ import { RefreshAt } from "@/components/refresh-at";
 import { CreateStoreForm } from "./create-store-form";
 import { CopyLink } from "./copy-link";
 import { StoreControl } from "./store-control";
+import { Floor } from "./requests/floor";
 import { RequestQueue } from "./requests/queue";
 import { StoreCreated } from "./store-created";
 
@@ -50,6 +51,7 @@ async function Dashboard({
             waiting={await waitingCount(getDb(), store.id)}
           />
           <RequestQueue storeId={store.id} />
+          <Floor slug={store.slug} />
         </>
       ) : (
         <NewStore />

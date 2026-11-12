@@ -5,8 +5,9 @@ import type { Db } from "@/db/open";
 // delivered on commit and never for a rollback, so a screen can only hear
 // about a request that exists. Payloads carry ids only; screens re-read.
 
+// "floor" is a buyer arriving or changing an unsent list; it carries no request.
 export type LiveType =
-  "new" | "expired" | "declined" | "cancelled" | "confirmed";
+  "new" | "expired" | "declined" | "cancelled" | "confirmed" | "floor";
 export type LiveEvent = { s: string; r: string; t: LiveType };
 
 const CHANNEL = "live";

@@ -33,6 +33,14 @@ export default function TermsPage() {
               from any promo email.
             </li>
           </ul>
+          <h2>Browsing a store</h2>
+          <p>
+            While you are on a vendor&apos;s page, your browser keeps a random
+            id for that store. It lets the vendor see how many people are
+            looking and what is on your list before you send it, shown under a
+            short tag like K7P. It holds no name, email or address, is not
+            shared between stores, and visit records are deleted after 30 days.
+          </p>
           <h2>Buyer requests</h2>
           <p>
             When you send a list, the vendor sees your name, your email and what

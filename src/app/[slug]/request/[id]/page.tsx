@@ -118,7 +118,9 @@ async function Sold(props: { requestId: string; slug: string }) {
         </p>
         <ReceiptSummary sale={sale} />
       </ShowMoment>
-      <ReceiptNote status={sale.emailStatus} email={sale.buyerEmail} />
+      {sale.buyerEmail && (
+        <ReceiptNote status={sale.emailStatus} email={sale.buyerEmail} />
+      )}
       <Link href={`/${props.slug}`} className={`${lineButton} self-start`}>
         Back to store
       </Link>

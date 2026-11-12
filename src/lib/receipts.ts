@@ -32,13 +32,14 @@ async function compose(db: Db, saleId: string) {
       ),
     )
     .where(eq(sale.id, saleId));
-  if (!row) return null;
+  const to = row?.sale.buyerEmail;
+  if (!row || !to) return null;
   const lines = await saleLines(db, saleId);
   const unsubscribeUrl = row.optedIn
     ? new URL(`/u/${row.token}`, appUrl()).toString()
     : null;
   return {
-    to: row.sale.buyerEmail,
+    to,
     receiptNo: row.sale.receiptNo,
     unsubscribeUrl,
     message: renderReceipt({

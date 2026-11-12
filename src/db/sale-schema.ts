@@ -39,7 +39,8 @@ export const sale = pgTable(
     // The seller's zone when they confirmed: a receipt's time never shifts.
     timeZone: text("time_zone").notNull().default("UTC"),
     buyerName: text("buyer_name").notNull(),
-    buyerEmail: text("buyer_email").notNull(),
+    // Null for a table sale: nobody typed an address, so no receipt is sent.
+    buyerEmail: text("buyer_email"),
     subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull(),
     discount: numeric("discount", { precision: 12, scale: 2 })
       .notNull()
@@ -101,6 +102,8 @@ export const saleLine = pgTable(
     unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
     quotedPrice: numeric("quoted_price", { precision: 12, scale: 2 }).notNull(),
     marketUsd: numeric("market_usd", { precision: 12, scale: 2 }),
+    // The listing's cost when it sold, for profit. Null when none was entered.
+    unitCost: numeric("unit_cost", { precision: 12, scale: 2 }),
   },
   (t) => [
     primaryKey({ name: "sale_line_pk", columns: [t.saleId, t.lineNo] }),

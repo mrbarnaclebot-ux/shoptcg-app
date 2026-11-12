@@ -3,6 +3,7 @@
 import { Check, Plus } from "lucide-react";
 import Link from "next/link";
 import { useSyncExternalStore } from "react";
+import { basketTag, DEVICE_ID } from "@/lib/basket-tag";
 
 // The buyer's list lives on this phone only, per store, for 24 hours
 // (SCREENS 7). It is the one client island on the public pages.
@@ -13,6 +14,7 @@ type List = { at: number; lines: Record<string, Line> };
 
 const TTL_MS = 24 * 60 * 60 * 1000;
 const EVENT = "shoptcg:list";
+export const LIST_EVENT = EVENT;
 const key = (slug: string) => `list:${slug}`;
 
 function read(slug: string): string {
@@ -33,6 +35,27 @@ function parse(raw: string): List["lines"] {
 }
 
 export const listOn = (slug: string) => parse(read(slug));
+
+/**
+ * A random id for this browser on this store, so the seller can tell open
+ * lists apart and count visitors. Per store, so it follows nobody around.
+ */
+export function deviceId(slug: string) {
+  const k = `device:${slug}`;
+  try {
+    const have = localStorage.getItem(k);
+    if (have && DEVICE_ID.test(have)) return have;
+    const id = crypto.randomUUID().replaceAll("-", "");
+    localStorage.setItem(k, id);
+    return id;
+  } catch {
+    // Private mode: an id for this page load only.
+    return (memoryId ??= Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join(""));
+  }
+}
+let memoryId: string | undefined;
 
 export function writeList(slug: string, lines: List["lines"]) {
   try {
@@ -114,6 +137,12 @@ export function AddButton(props: {
 /** Paper stub pinned to the bottom once the list has something on it. */
 export function ListBar({ slug }: { slug: string }) {
   const lines = useLines(slug);
+  // The same tag the seller sees on this list, so they can match it to you.
+  const tag = useSyncExternalStore(
+    subscribe,
+    () => basketTag(deviceId(slug)),
+    () => "",
+  );
   const n = Object.values(lines).reduce((s, l) => s + l.qty, 0);
   if (!n) return null;
   const total = Object.values(lines).reduce(
@@ -124,7 +153,9 @@ export function ListBar({ slug }: { slug: string }) {
     <div className="fixed inset-x-3 bottom-4 z-20 mx-auto max-w-[560px] drop-shadow-[0_12px_24px_oklch(0_0_0/0.6)]">
       <div className="paper grid grid-cols-[1fr_auto]">
         <p className="px-4 py-2.5" role="status">
-          <span className="block text-xs text-muted-foreground">Your list</span>
+          <span className="block text-xs text-muted-foreground">
+            Your list{tag && `, ${tag}. The seller can see it.`}
+          </span>
           <span className="font-display num text-[1.625rem] leading-none font-extrabold">
             {n} {n === 1 ? "item" : "items"},{" "}
             {total.toLocaleString("en-US", {

@@ -4,8 +4,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { CardThumb, kindOf } from "@/components/card-thumb";
 import { ExportButton } from "@/components/export-button";
+import { RangeForm, RangePresets } from "@/components/range-picker";
 import { paidBy } from "@/components/receipt-summary";
-import { lineButton } from "@/components/ticket-button";
 import { StubValue, TicketLoading } from "@/components/ticket";
 import { getDb } from "@/db";
 import { receiptTime, shortDate, usd, withLanguage } from "@/lib/format";
@@ -15,8 +15,6 @@ import {
   parseRange,
   salesReport,
   SALES_SHOWN,
-  weekendLabel,
-  weekendOf,
   type Range,
 } from "@/lib/reports";
 import { requireStore, sellerTimeZone } from "@/lib/session";
@@ -52,61 +50,6 @@ function rangeLabel({ from, to }: Range) {
   return from.slice(0, 4) === to.slice(0, 4)
     ? `${shortDate(from)} to ${withYear(to)}`
     : `${withYear(from)} to ${withYear(to)}`;
-}
-
-function Preset(props: { href: string; on: boolean; children: string }) {
-  return (
-    <Link
-      href={props.href}
-      aria-current={props.on ? "page" : undefined}
-      className={
-        props.on
-          ? "grid h-11 place-items-center bg-text px-3.5 font-semibold text-bg"
-          : "grid h-11 place-items-center px-3.5 font-medium text-muted-foreground shadow-[inset_0_0_0_1px_var(--border-strong)]"
-      }
-    >
-      {props.children}
-    </Link>
-  );
-}
-
-const dateInput =
-  "h-12 w-full min-w-0 border border-border-strong bg-transparent px-2 text-base";
-
-function RangeForm({ range }: { range: Range }) {
-  return (
-    <form
-      action="/dashboard/reports"
-      className="mt-5 grid grid-cols-2 items-end gap-3 border-y border-dashed border-border-strong py-4 sm:grid-cols-[1fr_1fr_auto]"
-    >
-      <label className="flex min-w-0 flex-col gap-1 text-sm font-semibold">
-        From
-        <input
-          type="date"
-          name="from"
-          defaultValue={range.from}
-          required
-          className={dateInput}
-        />
-      </label>
-      <label className="flex min-w-0 flex-col gap-1 text-sm font-semibold">
-        To
-        <input
-          type="date"
-          name="to"
-          defaultValue={range.to}
-          required
-          className={dateInput}
-        />
-      </label>
-      <button
-        type="submit"
-        className={`${lineButton} col-span-2 sm:col-span-1`}
-      >
-        Show these days
-      </button>
-    </form>
-  );
 }
 
 function Row(props: { k: string; children: React.ReactNode; big?: boolean }) {
@@ -304,21 +247,15 @@ async function Report({ searchParams }: Search) {
   const range = parseRange(await searchParams, timeZone, now);
   const report = await salesReport(getDb(), store.id, range);
   const today = localDate(now, timeZone);
-  const weekend = weekendOf(today);
   const { summary: sum } = report;
   return (
     <>
-      <nav aria-label="Report range" className="flex flex-wrap gap-2">
-        <Preset href="/dashboard/reports" on={range.preset === "today"}>
-          Today
-        </Preset>
-        <Preset
-          href={`/dashboard/reports?from=${weekend.from}&to=${weekend.to}`}
-          on={range.preset === "weekend"}
-        >
-          {weekendLabel(today)}
-        </Preset>
-      </nav>
+      <RangePresets
+        base="/dashboard/reports"
+        label="Report range"
+        range={range}
+        today={today}
+      />
       <section className="paper tally w-full px-5 pt-7 pb-5">
         <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -331,7 +268,7 @@ async function Report({ searchParams }: Search) {
           </div>
           {store.tableLabel && <StubValue k="Table" v={store.tableLabel} />}
         </header>
-        <RangeForm range={range} />
+        <RangeForm base="/dashboard/reports" range={range} />
         {sum.sales === 0 ? (
           <div className="pt-5">
             <p className="font-display text-[2rem] leading-none font-extrabold">

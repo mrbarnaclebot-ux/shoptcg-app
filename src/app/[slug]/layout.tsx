@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { getDb } from "@/db";
 import { previewing } from "@/lib/preview";
 import { getPublicStore } from "@/lib/storefront";
+import { Presence } from "./presence";
 import { PreviewNote } from "./preview-note";
 
 const SEEN = {
@@ -18,6 +19,10 @@ export default function StoreLayout({
     <>
       <Suspense>
         <Preview params={params} />
+      </Suspense>
+      {/* useParams is request data here, so it sits behind its own boundary. */}
+      <Suspense>
+        <Presence />
       </Suspense>
       {children}
     </>

@@ -38,7 +38,8 @@ export async function RequestQueue({ storeId }: { storeId: string }) {
       <AlertsRow publicKey={vapid()?.publicKey ?? null} />
       {queue ? (
         <>
-          <QueueLive pending={queue.pending.length} />
+          {/* The vendor's own table sale is in the list but never chimes. */}
+          <QueueLive pending={queue.pending.filter((t) => !t.walkUp).length} />
           {queue.pending.length ? (
             <ul className="flex flex-col gap-5">
               {queue.pending.map((t) => (
