@@ -8,7 +8,7 @@ import { listStock } from "@/lib/listings";
 import { requireStore } from "@/lib/session";
 import { BuyForm } from "./buy-form";
 
-export const metadata: Metadata = { title: "Buy - shoptcg" };
+export const metadata: Metadata = { title: "Buy - tcgmart" };
 
 export default function BuyPage() {
   return (

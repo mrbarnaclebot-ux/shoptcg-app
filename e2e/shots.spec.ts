@@ -10,7 +10,7 @@ import { saveSettings } from "./settings";
 //   SHOTS=setup pnpm e2e shots; PPT_API_KEY= pnpm sync:prices; SHOTS=capture pnpm e2e shots
 const STAGE = process.env.SHOTS;
 const OUT = ".planning/phases/03-inventory/shots";
-const ID_FILE = join(tmpdir(), "shoptcg-shots-id.txt");
+const ID_FILE = join(tmpdir(), "tcgmart-shots-id.txt");
 const WIDTHS = [390, 1280];
 
 test.skip(!STAGE, "set SHOTS=setup or SHOTS=capture");

@@ -7,8 +7,8 @@ const MAX_MS = 5 * 60_000;
 const enc = new TextEncoder();
 
 // ponytail: per-process counter; a second instance would allow its own share.
-const g = globalThis as { shoptcgStreams?: Map<string, number> };
-const open = (g.shoptcgStreams ??= new Map<string, number>());
+const g = globalThis as { tcgmartStreams?: Map<string, number> };
+const open = (g.tcgmartStreams ??= new Map<string, number>());
 
 export type Send = (data: object) => void;
 

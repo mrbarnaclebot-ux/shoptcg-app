@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { requireStore } from "@/lib/session";
 import { PreviewFrame } from "./preview-frame";
 
-export const metadata: Metadata = { title: "Preview - shoptcg" };
+export const metadata: Metadata = { title: "Preview - tcgmart" };
 
 const NOW = {
   open: "Your store is open, so this is what buyers see right now.",

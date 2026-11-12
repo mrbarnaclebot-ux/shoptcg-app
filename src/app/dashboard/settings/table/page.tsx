@@ -5,7 +5,7 @@ import { requireStore } from "@/lib/session";
 import { SettingsPage } from "../section";
 import { TableForm } from "../settings-form";
 
-export const metadata: Metadata = { title: "How you sell - shoptcg" };
+export const metadata: Metadata = { title: "How you sell - tcgmart" };
 
 export default function TablePage() {
   return (

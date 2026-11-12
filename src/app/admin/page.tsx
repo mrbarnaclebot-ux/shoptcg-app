@@ -21,7 +21,7 @@ import { VendorControls } from "./vendor-controls";
 const LIVE = { open: "Open", paused: "Paused", off: "Not vending" } as const;
 
 export const metadata: Metadata = {
-  title: "Admin - shoptcg",
+  title: "Admin - tcgmart",
   robots: { index: false },
 };
 

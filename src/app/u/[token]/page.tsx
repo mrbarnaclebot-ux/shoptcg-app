@@ -9,7 +9,7 @@ import { unsubscribe } from "./actions";
 export const instant = false;
 
 export const metadata: Metadata = {
-  title: "Unsubscribe - shoptcg",
+  title: "Unsubscribe - tcgmart",
   robots: { index: false },
 };
 

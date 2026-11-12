@@ -12,7 +12,7 @@ import { awaitingPrice, vendorPrice } from "@/lib/vendor-price";
 import { filterSchema, Filters } from "./filters";
 import { StockRow } from "./stock-row";
 
-export const metadata: Metadata = { title: "Inventory - shoptcg" };
+export const metadata: Metadata = { title: "Inventory - tcgmart" };
 
 export default function InventoryPage({
   searchParams,

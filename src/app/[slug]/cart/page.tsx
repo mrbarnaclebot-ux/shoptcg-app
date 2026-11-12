@@ -17,7 +17,7 @@ export async function generateMetadata({
   params,
 }: PageProps<"/[slug]/cart">): Promise<Metadata> {
   const store = await storeOr404((await params).slug);
-  return { title: `Your cart - ${store.name} - shoptcg` };
+  return { title: `Your cart - ${store.name} - tcgmart` };
 }
 
 export default async function CartPage({

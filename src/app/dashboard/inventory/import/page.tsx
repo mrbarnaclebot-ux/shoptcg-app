@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CSV_COLUMNS, MAX_ROWS } from "@/lib/csv-import";
 import { ImportFlow } from "./import-flow";
 
-export const metadata: Metadata = { title: "Import CSV - shoptcg" };
+export const metadata: Metadata = { title: "Import CSV - tcgmart" };
 
 const COLUMN_HELP: Record<(typeof CSV_COLUMNS)[number], string> = {
   name: "Required. Card or product name.",

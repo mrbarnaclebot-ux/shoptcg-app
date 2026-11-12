@@ -2,7 +2,7 @@ import "server-only";
 import { appendFile } from "node:fs/promises";
 import { isDeployed } from "@/lib/deployed";
 
-const FROM = process.env.EMAIL_FROM ?? "shoptcg <onboarding@resend.dev>";
+const FROM = process.env.EMAIL_FROM ?? "tcgmart <onboarding@resend.dev>";
 
 /**
  * E2E only: playwright.config.ts sets MAGIC_LINK_OUTBOX so tests read sign-in
@@ -47,8 +47,8 @@ export async function sendMagicLinkEmail(to: string, url: string) {
     body: JSON.stringify({
       from: FROM,
       to,
-      subject: "Your shoptcg sign-in link",
-      text: `Sign in to shoptcg:\n\n${url}\n\nThis link expires in 5 minutes. If you did not ask for it, ignore this email.`,
+      subject: "Your tcgmart sign-in link",
+      text: `Sign in to tcgmart:\n\n${url}\n\nThis link expires in 5 minutes. If you did not ask for it, ignore this email.`,
     }),
   });
   if (!res.ok)

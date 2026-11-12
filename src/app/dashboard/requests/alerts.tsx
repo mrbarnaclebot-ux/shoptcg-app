@@ -117,7 +117,7 @@ export function AlertsRow({ publicKey }: { publicKey: string | null }) {
   );
 }
 
-const NUDGE_KEY = "shoptcg:nudge";
+const NUDGE_KEY = "tcgmart:nudge";
 const DAY_MS = 86_400_000;
 const noop = () => () => {};
 
@@ -140,14 +140,14 @@ export function InstallNudge() {
   return (
     <div className="flex flex-col gap-3 border-t border-border pt-4 text-sm">
       <p>
-        Get request alerts when your phone is locked. Add shoptcg to your home
+        Get request alerts when your phone is locked. Add tcgmart to your home
         screen.
       </p>
       {guide && (
         <ol className="list-decimal pl-5">
           <li>Tap Share in your browser.</li>
           <li>Tap Add to Home Screen.</li>
-          <li>Open shoptcg from your home screen.</li>
+          <li>Open tcgmart from your home screen.</li>
         </ol>
       )}
       <div className="flex flex-wrap gap-3">

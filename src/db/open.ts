@@ -21,10 +21,10 @@ export function openDb(): Db {
 
 // Next bundles route handlers, server actions and instrumentation separately,
 // so a module-level singleton would give each its own PGlite copy.
-const g = globalThis as { shoptcgDb?: Db };
+const g = globalThis as { tcgmartDb?: Db };
 
 /** The process-wide database, opened lazily so build workers never touch PGlite. */
 export function sharedDb(): Db {
-  g.shoptcgDb ??= openDb();
-  return g.shoptcgDb;
+  g.tcgmartDb ??= openDb();
+  return g.tcgmartDb;
 }

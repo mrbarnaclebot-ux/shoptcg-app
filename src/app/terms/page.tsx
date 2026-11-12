@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Wordmark } from "@/components/wordmark";
 
-export const metadata: Metadata = { title: "Terms - shoptcg" };
+export const metadata: Metadata = { title: "Terms - tcgmart" };
 
 export default function TermsPage() {
   return (
@@ -16,7 +16,7 @@ export default function TermsPage() {
             Terms
           </h1>
           <p>
-            shoptcg is a hobby project run for a small group of card show
+            tcgmart is a hobby project run for a small group of card show
             vendors. It is provided as is, with no guarantee of uptime or
             accuracy. Prices shown are guides; the vendor at the table sets the
             final price.
@@ -59,7 +59,7 @@ export default function TermsPage() {
           <p>We do not sell your data or share it with anyone else.</p>
           <h2>Payments</h2>
           <p>
-            Payment happens in person between buyer and vendor. shoptcg never
+            Payment happens in person between buyer and vendor. tcgmart never
             handles money.
           </p>
           <h2>Contact</h2>

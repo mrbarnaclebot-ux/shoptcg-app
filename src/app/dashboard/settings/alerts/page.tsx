@@ -4,7 +4,7 @@ import { requireStore } from "@/lib/session";
 import { AlertsRow, InstallNudge } from "../../requests/alerts";
 import { SettingsPage } from "../section";
 
-export const metadata: Metadata = { title: "Alerts - shoptcg" };
+export const metadata: Metadata = { title: "Alerts - tcgmart" };
 
 export default function AlertsPage() {
   return (

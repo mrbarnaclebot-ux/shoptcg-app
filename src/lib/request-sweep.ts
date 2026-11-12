@@ -47,13 +47,13 @@ export async function sweepRequests(db: Db) {
   return { expired, purged: purged.length };
 }
 
-const g = globalThis as { shoptcgSweeper?: ReturnType<typeof setInterval> };
+const g = globalThis as { tcgmartSweeper?: ReturnType<typeof setInterval> };
 
 /** One timer per process; unref so it never keeps a script alive. */
 export function startSweeper(db: Db) {
-  if (g.shoptcgSweeper) return;
-  g.shoptcgSweeper = setInterval(() => {
+  if (g.tcgmartSweeper) return;
+  g.tcgmartSweeper = setInterval(() => {
     sweepRequests(db).catch((err) => console.error("[sweep] failed", err));
   }, SWEEP_MS);
-  g.shoptcgSweeper.unref();
+  g.tcgmartSweeper.unref();
 }

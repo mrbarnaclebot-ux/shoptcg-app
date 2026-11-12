@@ -18,7 +18,7 @@ import { Floor } from "./requests/floor";
 import { RequestQueue } from "./requests/queue";
 import { StoreCreated } from "./store-created";
 
-export const metadata: Metadata = { title: "Dashboard - shoptcg" };
+export const metadata: Metadata = { title: "Dashboard - tcgmart" };
 
 export default function DashboardPage({
   searchParams,

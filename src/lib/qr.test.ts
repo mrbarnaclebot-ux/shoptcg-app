@@ -17,7 +17,7 @@ function decode(data: boolean[][], size: number) {
 
 describe("qr", () => {
   it("decodes back to the exact sign URL", () => {
-    const url = "https://shoptcg.app/ridgeline-cards?src=sign";
+    const url = "https://tcgmart.app/ridgeline-cards?src=sign";
     const { data, size, d } = qr(url);
     expect(decode(data, size)).toBe(url);
     expect(d.startsWith("M4 4h1v1h-1z")).toBe(true);

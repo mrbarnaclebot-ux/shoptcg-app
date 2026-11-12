@@ -15,7 +15,7 @@ export type Line = { qty: number; price: number | null; name?: string };
 type List = { at: number; lines: Record<string, Line> };
 
 const TTL_MS = 24 * 60 * 60 * 1000;
-const EVENT = "shoptcg:list";
+const EVENT = "tcgmart:list";
 export const LIST_EVENT = EVENT;
 const key = (slug: string) => `list:${slug}`;
 

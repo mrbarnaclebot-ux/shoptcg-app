@@ -31,7 +31,7 @@ export async function generateMetadata({
   // The banner reads best in a link preview; the profile image is next best.
   const image = store.bannerUrl ?? store.avatarUrl;
   return {
-    title: `${store.name} - shoptcg`,
+    title: `${store.name} - tcgmart`,
     description,
     openGraph: {
       title: store.name,

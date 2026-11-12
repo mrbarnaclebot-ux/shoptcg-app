@@ -94,7 +94,7 @@ test("a show's report adds up, and its CSV is safe to open", async ({
 
   const { file, head, rows } = await exported(page, "Export CSV");
   expect(file).toMatch(
-    new RegExp(`^shoptcg-${slug}-\\d{4}-\\d\\d-\\d\\d\\.csv$`),
+    new RegExp(`^tcgmart-${slug}-\\d{4}-\\d\\d-\\d\\d\\.csv$`),
   );
   expect(head.slice(0, 5)).toEqual([
     "date",
@@ -181,7 +181,7 @@ test("the promo list is opted-in buyers only, and unsubscribing leaves it", asyn
   await expect(rowOf("Noor No")).toContainText("1 purchase.");
 
   const before = await exported(page, "Export promo list");
-  expect(before.file).toMatch(new RegExp(`^shoptcg-${slug}-promo-list-`));
+  expect(before.file).toMatch(new RegExp(`^tcgmart-${slug}-promo-list-`));
   expect(before.head).toEqual([
     "name",
     "email",

@@ -3,7 +3,7 @@ import { ToastRoot } from "@/components/toast-root";
 import { JoinPage } from "./join-page";
 
 export const metadata: Metadata = {
-  title: "Join - shoptcg",
+  title: "Join - tcgmart",
   robots: { index: false },
 };
 

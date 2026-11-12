@@ -36,7 +36,7 @@ export function ExportButton(props: {
       const url = URL.createObjectURL(await res.blob());
       const a = document.createElement("a");
       a.href = url;
-      a.download = file ?? "shoptcg.csv";
+      a.download = file ?? "tcgmart.csv";
       a.click();
       // Some mobile browsers read the blob after click() returns.
       setTimeout(() => URL.revokeObjectURL(url), 40_000);

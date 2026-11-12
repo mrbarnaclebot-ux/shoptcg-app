@@ -20,7 +20,7 @@ import {
 import { requireStore, sellerTimeZone } from "@/lib/session";
 import { shortName } from "@/lib/short-name";
 
-export const metadata: Metadata = { title: "Report - shoptcg" };
+export const metadata: Metadata = { title: "Report - tcgmart" };
 
 type Search = Pick<PageProps<"/dashboard/reports">, "searchParams">;
 

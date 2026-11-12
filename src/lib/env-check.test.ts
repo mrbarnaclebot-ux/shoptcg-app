@@ -12,7 +12,7 @@ const ok = {
   VAPID_SUBJECT: "mailto:o@example.test",
   PINATA_JWT: "j",
   PINATA_GATEWAY_URL: "x.mypinata.cloud",
-  EMAIL_FROM: "shoptcg <hello@shop.example>",
+  EMAIL_FROM: "tcgmart <hello@shop.example>",
 };
 
 describe("checkEnv", () => {
@@ -54,7 +54,7 @@ describe("checkEnv", () => {
   });
 
   it("warns while mail still goes from Resend's test sender", () => {
-    for (const EMAIL_FROM of [undefined, "shoptcg <onboarding@resend.dev>"])
+    for (const EMAIL_FROM of [undefined, "tcgmart <onboarding@resend.dev>"])
       expect(checkEnv({ ...ok, EMAIL_FROM }).warnings[0]).toMatch(/EMAIL_FROM/);
   });
 

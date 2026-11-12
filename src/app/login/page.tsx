@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AuthShell, authLink } from "./auth-shell";
 import { LoginForm } from "./login-form";
 
-export const metadata: Metadata = { title: "Sign in - shoptcg" };
+export const metadata: Metadata = { title: "Sign in - tcgmart" };
 
 export default function LoginPage() {
   return (

@@ -69,7 +69,7 @@ export function TableSign(props: {
         <span>{props.fact}</span>
       </div>
       <div className="ts-foot">
-        <span>Powered by shoptcg.app</span>
+        <span>Powered by tcgmart.app</span>
         {props.nfc && (
           <span className="ts-nfc">
             Or tap your phone here
