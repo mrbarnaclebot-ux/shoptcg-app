@@ -107,7 +107,7 @@ test("a closed store can be browsed but not requested from", async ({
   const buyer = await (await browser.newContext()).newPage();
   await buyer.goto(`/${slug}`);
   await expect(buyer.getByText("Browsing only.")).toBeVisible();
-  await expect(buyer.getByRole("button", { name: /to your list/ })).toHaveCount(
+  await expect(buyer.getByRole("button", { name: /to your cart/ })).toHaveCount(
     0,
   );
 
@@ -115,7 +115,7 @@ test("a closed store can be browsed but not requested from", async ({
   await buyer.reload();
   await expect(buyer.getByText("Browsing only.")).toHaveCount(0);
   await expect(
-    buyer.getByRole("button", { name: /to your list/ }).first(),
+    buyer.getByRole("button", { name: /to your cart/ }).first(),
   ).toBeVisible();
 });
 
@@ -125,15 +125,15 @@ test("the buyer's list survives a reload", async ({ page, browser }) => {
   const buyer = await (await browser.newContext()).newPage();
   await buyer.goto(`/${slug}`);
   await buyer
-    .getByRole("button", { name: "Add Charizard ex to your list" })
+    .getByRole("button", { name: "Add Charizard ex to your cart" })
     .click();
-  await buyer.getByRole("button", { name: "Add Mew ex to your list" }).click();
+  await buyer.getByRole("button", { name: "Add Mew ex to your cart" }).click();
   await expect(
-    buyer.getByRole("status").filter({ hasText: "Your list" }),
+    buyer.getByRole("status").filter({ hasText: "Your cart" }),
   ).toContainText("2 items");
   await buyer.reload();
   await expect(
-    buyer.getByRole("status").filter({ hasText: "Your list" }),
+    buyer.getByRole("status").filter({ hasText: "Your cart" }),
   ).toContainText("2 items, $313.60");
 });
 

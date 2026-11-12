@@ -43,7 +43,7 @@ export async function Floor({ slug }: { slug: string }) {
         </ul>
       ) : (
         <p className="max-w-[44ch] border-t border-dashed border-border-strong pt-4 text-muted-foreground">
-          No open lists. A buyer&apos;s list shows here while they build it,
+          No open carts. A buyer&apos;s cart shows here while they build it,
           before they send it.
         </p>
       )}
@@ -78,7 +78,7 @@ function Basket({ b }: { b: FloorBasket }) {
               {l.qty > 1 && <span className="num"> x{l.qty}</span>}
               {l.others > 0 && (
                 <span className="block text-xs font-semibold text-brand-text">
-                  Also on {l.others} other {l.others === 1 ? "list" : "lists"}
+                  Also on {l.others} other {l.others === 1 ? "cart" : "carts"}
                 </span>
               )}
             </span>

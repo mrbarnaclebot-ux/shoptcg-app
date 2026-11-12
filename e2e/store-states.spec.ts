@@ -36,13 +36,13 @@ test("a timed pause reopens by itself, and the buyer's page follows without a re
   await expect(buyer.getByText("Browsing only.")).toBeVisible();
   await expect(buyer.getByText(/Back in about 1 min/)).toBeVisible();
   await expect(
-    buyer.getByRole("button", { name: "Add Mew ex to your list" }),
+    buyer.getByRole("button", { name: "Add Mew ex to your cart" }),
   ).toHaveCount(0);
 
   // The page's own timer re-reads it once the pause ends.
   await expect(status(buyer)).toHaveText("Open", { timeout: 15_000 });
   await add(buyer, "Mew ex");
-  await expect(buyer.getByRole("link", { name: "Review list" })).toBeVisible();
+  await expect(buyer.getByRole("link", { name: "Review cart" })).toBeVisible();
 });
 
 test("not vending shows who and where, no stock, prices or item details", async ({
@@ -83,7 +83,7 @@ test("not vending shows who and where, no stock, prices or item details", async 
     buyer.getByRole("heading", { name: "Price history" }),
   ).toHaveCount(0);
 
-  await buyer.goto(`/${slug}/list`);
+  await buyer.goto(`/${slug}/cart`);
   await expect(buyer.getByText(/isn't vending right now/)).toBeVisible();
   await expect(
     buyer.getByRole("button", { name: "Send to seller" }),

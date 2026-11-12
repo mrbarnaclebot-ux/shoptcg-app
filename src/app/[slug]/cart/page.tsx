@@ -8,22 +8,22 @@ import { getPublicItems } from "@/lib/storefront";
 import { NotVending } from "../store-header";
 import { storeOr404 } from "../store-lookup";
 import { metaLine } from "../tile";
-import { ListReview, type ReviewItem } from "./list-review";
+import { CartReview, type ReviewItem } from "./cart-review";
 
 // The store lookup runs before any Suspense boundary so an unknown slug is a 404.
 export const instant = false;
 
 export async function generateMetadata({
   params,
-}: PageProps<"/[slug]/list">): Promise<Metadata> {
+}: PageProps<"/[slug]/cart">): Promise<Metadata> {
   const store = await storeOr404((await params).slug);
-  return { title: `Your list - ${store.name} - shoptcg` };
+  return { title: `Your cart - ${store.name} - shoptcg` };
 }
 
-export default async function ListPage({
+export default async function CartPage({
   params,
   searchParams,
-}: PageProps<"/[slug]/list">) {
+}: PageProps<"/[slug]/cart">) {
   const store = await storeOr404((await params).slug);
   if (store.state === "off") return <NotVending store={store} />;
   const raw = (await searchParams).ids;
@@ -56,9 +56,9 @@ export default async function ListPage({
         Back to store
       </Link>
       <h1 className="font-display mt-4 mb-5 text-[3rem] leading-[0.85] font-black">
-        Your list
+        Your cart
       </h1>
-      <ListReview
+      <CartReview
         store={{
           slug: store.slug,
           name: store.name,

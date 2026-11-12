@@ -7,7 +7,7 @@ import { PreviewNote } from "./preview-note";
 
 const SEEN = {
   open: "it is open for buyers too.",
-  paused: "buyers can browse but not send lists.",
+  paused: "buyers can browse but not send carts.",
   off: "buyers see no stock.",
 } as const;
 

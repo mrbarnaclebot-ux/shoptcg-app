@@ -105,7 +105,7 @@ function Empty() {
         No requests yet.
       </p>
       <p className="max-w-[44ch] text-muted-foreground">
-        When a buyer scans your table sign and sends a list, it lands here and
+        When a buyer scans your table sign and sends a cart, it lands here and
         your phone chimes. Stock your table first.
       </p>
       <div className="mt-1 flex flex-wrap gap-3">

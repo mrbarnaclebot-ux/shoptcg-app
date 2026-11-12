@@ -47,7 +47,7 @@ test("happy path: the seller sees the ticket within 3 seconds", async ({
 
   // Sending empties the list.
   await buyer.goto(`/${slug}`);
-  await expect(buyer.getByRole("link", { name: "Review list" })).toHaveCount(0);
+  await expect(buyer.getByRole("link", { name: "Review cart" })).toHaveCount(0);
 });
 
 test("the last copy: others see it on hold, a stale list can send without it", async ({
@@ -74,7 +74,7 @@ test("the last copy: others see it on hold, a stale list can send without it", a
   const tile = third.locator("article").filter({ hasText: "Mew ex" });
   await expect(tile).toContainText("On hold");
   await expect(
-    third.getByRole("button", { name: "Add Mew ex to your list" }),
+    third.getByRole("button", { name: "Add Mew ex to your cart" }),
   ).toHaveCount(0);
 
   await without.click();
@@ -105,7 +105,7 @@ test("decline releases the stock and tells the buyer", async ({
   ).toBeVisible();
   await buyer.goto(`/${slug}`);
   await expect(
-    buyer.getByRole("button", { name: "Add Mew ex to your list" }),
+    buyer.getByRole("button", { name: "Add Mew ex to your cart" }),
   ).toBeVisible();
 });
 
@@ -127,7 +127,7 @@ test("a buyer cancels and the seller's ticket goes away", async ({
 
   await buyer.goto(`/${slug}`);
   await expect(
-    buyer.getByRole("button", { name: "Add Mew ex to your list" }),
+    buyer.getByRole("button", { name: "Add Mew ex to your cart" }),
   ).toBeVisible();
 });
 
@@ -153,7 +153,7 @@ test("a hold lapses: the buyer can send again, the seller's group counts it", as
     .locator("main")
     .getByRole("button", { name: "Send again" })
     .click();
-  await expect(buyer.getByRole("heading", { name: "Your list" })).toBeVisible();
+  await expect(buyer.getByRole("heading", { name: "Your cart" })).toBeVisible();
   await expect(
     buyer.getByRole("listitem").filter({ hasText: "Mew ex" }),
   ).toBeVisible();
@@ -252,12 +252,12 @@ test("a closed store: no list bar, and a stale list gets the closed copy", async
 
   await buyer.getByRole("button", { name: "Send to seller" }).click();
   await expect(
-    buyer.getByText(/just closed\. Your list is saved/),
+    buyer.getByText(/just closed\. Your cart is saved/),
   ).toBeVisible();
 
   await buyer.goto(`/${slug}`);
   await expect(buyer.getByText("Browsing only.")).toBeVisible();
-  await expect(buyer.getByRole("link", { name: "Review list" })).toHaveCount(0);
+  await expect(buyer.getByRole("link", { name: "Review cart" })).toHaveCount(0);
 });
 
 test("a test request lands on the seller's own queue, flagged", async ({
@@ -304,7 +304,7 @@ test("the list says what it had to change", async ({ page, browser }) => {
     [mew]: { qty: 1, price: 1, name: "Mew ex" },
   };
   await writeLines(buyer, slug, lines);
-  await buyer.goto(`/${slug}/list`);
+  await buyer.goto(`/${slug}/cart`);
 
   await expect(
     buyer.getByText("Only 3 left, so we lowered this."),
@@ -358,7 +358,7 @@ test("Send again asks before replacing a newer list", async ({
 
   buyer.once("dialog", (d) => d.accept());
   await again.click();
-  await expect(buyer.getByRole("heading", { name: "Your list" })).toBeVisible();
+  await expect(buyer.getByRole("heading", { name: "Your cart" })).toBeVisible();
   await expect(
     buyer.getByRole("listitem").filter({ hasText: "Mew ex" }),
   ).toBeVisible();

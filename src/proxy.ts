@@ -40,6 +40,12 @@ export async function proxy(req: NextRequest) {
   }
   // Top-level routes and files (favicon.ico) are not stores.
   if (RESERVED_SLUGS.has(slug) || slug.includes(".")) return;
+  // The buyer's list became a cart; old links and bookmarks still land.
+  if (page === "list" && id === undefined)
+    return NextResponse.redirect(
+      new URL(`/${slug}/cart${req.nextUrl.search}`, req.url),
+      308,
+    );
   if (await missing(req, slug, page, id))
     return NextResponse.rewrite(new URL("/_not-found", req.url));
 }
@@ -48,6 +54,7 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/:slug",
+    "/:slug/cart",
     "/:slug/list",
     "/:slug/item/:id",
     "/:slug/request/:id",

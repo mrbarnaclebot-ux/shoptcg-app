@@ -54,7 +54,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
-export function ListReview(props: {
+export function CartReview(props: {
   store: ReviewStore;
   items: ReviewItem[];
   loaded: string[];
@@ -79,12 +79,12 @@ export function ListReview(props: {
     startBuyerSession().catch(() => {});
   }, []);
   useEffect(() => {
-    if (stale) router.replace(`/${store.slug}/list?ids=${ids}`);
+    if (stale) router.replace(`/${store.slug}/cart?ids=${ids}`);
   }, [stale, ids, store.slug, router]);
 
   if (!hydrated) return null;
 
-  const closedCopy = `${store.name} just closed. Your list is saved on this phone.`;
+  const closedCopy = `${store.name} just closed. Your cart is saved on this phone.`;
   const rows = items
     .filter((it) => lines[it.id])
     .map((it) => {
@@ -104,7 +104,7 @@ export function ListReview(props: {
   if (!rows.length && !missing.length)
     return (
       <p className="text-lg">
-        Your list is empty. Tap the plus on any card to add it.
+        Your cart is empty. Tap the plus on any card to add it.
       </p>
     );
 
@@ -203,7 +203,7 @@ export function ListReview(props: {
             className="flex items-start justify-between gap-3 border-b border-border py-3 first:pt-0"
           >
             <p className="font-semibold">
-              {lines[id].name ?? "An item on your list"}
+              {lines[id].name ?? "An item in your cart"}
               {overLimit(id)
                 ? ` won't be sent. A request holds ${maxLines} cards.`
                 : " is no longer for sale."}

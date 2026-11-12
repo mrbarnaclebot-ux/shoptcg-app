@@ -49,10 +49,10 @@ for (const width of [390, 768, 1280]) {
     await settings(page, true);
     await buyer.goto(`/${slug}`);
     await buyer
-      .getByRole("button", { name: "Add Charizard ex to your list" })
+      .getByRole("button", { name: "Add Charizard ex to your cart" })
       .click();
     await buyer
-      .getByRole("button", { name: "Add Mew ex to your list" })
+      .getByRole("button", { name: "Add Mew ex to your cart" })
       .click();
     await shot(buyer, "store", width);
 

@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 const COPY = {
   declined: {
     title: "The seller couldn't do this one.",
-    sub: "Items are back in the store. You can talk to the seller at the table or send a new list.",
+    sub: "Items are back in the store. You can talk to the seller at the table or send a new cart.",
   },
   expired: {
     title: "Your hold ended.",

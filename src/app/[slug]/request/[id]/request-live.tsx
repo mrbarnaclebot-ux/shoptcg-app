@@ -9,7 +9,7 @@ import type { Line } from "@/lib/request-reads";
 import { toast } from "@/lib/toast";
 import { clock, useLive, useNow, useRefreshWhile } from "@/lib/use-live";
 import { listOn, writeList } from "../../list-island";
-import { cancelMyRequest } from "../../list/actions";
+import { cancelMyRequest } from "../../cart/actions";
 
 const WARN_MS = 3 * 60_000;
 
@@ -22,7 +22,7 @@ const sameLines = (a: Record<string, { qty: number }>, b: typeof a) => {
   return key(a) === key(b);
 };
 
-/** Puts what was on the request back on the list; the review clamps it to what's left. */
+/** Puts what was on the request back in the cart; the review clamps it to what's left. */
 function useSendAgain(slug: string, lines: Line[]) {
   const router = useRouter();
   return () => {
@@ -37,12 +37,12 @@ function useSendAgain(slug: string, lines: Line[]) {
       Object.keys(newer).length &&
       !sameLines(newer, again) &&
       !window.confirm(
-        "Replace the list you started with this request? Your newer list will be lost.",
+        "Replace the cart you started with this request? Your newer cart will be lost.",
       )
     )
       return;
     writeList(slug, again);
-    router.push(`/${slug}/list`);
+    router.push(`/${slug}/cart`);
   };
 }
 

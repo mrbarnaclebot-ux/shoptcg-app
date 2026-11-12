@@ -114,7 +114,7 @@ export function AddButton(props: {
         className="btn-ticket w-full"
       >
         <span className="btn-ticket-main">
-          {on ? "On your list" : "Add to list"}
+          {on ? "In your cart" : "Add to cart"}
         </span>
         <span aria-hidden className="btn-ticket-stub">
           <Icon className="size-[18px]" strokeWidth={2.4} />
@@ -126,7 +126,7 @@ export function AddButton(props: {
       type="button"
       onClick={toggle}
       aria-pressed={on}
-      aria-label={`Add ${props.name} to your list`}
+      aria-label={`Add ${props.name} to your cart`}
       className={`grid size-11 shrink-0 place-items-center ${on ? "bg-brand text-on-brand" : "bg-surface text-text shadow-[inset_0_0_0_1px_var(--border-strong)]"}`}
     >
       <Icon aria-hidden className="size-5" strokeWidth={2.3} />
@@ -154,7 +154,7 @@ export function ListBar({ slug }: { slug: string }) {
       <div className="paper grid grid-cols-[1fr_auto]">
         <p className="px-4 py-2.5" role="status">
           <span className="block text-xs text-muted-foreground">
-            Your list{tag && `, ${tag}. The seller can see it.`}
+            Your cart{tag && `, ${tag}. The seller can see it.`}
           </span>
           <span className="font-display num text-[1.625rem] leading-none font-extrabold">
             {n} {n === 1 ? "item" : "items"},{" "}
@@ -165,10 +165,10 @@ export function ListBar({ slug }: { slug: string }) {
           </span>
         </p>
         <Link
-          href={`/${slug}/list?ids=${Object.keys(lines).join(",")}`}
+          href={`/${slug}/cart?ids=${Object.keys(lines).join(",")}`}
           className="flex min-h-12 items-center justify-center bg-brand px-5 font-semibold text-on-brand hover:bg-brand-hover"
         >
-          Review list
+          Review cart
         </Link>
       </div>
     </div>

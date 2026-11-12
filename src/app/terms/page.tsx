@@ -37,13 +37,13 @@ export default function TermsPage() {
           <p>
             While you are on a vendor&apos;s page, your browser keeps a random
             id for that store. It lets the vendor see how many people are
-            looking and what is on your list before you send it, shown under a
+            looking and what is in your cart before you send it, shown under a
             short tag like K7P. It holds no name, email or address, is not
             shared between stores, and visit records are deleted after 30 days.
           </p>
           <h2>Buyer requests</h2>
           <p>
-            When you send a list, the vendor sees your name, your email and what
+            When you send a cart, the vendor sees your name, your email and what
             you asked for, and the items are held for 15 minutes. If the request
             doesn&apos;t end in a sale, your details are deleted after 30 days.
             Promo emails are separate: they need the optional box, which starts

@@ -16,6 +16,30 @@ async function rows(page: Page) {
   return [...by.values()];
 }
 
+test("add to cart from a tile; the old list link lands on the cart", async ({
+  page,
+  browser,
+  request,
+}) => {
+  const slug = await openVendor(page);
+  const buyer = await (await browser.newContext()).newPage();
+  await buyer.goto(`/${slug}`);
+  await buyer
+    .getByRole("button", { name: "Add Mew ex to your cart" })
+    .click();
+  await expect(
+    buyer.getByRole("status").filter({ hasText: "Your cart" }),
+  ).toContainText("1 item, $48.10");
+
+  const res = await request.get(`/${slug}/list?ids=x`, { maxRedirects: 0 });
+  expect(res.status()).toBe(308);
+  expect(res.headers().location).toMatch(new RegExp(`/${slug}/cart\\?ids=x$`));
+  await buyer.goto(`/${slug}/list`);
+  await expect(buyer).toHaveURL(new RegExp(`/${slug}/cart$`));
+  await expect(buyer.getByRole("heading", { name: "Your cart" })).toBeVisible();
+  await expect(buyer.getByText("Mew ex", { exact: true })).toBeVisible();
+});
+
 test("every tile in a row is the same size, buttons in line", async ({
   page,
   browser,

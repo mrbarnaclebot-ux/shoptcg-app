@@ -48,11 +48,11 @@ export async function newBuyer(browser: Browser, slug: string) {
 }
 
 export const add = (buyer: Page, name: string) =>
-  buyer.getByRole("button", { name: `Add ${name} to your list` }).click();
+  buyer.getByRole("button", { name: `Add ${name} to your cart` }).click();
 
 export async function reviewList(buyer: Page) {
-  await buyer.getByRole("link", { name: "Review list" }).click();
-  await expect(buyer.getByRole("heading", { name: "Your list" })).toBeVisible();
+  await buyer.getByRole("link", { name: "Review cart" }).click();
+  await expect(buyer.getByRole("heading", { name: "Your cart" })).toBeVisible();
 }
 
 export async function fillForm(
