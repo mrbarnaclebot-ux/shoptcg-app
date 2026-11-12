@@ -2,6 +2,7 @@ import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 import { getDb } from "@/db";
 import { BUYER_COOKIE } from "@/lib/buyer-session";
+import { canonicalRedirect } from "@/lib/canonical-host";
 import { buyerRequest } from "@/lib/request-reads";
 import { RESERVED_SLUGS, slugSchema } from "@/lib/slug";
 import { getPublicItem, getPublicStore, UUID } from "@/lib/storefront";
@@ -21,7 +22,18 @@ async function missing(req: NextRequest, slug: string, page?: string, id = "") {
   return (await buyerRequest(db, id, sid))?.slug !== slug;
 }
 
+// The paths that need a store or session check. Everything else only gets the
+// canonical-host redirect, so a printed sign on the old domain still lands.
+const CHECKED =
+  /^\/(?:dashboard(?:\/.*)?|join\/[^/]+|[^/]+(?:\/(?:cart|list)|\/(?:item|request)\/[^/]+)?)$/;
+
 export async function proxy(req: NextRequest) {
+  const moved = canonicalRedirect(
+    req.method,
+    req.headers.get("host"),
+    req.nextUrl,
+  );
+  if (moved) return NextResponse.redirect(moved, 308);
   // Next answers a path it can't decode with a 500; catch it first.
   try {
     decodeURIComponent(req.nextUrl.pathname);
@@ -30,6 +42,7 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL("/join", req.url));
     return NextResponse.rewrite(new URL("/_not-found", req.url));
   }
+  if (!CHECKED.test(req.nextUrl.pathname)) return;
   const [slug, page, id] = req.nextUrl.pathname.slice(1).split("/");
   if (slug === "dashboard") {
     // Cookie presence only, to skip rendering for signed-out visitors.
@@ -51,13 +64,6 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/dashboard/:path*",
-    "/:slug",
-    "/:slug/cart",
-    "/:slug/list",
-    "/:slug/item/:id",
-    "/:slug/request/:id",
-    "/join/:code",
-  ],
+  // Everything but build assets, for the redirect; CHECKED narrows the rest.
+  matcher: ["/((?!_next/static|_next/image).*)"],
 };

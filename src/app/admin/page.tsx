@@ -48,10 +48,6 @@ async function Admin() {
     lastPriceDate(db),
   ]);
   const { warnings } = checkEnv(process.env);
-  if (!process.env.EMAIL_FROM)
-    warnings.push(
-      "EMAIL_FROM unset: mail goes out from Resend's test address and only reaches the Resend account owner",
-    );
   const day = new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",

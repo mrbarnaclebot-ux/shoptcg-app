@@ -1,6 +1,29 @@
 import type { NextConfig } from "next";
 import { IMAGE_HOSTS } from "./src/lib/pricing/images";
 
+// No script-src: a nonce needs every page rendered per request, which
+// cacheComponents' prerendered shells can't do. These parts touch no script.
+// 'self' frame-ancestors keeps the dashboard preview framing the store page.
+const CSP = [
+  "frame-ancestors 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "form-action 'self'",
+].join("; ");
+
+const SECURITY_HEADERS = [
+  { key: "Content-Security-Policy", value: CSP },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  // Browsers ignore it over plain http, so localhost is unaffected.
+  { key: "Strict-Transport-Security", value: "max-age=63072000" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+  },
+];
+
 const nextConfig: NextConfig = {
   // Test-only routes are named *.e2e.ts and exist only in E2E_SEED=1 builds.
   pageExtensions: [
@@ -13,9 +36,11 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,
+  poweredByHeader: false,
   // The code is in the URL: never pass it to another site.
   async headers() {
     return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
       {
         source: "/join/:path*",
         headers: [{ key: "Referrer-Policy", value: "no-referrer" }],

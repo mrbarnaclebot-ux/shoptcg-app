@@ -15,14 +15,20 @@ const checks = [
   ],
   [`/${missing}`, 404],
   ["/login", 200],
-  ["/", 200],
+  // The security headers from next.config.ts reach the browser through Railway.
+  [
+    "/",
+    200,
+    (_, res) => res.headers.get("x-content-type-options") === "nosniff",
+  ],
+  ["/robots.txt", 200, (t) => t.includes(`Sitemap: ${base}/sitemap.xml`)],
 ];
 
 let failed = false;
 for (const [path, status, body] of checks) {
   const res = await fetch(base + path, { redirect: "manual" });
   const text = await res.text();
-  const ok = res.status === status && (!body || body(text));
+  const ok = res.status === status && (!body || body(text, res));
   failed ||= !ok;
   console.log(`${ok ? "ok  " : "FAIL"} ${path} -> ${res.status}`);
 }
