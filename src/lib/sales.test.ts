@@ -21,8 +21,14 @@ import {
   heldByListing,
   postgresZone,
   storeQueue,
+  waitingCount,
 } from "@/lib/request-reads";
-import { createRequest, type NewRequest } from "@/lib/requests";
+import {
+  addToTableSale,
+  createRequest,
+  tableSale,
+  type NewRequest,
+} from "@/lib/requests";
 import { confirmSale, optOut, type ConfirmInput } from "@/lib/sales";
 import { addStore, migratedDb } from "@/lib/test-fixtures";
 
@@ -114,6 +120,44 @@ function suite(name: string, open: () => Promise<Db>) {
       expect(results.filter((r) => "ok" in r)).toHaveLength(1);
       expect(results.filter((r) => "stock" in r)).toHaveLength(1);
       expect(await qtyOf(db, s.listingId)).toBe(0);
+    });
+
+    test("a table sale holds stock, sells without an email and sends no receipt", async () => {
+      const s = await shop(db, 2);
+      // Two quick taps land on one sale; the third finds nothing free.
+      const [a, b] = await Promise.all([
+        addToTableSale(db, s.storeId, s.listingId),
+        addToTableSale(db, s.storeId, s.listingId),
+      ]);
+      expect(a).toBe(b);
+      expect(await addToTableSale(db, s.storeId, s.listingId)).toBeNull();
+      expect(await tableSale(db, s.storeId)).toEqual({
+        id: a,
+        items: 2,
+        total: 20,
+      });
+      expect((await heldByListing(db, s.storeId)).get(s.listingId)?.qty).toBe(
+        2,
+      );
+      // It is the vendor's own: no buyer is waiting on it.
+      expect(await waitingCount(db, s.storeId)).toBe(0);
+
+      const r = await confirmSale(db, s.storeId, input(s, a!, {}, 2));
+      if (!("ok" in r)) throw new Error("expected a sale");
+      const [sold] = await salesOf(db, s.storeId);
+      expect(sold.buyerEmail).toBeNull();
+      expect(sold.buyerName).toBe("Walk-up");
+      expect(await qtyOf(db, s.listingId)).toBe(0);
+      expect(
+        await db.select().from(customer).where(eq(customer.storeId, s.storeId)),
+      ).toHaveLength(0);
+      expect(
+        await db
+          .select()
+          .from(receiptEmail)
+          .where(eq(receiptEmail.saleId, r.saleId)),
+      ).toHaveLength(0);
+      expect(await tableSale(db, s.storeId)).toBeNull();
     });
 
     test("a double tap makes one sale", async () => {

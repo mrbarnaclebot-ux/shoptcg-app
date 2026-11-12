@@ -1,5 +1,5 @@
 import { randomInt } from "node:crypto";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { listing, request, requestLine, store } from "@/db/schema";
 import { listStock } from "@/lib/listings";
@@ -144,18 +144,106 @@ async function insertRequest(tx: Db, input: NewRequest): Promise<CreateResult> {
 }
 
 /** One transaction per attempt; a code collision with another pending request retries. */
-export async function createRequest(
-  db: Db,
-  input: NewRequest,
-): Promise<CreateResult> {
+async function withCode<T>(db: Db, run: (tx: Db) => Promise<T>) {
   for (let attempt = 1; ; attempt++) {
     try {
-      return await db.transaction((tx) => insertRequest(tx as Db, input));
+      return await db.transaction((tx) => run(tx as Db));
     } catch (err) {
       const collided = uniqueViolation(err) === "request_pending_code_idx";
       if (!collided || attempt >= 5) throw err;
     }
   }
+}
+
+export function createRequest(db: Db, input: NewRequest) {
+  return withCode<CreateResult>(db, (tx) => insertRequest(tx, input));
+}
+
+const WALK_UP = "Walk-up";
+
+const openTableSale = (storeId: string) =>
+  and(
+    eq(request.storeId, storeId),
+    eq(request.walkUp, true),
+    sql`${effectiveStatus} = 'pending'`,
+  );
+
+/** The sale the vendor is building for a buyer at the table, or null. */
+export async function tableSale(db: Db, storeId: string) {
+  const [row] = await db
+    .select({
+      id: request.id,
+      items: sql<number>`coalesce(sum(${requestLine.qty}), 0)::int`,
+      total:
+        sql<string>`coalesce(sum(${requestLine.qty} * ${requestLine.quotedPrice}), 0)`.mapWith(
+          Number,
+        ),
+    })
+    .from(request)
+    .leftJoin(requestLine, eq(requestLine.requestId, request.id))
+    .where(openTableSale(storeId))
+    .groupBy(request.id)
+    .orderBy(desc(request.createdAt))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * One more of this listing on the store's table sale, starting one if none is
+ * open. It is a request the vendor makes, so the units are held like any
+ * buyer's and it is confirmed on the same screen. Null when none is free.
+ */
+export function addToTableSale(db: Db, storeId: string, listingId: string) {
+  return withCode(db, async (tx) => {
+    // Store first and exclusively: two quick taps must not start two sales.
+    const [s] = await tx
+      .select({
+        id: store.id,
+        priceRulePct: store.priceRulePct,
+        rounding: store.rounding,
+      })
+      .from(store)
+      .where(eq(store.id, storeId))
+      .for("no key update");
+    if (!s) return null;
+    await tx
+      .select({ id: listing.id })
+      .from(listing)
+      .where(and(eq(listing.storeId, storeId), eq(listing.id, listingId)))
+      .for("update");
+    // Its own hold counts as held, so asking for one asks for one more.
+    const { priced } = await quote(tx, s, [{ listingId, qty: 1 }]);
+    if (!priced.length) return null;
+    const expiresAt = sql`now() + make_interval(secs => ${HOLD_MS / 1000})`;
+    let [open] = await tx
+      .update(request)
+      .set({ expiresAt })
+      .where(openTableSale(storeId))
+      .returning({ id: request.id });
+    open ??= (
+      await tx
+        .insert(request)
+        .values({
+          storeId,
+          code: requestCode(),
+          buyerName: WALK_UP,
+          sessionId: `table:${storeId}`,
+          walkUp: true,
+          termsVersion: TERMS_VERSION,
+          expiresAt,
+        })
+        .returning({ id: request.id })
+    )[0];
+    const { quotedPrice } = priced[0];
+    await tx
+      .insert(requestLine)
+      .values({ requestId: open.id, listingId, qty: 1, quotedPrice })
+      .onConflictDoUpdate({
+        target: [requestLine.requestId, requestLine.listingId],
+        set: { qty: sql`${requestLine.qty} + 1`, quotedPrice },
+      });
+    return open.id;
+  });
 }
 
 type Change = {

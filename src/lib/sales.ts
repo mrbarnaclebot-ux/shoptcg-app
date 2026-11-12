@@ -128,7 +128,7 @@ async function recordSale(
     secondCurrency: string | null;
     fxRate: string | null;
   },
-  r: { promo: boolean; name: string; email: string },
+  r: { promo: boolean; name: string; email: string | null },
   input: ConfirmInput,
   asked: Asked[],
 ) {
@@ -199,13 +199,16 @@ async function recordSale(
     .update(request)
     .set({ status: "confirmed", decidedAt: sql`now()` })
     .where(eq(request.id, input.requestId));
-  await upsertCustomer(tx, {
-    storeId,
-    email: r.email,
-    name: r.name,
-    promo: r.promo,
-  });
-  await tx.insert(receiptEmail).values({ saleId: row.id });
+  // A table sale has no email: no customer record and no receipt to send.
+  if (r.email) {
+    await upsertCustomer(tx, {
+      storeId,
+      email: r.email,
+      name: r.name,
+      promo: r.promo,
+    });
+    await tx.insert(receiptEmail).values({ saleId: row.id });
+  }
   await notifyLive(tx, { s: storeId, r: input.requestId, t: "confirmed" });
   return { ok: true as const, saleId: row.id, receiptNo: no, total: row.total };
 }
@@ -231,6 +234,7 @@ async function confirmTx(
     .select({
       status: effectiveStatus,
       isTest: request.isTest,
+      walkUp: request.walkUp,
       // Ticked before they opted out, and confirmed after: the opt-out wins.
       promo: sql<boolean>`${request.promoOptIn} and not exists (
         select 1 from ${customer}
@@ -252,7 +256,8 @@ async function confirmTx(
     return { ok: true, ...done, retry: true };
   }
   const open = r.status === "pending" || r.status === "expired";
-  if (!open || r.isTest || !r.name || !r.email) return { gone: true };
+  if (!open || r.isTest || !r.name || (!r.email && !r.walkUp))
+    return { gone: true };
 
   const asked = await tx
     .select({

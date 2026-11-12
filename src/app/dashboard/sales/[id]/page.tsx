@@ -64,12 +64,16 @@ async function Receipt({
         </p>
         <ReceiptSummary sale={sale} />
       </Ticket>
-      <ReceiptEmailStatus
-        saleId={sale.id}
-        status={sale.emailStatus}
-        email={sale.buyerEmail}
-        attemptsLeft={MAX_ATTEMPTS - (sale.emailAttempts ?? 0)}
-      />
+      {sale.buyerEmail ? (
+        <ReceiptEmailStatus
+          saleId={sale.id}
+          status={sale.emailStatus}
+          email={sale.buyerEmail}
+          attemptsLeft={MAX_ATTEMPTS - (sale.emailAttempts ?? 0)}
+        />
+      ) : (
+        <p>Sold at the table. No receipt was emailed.</p>
+      )}
       <p className="text-sm text-muted-foreground">
         Receipts can&apos;t be changed once saved.
       </p>

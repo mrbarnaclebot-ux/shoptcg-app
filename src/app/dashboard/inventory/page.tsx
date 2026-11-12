@@ -3,9 +3,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { lineButton, TicketButton } from "@/components/ticket-button";
-import { shortDate } from "@/lib/format";
+import { shortDate, usd } from "@/lib/format";
 import { getDb } from "@/db";
 import { listStock } from "@/lib/listings";
+import { tableSale } from "@/lib/requests";
 import { requireStore } from "@/lib/session";
 import { vendorPrice } from "@/lib/vendor-price";
 import { filterSchema, Filters } from "./filters";
@@ -30,7 +31,10 @@ async function Inventory({
 }: Pick<PageProps<"/dashboard/inventory">, "searchParams">) {
   const { store } = await requireStore();
   const filter = filterSchema.parse(await searchParams);
-  const rows = await listStock(getDb(), store.id, filter);
+  const [rows, selling] = await Promise.all([
+    listStock(getDb(), store.id, filter),
+    tableSale(getDb(), store.id),
+  ]);
   const today = new Date().toISOString().slice(0, 10);
   const filtered = Boolean(filter.q || filter.kind || filter.language);
   const rule = [store.priceRulePct, Number(store.rounding)] as const;
@@ -42,6 +46,18 @@ async function Inventory({
     <>
       <Header count={filtered ? null : rows.length} synced={synced} />
       {rows.length || filtered ? <Filters filter={filter} /> : null}
+      {selling && (
+        <Link
+          href={`/dashboard/requests/${selling.id}`}
+          className="num sticky top-2 z-10 flex min-h-12 items-center justify-between gap-3 bg-text px-4 font-semibold text-bg"
+        >
+          <span>
+            Table sale: {selling.items} {selling.items === 1 ? "item" : "items"}
+            , {usd(selling.total)}
+          </span>
+          <span className="underline underline-offset-4">Finish sale</span>
+        </Link>
+      )}
       {rows.length ? (
         <ul className="-mx-4 bg-surface md:mx-0">
           {rows.map((r) => (

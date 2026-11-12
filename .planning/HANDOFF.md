@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-10. `main` and `production` are level; the last code change is the ledger (first half of step 4 of the plan under "Next up")._
+_Last updated: 2026-11-12. The table sale (walk-up quick sale, from step 4 under "Next up") is in a PR on branch `quick-sale`. `main` and `production` are level with the ledger until it merges._
 
 ## Where things stand
 
@@ -41,9 +41,14 @@ _Last updated: 2026-11-10. `main` and `production` are level; the last code chan
 - **Ledger (step 4, first half):** `/dashboard/ledger`, linked from Sales and More, shows for any day range: takings after discounts, what the sold items cost, profit, stock on hand valued at market and at cost, and every stock change.
   - Every quantity change writes a `stock_move` row from a database trigger (`listing_stock_move`, migration `0020`), so no code path can skip it. The reason comes from a transaction setting: call `stockReason(tx, "sold", saleId)` in `src/lib/ledger.ts` before changing quantities. Unlabelled changes are "added" (new listing) or "adjusted". Existing stock got an "opening" row.
   - Cost is optional per listing (`listing.cost`, private to the vendor), set in the inventory edit panel or a `cost` CSV column. It is copied to `sale_line.unit_cost` when sold. Profit only counts lines that have a cost and says how many were left out.
-  - Not built yet from step 4: the walk-up "quick sale" and voids. The cost field is not in the two "add item" panels.
+  - Not built yet from step 4: voids. The cost field is not in the two "add item" panels.
+- **Table sale (quick sale for walk-up buyers):** an in-stock, priced, visible inventory row has a "Sell" button. Each tap adds one unit to the store's one open table sale, a request with `request.walk_up` (migration `0021`), named "Walk-up". A bar on Inventory shows its items and total and links to the normal sale screen.
+  - Logic in `addToTableSale` and `tableSale` (`src/lib/requests.ts`). The store row is locked first so two quick taps make one sale. Units are held like any buyer's list, and each tap renews the hold.
+  - `sale.buyer_email` is now nullable. A table sale has no email, so it makes no customer record and no receipt email, and the receipt page says "Sold at the table".
+  - It never chimes and is left out of the "waiting" count. Confirming doesn't check store state, so it can be sold while paused.
+  - Covered by a unit test in `src/lib/sales.test.ts` and `e2e/table-sale.spec.ts`.
 - **Invites:** the owner created the first one on production.
-- **In progress:** the five-step plan under "Next up"; steps 1 to 3 and the first half of step 4 are shipped. Search and graded-card work is researched but not started. The repo has one branch (`main`, plus `production`) and no worktrees.
+- **In progress:** the five-step plan under "Next up"; steps 1 to 3 are shipped, plus the ledger and the table sale from step 4. Search and graded-card work is researched but not started. The repo has one branch (`main`, plus `production`) and no worktrees.
 
 ## How to ship
 
@@ -94,7 +99,7 @@ Railway notes (more in memory `railway-config-ignored`):
   2. ~~Preview mode.~~ Shipped.
   3. ~~Live baskets and visitor counts.~~ Shipped.
   4. Ledger part one. Shipped: stock moves, cost and profit, the ledger page. Left:
-     - Quick sale for walk-up buyers. Plan: a vendor-made request (`request.walk_up`) built by tapping "Sell" on inventory rows, then confirmed on the existing sale screen. `sale.buyer_email` becomes optional; skip the receipt email and customer record without one; don't chime for it.
+     - ~~Quick sale for walk-up buyers.~~ Shipped as the table sale.
      - Voids as a new `sale_void` record with a "put back in stock" choice (`stockReason(tx, "voided", saleId)`), netted out of the report, ledger, sales list and CSV.
      - Cost field in the catalog and custom "add item" panels.
   5. Ledger part two: buys and trade-ins, float and a cash check at close. This reverses "No float field" below; the owner agreed.

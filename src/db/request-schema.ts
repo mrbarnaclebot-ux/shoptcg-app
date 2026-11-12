@@ -50,6 +50,9 @@ export const request = pgTable(
     sessionId: text("session_id").notNull(),
     ipHash: text("ip_hash"),
     isTest: boolean("is_test").notNull().default(false),
+    // Built by the vendor for a buyer standing at the table: no email, no
+    // alert, and it can be sold while the store is paused.
+    walkUp: boolean("walk_up").notNull().default(false),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

@@ -39,7 +39,8 @@ export const sale = pgTable(
     // The seller's zone when they confirmed: a receipt's time never shifts.
     timeZone: text("time_zone").notNull().default("UTC"),
     buyerName: text("buyer_name").notNull(),
-    buyerEmail: text("buyer_email").notNull(),
+    // Null for a table sale: nobody typed an address, so no receipt is sent.
+    buyerEmail: text("buyer_email"),
     subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull(),
     discount: numeric("discount", { precision: 12, scale: 2 })
       .notNull()

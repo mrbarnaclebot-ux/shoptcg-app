@@ -29,6 +29,7 @@ import {
   updateListing,
 } from "@/lib/listings";
 import { defaultProvider } from "@/lib/pricing/provider";
+import { addToTableSale } from "@/lib/requests";
 import { requireStore } from "@/lib/session";
 import { priceNewListings } from "@/lib/sync-prices";
 
@@ -51,6 +52,14 @@ async function isFirst(db: Db, storeId: string) {
 }
 
 const deltaSchema = z.union([z.literal(1), z.literal(-1)]);
+
+/** Puts one on the table sale; false when none is free to sell. */
+export async function sellAction(id: string) {
+  const { store } = await requireStore();
+  const sale = await addToTableSale(getDb(), store.id, z.uuid().parse(id));
+  refresh();
+  return Boolean(sale);
+}
 
 export async function stepQtyAction(id: string, delta: 1 | -1) {
   const { store } = await requireStore();

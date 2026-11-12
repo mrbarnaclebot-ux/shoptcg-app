@@ -101,6 +101,7 @@ const ticketCols = {
   status: effectiveStatus,
   buyerName: request.buyerName,
   isTest: request.isTest,
+  walkUp: request.walkUp,
   expiresAt: request.expiresAt,
   createdAt: request.createdAt,
 };
@@ -185,6 +186,7 @@ export async function waitingCount(db: Db, storeId: string) {
       and(
         eq(request.storeId, storeId),
         eq(request.isTest, false),
+        eq(request.walkUp, false),
         sql`${effectiveStatus} = 'pending'`,
       ),
     );
