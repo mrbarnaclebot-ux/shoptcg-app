@@ -397,7 +397,10 @@ export function SaleForm(props: {
         )}
       </dl>
       {!r.isTest && (
-        <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 -mx-4 flex flex-col gap-2 border-t border-border bg-bg px-4 py-3 lg:bottom-0">
+        <div
+          data-toast-clear
+          className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 -mx-4 flex flex-col gap-2 border-t border-border bg-bg px-4 py-3 lg:bottom-0"
+        >
           {failed && (
             <p role="alert" className="font-semibold text-danger">
               Couldn&apos;t confirm the sale saved. Tap Confirm again; it

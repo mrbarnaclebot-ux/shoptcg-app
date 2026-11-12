@@ -309,3 +309,36 @@ test("a test request can be reviewed but never sold", async ({ page }) => {
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("link", { name: "Review sale" })).toHaveCount(0);
 });
+
+test("on a phone, new request toasts stay clear of the Confirm sale bar", async ({
+  page,
+  browser,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const slug = await openVendor(page);
+  const toasts = page.locator(".toasts li").filter({ hasText: "New request" });
+  const a = await (await browser.newContext()).newPage();
+  await sendList(a, slug, ["Charizard ex"], { name: "Ana Reyes" });
+  await expect(toasts).toHaveCount(1);
+  const b = await (await browser.newContext()).newPage();
+  await sendList(b, slug, ["Gengar"], { name: "Ben Carter" });
+  await expect(toasts).toHaveCount(2);
+  await page.getByRole("button", { name: "Send a test request" }).click();
+  await expect(toasts).toHaveCount(3);
+
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: "Ana Reyes" })
+    .getByRole("link", { name: "Review sale" })
+    .click();
+  await expect(page.getByRole("heading", { name: /^Sale for/ })).toBeVisible();
+  // The newest two show, at the top; the bar stays uncovered.
+  const shown = page.locator(".toasts li:visible");
+  await expect(shown).toHaveCount(2);
+  const bar = (await page.locator("[data-toast-clear]").boundingBox())!;
+  const boxes = await shown.evaluateAll((els) =>
+    els.map((el) => el.getBoundingClientRect().toJSON() as DOMRect),
+  );
+  for (const box of boxes)
+    expect(box.bottom <= bar.y || box.top >= bar.y + bar.height).toBe(true);
+});
