@@ -19,6 +19,7 @@ test("a vendor adds a custom item and sees it in inventory", async ({
   await page.getByLabel("Number").fill("SM-P 1");
   await page.getByLabel("Qty").fill("2");
   await page.getByLabel("Fixed price (optional)").fill("25");
+  await page.getByLabel("What you paid, each (USD)").fill("$12.5");
   await page.getByRole("button", { name: "Add custom item" }).click();
   await expect(
     page.getByText("Added Pikachu Gold Star CN promo"),
@@ -31,6 +32,12 @@ test("a vendor adds a custom item and sees it in inventory", async ({
   await expect(row).toContainText("$25.00");
   await expect(row).toContainText("CN");
   await expect(row.locator("output")).toHaveText("2");
+  // The cost from the add form is the one the edit panel holds.
+  await row.getByRole("button", { name: "Edit" }).click();
+  await expect(row.getByLabel("What you paid, each (USD)")).toHaveValue(
+    "12.50",
+  );
+  await row.getByRole("button", { name: "Close" }).click();
 
   // The digit changes straight away; a reload before the save lands would abort it.
   const saved = page.waitForResponse((r) => r.request().method() === "POST");

@@ -96,20 +96,10 @@ function Fields({ row }: { row: StockRow }) {
           Leave blank to follow the market with your store rule.
         </p>
       </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`cost-${row.id}`}>What you paid, each (USD)</Label>
-        <Input
-          id={`cost-${row.id}`}
-          name="cost"
-          inputMode="decimal"
-          defaultValue={row.cost?.toFixed(2) ?? ""}
-          placeholder="Optional"
-          aria-describedby={`cost-${row.id}-hint`}
-        />
-        <p id={`cost-${row.id}-hint`} className="text-sm text-muted-foreground">
-          Only you see this. It gives your ledger a profit figure.
-        </p>
-      </div>
+      <CostField
+        id={`cost-${row.id}`}
+        defaultValue={row.cost?.toFixed(2) ?? ""}
+      />
       {row.kind === "raw" && (
         <div className="flex flex-col gap-2">
           <Label htmlFor={`cond-${row.id}`}>Condition</Label>
@@ -126,5 +116,37 @@ function Fields({ row }: { row: StockRow }) {
         </div>
       )}
     </>
+  );
+}
+
+/** The vendor's own unit cost, here and on both add forms (priceSchema parses it). */
+export function CostField({
+  id,
+  defaultValue,
+  error,
+}: {
+  id: string;
+  defaultValue?: string;
+  error?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>What you paid, each (USD)</Label>
+      <Input
+        id={id}
+        name="cost"
+        inputMode="decimal"
+        defaultValue={defaultValue}
+        placeholder="Optional"
+        aria-invalid={error ? true : undefined}
+        aria-describedby={`${id}-hint`}
+      />
+      <p
+        id={`${id}-hint`}
+        className={`text-sm ${error ? "text-danger" : "text-muted-foreground"}`}
+      >
+        {error ?? "Only you see this. It gives your ledger a profit figure."}
+      </p>
+    </div>
   );
 }

@@ -26,6 +26,8 @@ const STALE_DAYS = 2;
 export function StockRow(props: {
   row: Row;
   price: number | null;
+  /** Just added from the catalog; its market price is on the way. */
+  awaiting: boolean;
   today: string;
 }) {
   const { row, price } = props;
@@ -87,7 +89,12 @@ function Name({ row, price }: { row: Row; price: number | null }) {
   );
 }
 
-function PriceTag({ row, price, today }: Parameters<typeof StockRow>[0]) {
+function PriceTag({
+  row,
+  price,
+  awaiting,
+  today,
+}: Parameters<typeof StockRow>[0]) {
   const stale = row.asOf ? daysBetween(row.asOf, today) : 0;
   const mkt =
     row.market !== null && row.asOf
@@ -95,7 +102,12 @@ function PriceTag({ row, price, today }: Parameters<typeof StockRow>[0]) {
       : null;
   return (
     <div className="col-start-3 row-start-1 flex flex-col items-end gap-1 lg:col-start-5">
-      {price === null ? (
+      {price === null && awaiting ? (
+        // Not a task yet: price on add usually lands within a minute.
+        <span className="inline-flex min-h-9 items-center text-[0.9375rem] font-semibold text-muted-foreground">
+          No price yet
+        </span>
+      ) : price === null ? (
         // A task, not a price: outline only, so it never reads as one.
         <span className="inline-flex min-h-9 items-center px-3 text-[0.9375rem] font-semibold text-brand-text shadow-[inset_0_0_0_1.5px_var(--brand)]">
           Set a price

@@ -1,10 +1,11 @@
 import { cn } from "cn";
 import { LANGUAGE_LABEL } from "@/lib/format";
 
-// Slabs are taller than raw cards; sealed product is roughly square (UI-SPEC 4).
+// A slab's scan is the card itself, so it keeps the card's shape and shows
+// whole; sealed product is roughly square.
 const ASPECT = {
   raw: "aspect-[63/88]",
-  graded: "aspect-[3/5]",
+  graded: "aspect-[63/88]",
   sealed: "aspect-square",
 } as const;
 

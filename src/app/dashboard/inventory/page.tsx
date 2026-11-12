@@ -8,7 +8,7 @@ import { getDb } from "@/db";
 import { listStock } from "@/lib/listings";
 import { tableSale } from "@/lib/requests";
 import { requireStore } from "@/lib/session";
-import { vendorPrice } from "@/lib/vendor-price";
+import { awaitingPrice, vendorPrice } from "@/lib/vendor-price";
 import { filterSchema, Filters } from "./filters";
 import { StockRow } from "./stock-row";
 
@@ -65,6 +65,7 @@ async function Inventory({
               key={r.id}
               row={r}
               price={vendorPrice(r.market, ...rule, r.overridePrice)}
+              awaiting={awaitingPrice(r)}
               today={today}
             />
           ))}

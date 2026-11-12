@@ -1,7 +1,6 @@
-import { PartialPricesError, SearchError } from "./errors";
+import { PartialPricesError, SearchBusyError } from "./errors";
 import {
   cardHit,
-  gradedHits,
   history,
   quote,
   sealedHit,
@@ -46,7 +45,7 @@ async function throttle(rate: Rate) {
   const now = Date.now();
   const wait = nextCallAt - now;
   if (wait > rate.maxWaitMs)
-    throw new SearchError("Price search is busy. Try again in a minute.");
+    throw new SearchBusyError("Price search is busy. Try again in a minute.");
   nextCallAt = Math.max(nextCallAt, now) + rate.gapMs;
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
 }
@@ -83,12 +82,17 @@ async function request(c: Client, path: string, params: Params) {
 }
 
 // One item per call with limit=1: PPT bills on the requested limit, not results.
-function fetchOne(c: Client, ref: PriceRef, extra: Params = {}) {
+async function fetchOne(c: Client, ref: PriceRef, extra: Params = {}) {
   const language = LANG[ref.language] ?? "english";
   const base = { tcgPlayerId: ref.providerId, language, limit: 1, ...extra };
-  if (ref.kind === "sealed") return request(c, "/sealed-products", base);
   const graded: Params = ref.kind === "graded" ? { includeEbay: true } : {};
-  return request(c, "/cards", { ...base, ...graded });
+  const data =
+    ref.kind === "sealed"
+      ? await request(c, "/sealed-products", base)
+      : await request(c, "/cards", { ...base, ...graded });
+  // The docs say a tcgPlayerId lookup returns one object; /cards does (checked
+  // live), /sealed-products is unverified, so a one-item list is read too.
+  return Array.isArray(data) ? (data[0] ?? null) : data;
 }
 
 async function search(c: Client, q: SearchQuery): Promise<CatalogHit[]> {
@@ -100,12 +104,9 @@ async function search(c: Client, q: SearchQuery): Promise<CatalogHit[]> {
     const rows = (await request(c, "/sealed-products", params)) ?? [];
     return (rows as PptSealed[]).map((p) => sealedHit(p, q.language));
   }
-  const extra: Params = q.kind === "graded" ? { includeEbay: true } : {};
-  const rows = ((await request(c, "/cards", { ...params, ...extra })) ??
-    []) as PptCard[];
-  return q.kind === "graded"
-    ? rows.flatMap((card) => gradedHits(card, q.language))
-    : rows.map((card) => cardHit(card, q.language));
+  // Graded searches arrive as raw (searchCatalog): one hit per card.
+  const rows = ((await request(c, "/cards", params)) ?? []) as PptCard[];
+  return rows.map((card) => cardHit(card, q.language));
 }
 
 const FAILED = Symbol("failed");

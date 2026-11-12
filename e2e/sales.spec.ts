@@ -2,13 +2,18 @@ import { randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { newVendor } from "./auth";
 import {
+  add,
   buyerEmail,
   confirm,
+  fillForm,
+  newBuyer,
   openVendor,
   outboxLine,
   pay,
+  reviewList,
   reviewSale,
   sendList,
+  sent,
 } from "./buyer";
 
 test("a full table sale: edit, discount, confirm, receipt, stock, buyer", async ({
@@ -308,4 +313,48 @@ test("a test request can be reviewed but never sold", async ({ page }) => {
   await page.getByRole("button", { name: "Decline", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("link", { name: "Review sale" })).toHaveCount(0);
+});
+
+test("on a phone, new request toasts stay clear of the Confirm sale bar", async ({
+  page,
+  browser,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const slug = await openVendor(page);
+  const toasts = page.locator(".toasts li").filter({ hasText: "New request" });
+  const buyers = [
+    ["Ana Reyes", "Charizard ex"],
+    ["Ben Carter", "Gengar"],
+    ["Cleo Park", "Mew ex"],
+  ];
+  // Lists filled first, then sent back to back: toasts last 10 seconds.
+  const ready = [];
+  for (const [name, item] of buyers) {
+    const buyer = await newBuyer(browser, slug);
+    await add(buyer, item);
+    await reviewList(buyer);
+    await fillForm(buyer, name, buyerEmail());
+    ready.push(buyer);
+  }
+  for (const [i, buyer] of ready.entries()) {
+    await buyer.getByRole("button", { name: "Send to seller" }).click();
+    await sent(buyer);
+    await expect(toasts).toHaveCount(i + 1);
+  }
+
+  await page
+    .getByRole("listitem")
+    .filter({ hasText: "Ana Reyes" })
+    .getByRole("link", { name: "Review sale" })
+    .click();
+  await expect(page.getByRole("heading", { name: /^Sale for/ })).toBeVisible();
+  // The newest two show, at the top; the bar stays uncovered.
+  const shown = page.locator(".toasts li:visible");
+  await expect(shown).toHaveCount(2);
+  const bar = (await page.locator("[data-toast-clear]").boundingBox())!;
+  const boxes = await shown.evaluateAll((els) =>
+    els.map((el) => el.getBoundingClientRect().toJSON() as DOMRect),
+  );
+  for (const box of boxes)
+    expect(box.bottom <= bar.y || box.top >= bar.y + bar.height).toBe(true);
 });

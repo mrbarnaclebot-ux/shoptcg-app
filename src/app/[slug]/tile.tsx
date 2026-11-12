@@ -8,10 +8,11 @@ import { gradeLabel, LANGUAGE_LABEL } from "@/lib/format";
 import type { PublicItem } from "@/lib/storefront";
 import { AddButton } from "./list-island";
 
-// Slabs are taller than raw cards; sealed product is roughly square.
+// A slab's scan is the card itself, so it keeps the card's shape and shows
+// whole; sealed product is roughly square.
 export const ART_ASPECT = {
   raw: "aspect-[63/88]",
-  graded: "aspect-[3/5]",
+  graded: "aspect-[63/88]",
   sealed: "aspect-square",
 } as const;
 

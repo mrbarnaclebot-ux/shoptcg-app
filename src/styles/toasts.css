@@ -39,6 +39,23 @@
     bottom: 24px;
   }
 }
+/*
+  A screen with a sticky action bar ([data-toast-clear], the Confirm sale bar)
+  keeps the stack at the top edge whatever the flip says, and shows only the
+  newest two, so a burst of new requests never reaches the bar.
+*/
+body:has([data-toast-clear]) .toasts {
+  top: 64px;
+  bottom: auto;
+}
+body:has([data-toast-clear]) .toasts > li:nth-last-child(n + 3) {
+  display: none;
+}
+@media (min-width: 768px) {
+  body:has([data-toast-clear]) .toasts {
+    top: 24px;
+  }
+}
 
 .toasts > li {
   position: relative;

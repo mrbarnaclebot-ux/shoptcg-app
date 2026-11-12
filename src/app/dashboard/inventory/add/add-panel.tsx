@@ -11,18 +11,29 @@ import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CatalogItem } from "@/db/schema";
-import { CONDITIONS, type Condition } from "@/lib/listing-input";
+import {
+  CONDITIONS,
+  GRADERS,
+  GRADES,
+  type Condition,
+} from "@/lib/listing-input";
+import type { Grader } from "@/lib/pricing/provider";
 import { toast } from "@/lib/toast";
 import { addCatalogAction } from "../actions";
+import { CostField } from "../edit-panel";
 
 export function AddPanel({
   item,
+  graded = false,
   onClose,
 }: {
   item: CatalogItem;
+  /** Listing a raw card as a slab: the vendor picks grader and grade here. */
+  graded?: boolean;
   onClose: () => void;
 }) {
   const [condition, setCondition] = useState<Condition>("NM");
+  const [grader, setGrader] = useState<Grader>("PSA");
   const [error, setError] = useState<string>();
   const [added, setAdded] = useState<{ first: boolean }>();
   const [pending, start] = useTransition();
@@ -31,9 +42,12 @@ export function AddPanel({
       const fixed = String(form.get("overridePrice") ?? "").trim();
       const res = await addCatalogAction({
         catalogItemId: item.id,
-        condition: item.kind === "raw" ? condition : null,
+        condition: item.kind === "raw" && !graded ? condition : null,
+        grader: graded ? grader : null,
+        grade: graded ? form.get("grade") : null,
         qty: form.get("qty"),
         overridePrice: fixed,
+        cost: form.get("cost"),
       });
       setError(res.error);
       if (res.error) return void toast.notSaved(res.error);
@@ -54,13 +68,37 @@ export function AddPanel({
           Back to results
         </button>
         <ItemHeader item={item} />
-        {item.kind === "raw" && (
-          <Segmented
-            label="Condition"
-            value={condition}
-            options={CONDITIONS.map((c) => [c, c] as const)}
-            onChange={setCondition}
-          />
+        {graded ? (
+          <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+            <Segmented
+              label="Grader"
+              value={grader}
+              options={GRADERS.map((g) => [g, g] as const)}
+              onChange={setGrader}
+            />
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="grade">Grade</Label>
+              <select
+                id="grade"
+                name="grade"
+                defaultValue="10"
+                className="h-12 min-w-24 bg-bg px-3 text-base shadow-[inset_0_0_0_1.5px_var(--border-strong)] focus-visible:shadow-[inset_0_0_0_2.5px_var(--focus)] focus-visible:outline-none"
+              >
+                {GRADES.map((g) => (
+                  <option key={g}>{g}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        ) : (
+          item.kind === "raw" && (
+            <Segmented
+              label="Condition"
+              value={condition}
+              options={CONDITIONS.map((c) => [c, c] as const)}
+              onChange={setCondition}
+            />
+          )
         )}
         <StockFields />
         {error && <p className="text-sm text-danger">{error}</p>}
@@ -72,44 +110,47 @@ export function AddPanel({
   );
 }
 
-/** Qty and optional fixed price; shared with the custom item form. */
+/** Qty, optional fixed price and cost; shared with the custom item form. */
 export function StockFields({
   errors = {},
 }: {
   errors?: Record<string, string>;
 }) {
   return (
-    <div className="grid grid-cols-[6rem_1fr] gap-3">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="qty">Qty</Label>
-        <Input
-          id="qty"
-          name="qty"
-          type="number"
-          min={0}
-          max={9999}
-          defaultValue={1}
-          required
-          className="num"
-        />
+    <>
+      <div className="grid grid-cols-[6rem_1fr] gap-3">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="qty">Qty</Label>
+          <Input
+            id="qty"
+            name="qty"
+            type="number"
+            min={0}
+            max={9999}
+            defaultValue={1}
+            required
+            className="num"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="overridePrice">Fixed price (optional)</Label>
+          <Input
+            id="overridePrice"
+            name="overridePrice"
+            inputMode="decimal"
+            placeholder="Use market price"
+            aria-invalid={errors.overridePrice ? true : undefined}
+            aria-describedby="price-error"
+          />
+        </div>
+        {(errors.qty || errors.overridePrice) && (
+          <p id="price-error" className="col-span-2 text-sm text-danger">
+            {errors.qty ?? errors.overridePrice}
+          </p>
+        )}
       </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="overridePrice">Fixed price (optional)</Label>
-        <Input
-          id="overridePrice"
-          name="overridePrice"
-          inputMode="decimal"
-          placeholder="Use market price"
-          aria-invalid={errors.overridePrice ? true : undefined}
-          aria-describedby="price-error"
-        />
-      </div>
-      {(errors.qty || errors.overridePrice) && (
-        <p id="price-error" className="col-span-2 text-sm text-danger">
-          {errors.qty ?? errors.overridePrice}
-        </p>
-      )}
-    </div>
+      <CostField id="cost" error={errors.cost} />
+    </>
   );
 }
 
