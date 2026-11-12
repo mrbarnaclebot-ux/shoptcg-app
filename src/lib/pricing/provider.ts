@@ -1,3 +1,5 @@
+import { seedAllowed } from "@/lib/e2e-seed";
+import { e2eProvider } from "./e2e";
 import { ppt, SYNC_RATE } from "./ppt";
 import { tcgdex } from "./tcgdex";
 
@@ -56,6 +58,7 @@ export interface PriceProvider {
 
 // PPT is the paid source of record; TCGdex keeps dev working with no key.
 export function defaultProvider(): PriceProvider {
+  if (seedAllowed(process.env)) return e2eProvider;
   const key = process.env.PPT_API_KEY;
   return key ? ppt(key) : tcgdex;
 }
