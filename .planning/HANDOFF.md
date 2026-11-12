@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-12. Step 4 is finished on `main` (table sale #23, voids #24, cost on add #25), plus the search fixes (#27) and the `logo_url` drop (#26). Step 5 is in progress on branch `ledger-two`. Production still runs the ledger build until `main` is pushed to `production`._
+_Last updated: 2026-11-12. Step 4 is finished on `main` (table sale #23, voids #24, cost on add #25), plus the search fixes (#27) and the `logo_url` drop (#26). Step 5 (buys, float, cash check) is in PR #28. Production still runs the ledger build until `main` is pushed to `production`._
 
 ## Where things stand
 
@@ -50,6 +50,12 @@ _Last updated: 2026-11-12. Step 4 is finished on `main` (table sale #23, voids #
   - `sale.buyer_email` is now nullable. A table sale has no email, so it makes no customer record and no receipt email, and the receipt page says "Sold at the table".
   - It never chimes and is left out of the "waiting" count. Confirming doesn't check store state, so it can be sold while paused.
   - Covered by a unit test in `src/lib/sales.test.ts` and `e2e/table-sale.spec.ts`.
+- **Ledger part two (PR #28): buys, float, cash check.** "Buy" on Inventory, or "Record a buy" on Ledger, opens `/dashboard/buy`. Pick from stock or add a custom item, then pay with cash, card, PayPal or trade (store credit; no cash moves).
+  - `recordBuy` in `src/lib/buys.ts` locks the store, then the listings, labels the change with `stockReason(tx, "bought", buyId)` and adds the stock. The price paid becomes `listing.cost`, averaged with the cost of units on hand when that is known. The buy id comes from the browser, so a repeat records nothing (migration `0024`: `buy`, `buy_line`, `till`).
+  - Opening the store starts a cash box (`till`, `src/lib/till.ts`) if none is open. It lasts through pauses and the 14 h auto-pause; `store-state.ts` is unchanged. The float is set on the dashboard.
+  - The dashboard's cash check closes the box and saves counted and expected. Expected = float + unvoided cash sales − cash buys since the box opened. It is saved at close, so a later void doesn't change it.
+  - The ledger shows buys (money out, not in takings or profit) and cash checks with over or short. Buys have their own CSV at `/dashboard/ledger/buys`.
+  - Not built: catalog search in the buy flow (add a priced card at qty 0 first), and linking a trade to a sale.
 - **Toasts on the sale screen (PR #25):** while a `[data-toast-clear]` bar is on screen (the Confirm sale bar), toasts stay at the top and show only the newest two. The chime is unchanged.
 - **Graded art** shows in the card's own shape, `aspect-[63/88]`, in `tile.tsx` and `card-thumb.tsx`.
 - **Catalog search (PR #27):**
@@ -59,7 +65,7 @@ _Last updated: 2026-11-12. Step 4 is finished on `main` (table sale #23, voids #
   - Not done: trigram matching (the migration is sketched in PR #27). Price on add shares the search throttle, so searches say "busy" during a big import.
   - Unverified live: the shape of a sealed lookup by id and its history. The parser now accepts an object or a one-item list. One real sealed price on production settles it.
 - **Invites:** the owner created the first one on production.
-- **In progress:** step 5 of the plan under "Next up" (branch `ledger-two`). Steps 1 to 4 and the search fixes are on `main`.
+- **In progress:** nothing; the five-step plan is done once #28 merges.
 
 ## How to ship
 
@@ -109,7 +115,7 @@ Railway notes (more in memory `railway-config-ignored`):
   2. ~~Preview mode.~~ Shipped.
   3. ~~Live baskets and visitor counts.~~ Shipped.
   4. ~~Ledger part one: stock moves, cost and profit, table sale, voids, cost on add.~~ Shipped.
-  5. Ledger part two: buys and trade-ins, float and a cash check at close. This reverses "No float field" below; the owner agreed.
+  5. ~~Ledger part two: buys and trade-ins, float and a cash check at close.~~ Shipped (PR #28).
   - Sales tax is left out unless the owner asks for it.
 - [ ] Search: give price on add its own throttle (or a lower priority) so searches don't say "busy" during a big import. Trigram matching if contains-matching gets slow.
 
@@ -119,6 +125,5 @@ Railway notes (more in memory `railway-config-ignored`):
 - The rate limit is per process.
 - Sale DELETE trigger.
 - `?done=1`.
-- No float field.
 - The invite code is a bearer code (see `.planning/phases/invites/PLAN.md`).
 - The journey seeds its priced catalog cards and doesn't search TCGdex, so CI needs no third-party API.
