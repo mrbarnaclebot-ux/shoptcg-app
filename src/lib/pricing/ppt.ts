@@ -1,4 +1,4 @@
-import { PartialPricesError, SearchError } from "./errors";
+import { PartialPricesError, SearchBusyError } from "./errors";
 import {
   cardHit,
   gradedHits,
@@ -46,7 +46,7 @@ async function throttle(rate: Rate) {
   const now = Date.now();
   const wait = nextCallAt - now;
   if (wait > rate.maxWaitMs)
-    throw new SearchError("Price search is busy. Try again in a minute.");
+    throw new SearchBusyError("Price search is busy. Try again in a minute.");
   nextCallAt = Math.max(nextCallAt, now) + rate.gapMs;
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
 }

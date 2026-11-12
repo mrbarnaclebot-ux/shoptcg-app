@@ -1,7 +1,7 @@
 import { and, count, eq, gt, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { catalogItem, searchMiss, type CatalogItem } from "@/db/schema";
-import { SearchLimitError } from "@/lib/pricing/errors";
+import { SearchBusyError, SearchLimitError } from "@/lib/pricing/errors";
 import { safeImageUrl } from "@/lib/pricing/images";
 import {
   defaultProvider,
@@ -81,7 +81,8 @@ function searchLocal(
     eq(catalogItem.language, opts.language),
   ];
   // Prefix match so the lower(name) text_pattern_ops index applies.
-  const prefix = q.name.toLowerCase().replace(/[\%_]/g, "\$&") + "%";
+  // Escape LIKE's wildcards and its escape character so they match literally.
+  const prefix = q.name.toLowerCase().replace(/[\\%_]/g, "\\$&") + "%";
   if (q.name) conds.push(sql`lower(${catalogItem.name}) like ${prefix}`);
   // PPT stores "199/165"; TCGdex stores "199" and so never matches a set total.
   const part = (i: number) =>
@@ -95,24 +96,40 @@ function searchLocal(
     .limit(LIMIT);
 }
 
-/** Throws a SearchError once a user has caused MISSES_PER_HOUR provider calls this hour. */
-export async function chargeMiss(db: Db, userId: string) {
-  const since = new Date(Date.now() - 3_600_000);
-  const [{ n }] = await db
-    .select({ n: count() })
-    .from(searchMiss)
-    .where(and(eq(searchMiss.userId, userId), gt(searchMiss.at, since)));
-  // ponytail: count-then-insert lets concurrent requests overshoot by a few; fine for a credit guard.
-  if (n >= MISSES_PER_HOUR)
-    throw new SearchLimitError(
-      "Search limit reached for this hour. Results already in the catalog still work.",
-    );
-  await db.insert(searchMiss).values({ userId });
+export interface MissLimit {
+  /** Throws a SearchLimitError when no provider call is left this hour. */
+  check(): Promise<void>;
+  /** Counts one provider call against the hour. */
+  record(): Promise<void>;
+}
+
+const noLimit: MissLimit = { check: async () => {}, record: async () => {} };
+
+/** The hourly provider-call cap for one user. */
+export function missLimit(db: Db, userId: string): MissLimit {
+  return {
+    async check() {
+      const since = new Date(Date.now() - 3_600_000);
+      const [{ n }] = await db
+        .select({ n: count() })
+        .from(searchMiss)
+        .where(and(eq(searchMiss.userId, userId), gt(searchMiss.at, since)));
+      // ponytail: count-then-insert lets concurrent requests overshoot by a few; fine for a credit guard.
+      if (n >= MISSES_PER_HOUR)
+        throw new SearchLimitError(
+          "Search limit reached for this hour. Results already in the catalog still work.",
+        );
+    },
+    async record() {
+      await db.insert(searchMiss).values({ userId });
+    },
+  };
 }
 
 /**
  * Local cache first, then the provider, upserting what it returns.
- * `beforeMiss` runs only when the provider is about to be called (e.g. chargeMiss).
+ * `limit` is checked before a provider call and charged after it, unless the
+ * throttle refused the call as busy (nothing was sent).
  * Any local hit wins, so a partly cached name returns only what was cached;
  * `force` skips the cache for the add flow's "Search more".
  */
@@ -121,7 +138,7 @@ export async function searchCatalog(
   text: string,
   opts: { kind: Kind; language: Language; force?: boolean },
   provider: PriceProvider = defaultProvider(),
-  beforeMiss: () => Promise<void> = async () => {},
+  limit: MissLimit = noLimit,
 ): Promise<CatalogItem[]> {
   const q = parseQuery(text);
   if (!q.name && !q.number) return [];
@@ -133,16 +150,15 @@ export async function searchCatalog(
     .join("|")
     .replace(/\s+/g, " ");
   if ((emptyUntil.get(key) ?? 0) > Date.now()) return [];
-  await beforeMiss();
-  const rows = await upsertHits(
-    db,
-    await provider.search({
-      ...q,
-      kind: opts.kind,
-      language: opts.language,
-      limit: LIMIT,
-    }),
-  );
+  await limit.check();
+  const hits = await provider
+    .search({ ...q, kind: opts.kind, language: opts.language, limit: LIMIT })
+    .catch(async (err) => {
+      if (!(err instanceof SearchBusyError)) await limit.record();
+      throw err;
+    });
+  await limit.record();
+  const rows = await upsertHits(db, hits);
   if (!rows.length) {
     if (emptyUntil.size > 10_000) emptyUntil.clear();
     emptyUntil.set(key, Date.now() + EMPTY_TTL_MS);

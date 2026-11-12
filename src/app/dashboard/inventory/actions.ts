@@ -5,7 +5,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db";
 import type { Db } from "@/db/open";
-import { chargeMiss, searchCatalog } from "@/lib/catalog";
+import { missLimit, searchCatalog } from "@/lib/catalog";
 import {
   importRowsSchema,
   previewRows,
@@ -156,13 +156,14 @@ export async function previewCsvAction(
   }
   const db = getDb();
   const provider = defaultProvider();
+  const limit = missLimit(db, user.id);
   const rows = await previewRows(parsed, (input) =>
     searchCatalog(
       db,
       searchText(input),
       { kind: input.kind, language: input.language },
       provider,
-      () => chargeMiss(db, user.id),
+      limit,
     ),
   );
   return { rows };

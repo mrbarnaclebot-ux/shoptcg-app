@@ -3,13 +3,13 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/db/open";
 import * as schema from "@/db/schema";
 import {
-  chargeMiss,
   MISSES_PER_HOUR,
+  missLimit,
   parseQuery,
   searchCatalog,
   upsertHits,
 } from "@/lib/catalog";
-import { SearchError } from "@/lib/pricing/errors";
+import { SearchBusyError, SearchError } from "@/lib/pricing/errors";
 import type { CatalogHit } from "@/lib/pricing/provider";
 import { fakeProvider, hit, migratedDb } from "@/lib/test-fixtures";
 
@@ -56,23 +56,20 @@ describe("searchCatalog", () => {
 
   it("serves number/total queries like 199/165 from the cache", async () => {
     const provider = fakeProvider([hit()]);
-    const beforeMiss = vi.fn(async () => {});
+    const limit = {
+      check: vi.fn(async () => {}),
+      record: vi.fn(async () => {}),
+    };
     const opts = { kind: "raw", language: "en" } as const;
-    const rows = await searchCatalog(
-      db,
-      "199/0165",
-      opts,
-      provider,
-      beforeMiss,
-    );
+    const rows = await searchCatalog(db, "199/0165", opts, provider, limit);
     expect(rows.map((r) => r.number)).toEqual(["199/165"]);
     // A different set total is not the same card, so it asks the provider.
-    await searchCatalog(db, "charizard 199/999", opts, provider, beforeMiss);
+    await searchCatalog(db, "charizard 199/999", opts, provider, limit);
     expect(provider.search).toHaveBeenCalledTimes(1);
     expect(provider.search).toHaveBeenCalledWith(
       expect.objectContaining({ number: "199", setTotal: "999", limit: 10 }),
     );
-    expect(beforeMiss).toHaveBeenCalledTimes(1);
+    expect(limit.record).toHaveBeenCalledTimes(1);
   });
 
   it("caches empty provider results for the same query", async () => {
@@ -101,19 +98,55 @@ describe("searchCatalog", () => {
 
   it("limits provider calls per user per hour", async () => {
     await db.insert(schema.user).values({ id: "u1", name: "U", email: "u@x" });
-    for (let i = 0; i < MISSES_PER_HOUR; i++) await chargeMiss(db, "u1");
-    await expect(chargeMiss(db, "u1")).rejects.toBeInstanceOf(SearchError);
+    const limit = missLimit(db, "u1");
+    for (let i = 0; i < MISSES_PER_HOUR; i++) await limit.record();
+    await expect(limit.check()).rejects.toBeInstanceOf(SearchError);
     // Cache hits never charge.
-    const beforeMiss = () => chargeMiss(db, "u1");
     const opts = { kind: "raw", language: "en" } as const;
     const rows = await searchCatalog(
       db,
       "charizard",
       opts,
       fakeProvider([]),
-      beforeMiss,
+      limit,
     );
     expect(rows.length).toBeGreaterThan(0);
+  });
+
+  it("charges a provider call, but not one the throttle refused as busy", async () => {
+    await db.insert(schema.user).values({ id: "u2", name: "U", email: "u2@x" });
+    const misses = async () =>
+      (await db.select().from(schema.searchMiss)).filter(
+        (m) => m.userId === "u2",
+      ).length;
+    const limit = missLimit(db, "u2");
+    const opts = { kind: "raw", language: "en" } as const;
+    const busy = fakeProvider([]);
+    vi.mocked(busy.search).mockRejectedValue(new SearchBusyError("busy"));
+    await expect(
+      searchCatalog(db, "busy 1", opts, busy, limit),
+    ).rejects.toBeInstanceOf(SearchBusyError);
+    expect(await misses()).toBe(0);
+    await searchCatalog(db, "quiet 1", opts, fakeProvider([]), limit);
+    expect(await misses()).toBe(1);
+  });
+
+  it("matches %, _ and \\ in a name literally", async () => {
+    const provider = fakeProvider([]);
+    const names = ["100% Pikachu", "100X Pikachu", "a_b", "axb", "c\\d", "cd"];
+    await upsertHits(
+      db,
+      names.map((name, i) =>
+        hit({ provider: "fake", providerId: `l${i}`, name }),
+      ),
+    );
+    const opts = { kind: "raw", language: "en" } as const;
+    const found = async (q: string) =>
+      (await searchCatalog(db, q, opts, provider)).map((r) => r.name);
+    expect(await found("100%")).toEqual(["100% Pikachu"]);
+    expect(await found("a_")).toEqual(["a_b"]);
+    expect(await found("c\\")).toEqual(["c\\d"]);
+    expect(provider.search).not.toHaveBeenCalled();
   });
 
   it("keeps one row per grade and rejects inconsistent graded rows", async () => {

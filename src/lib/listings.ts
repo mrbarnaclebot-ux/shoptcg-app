@@ -95,6 +95,7 @@ function columns(latest: ReturnType<typeof latestPrices>) {
     overridePrice: listing.overridePrice,
     cost: listing.cost,
     active: listing.active,
+    createdAt: listing.createdAt,
     market: latest.market,
     asOf: latest.asOf,
   };

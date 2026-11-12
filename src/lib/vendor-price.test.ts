@@ -1,5 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { underMarket, vendorPrice } from "@/lib/vendor-price";
+import { awaitingPrice, underMarket, vendorPrice } from "@/lib/vendor-price";
+
+describe("awaitingPrice", () => {
+  const now = Date.parse("2026-11-12T12:00:00Z");
+  const row = {
+    catalogItemId: "c",
+    market: null,
+    overridePrice: null,
+    createdAt: new Date(now - 60_000),
+  };
+  it("is true for a catalog card added a minute ago with no price", () =>
+    expect(awaitingPrice(row, now)).toBe(true));
+  it.each([
+    ["priced", { market: 10 }],
+    ["fixed price", { overridePrice: 5 }],
+    ["custom item", { catalogItemId: null }],
+    ["added an hour ago", { createdAt: new Date(now - 3_600_000) }],
+  ])("is false when %s", (_, over) =>
+    expect(awaitingPrice({ ...row, ...over }, now)).toBe(false),
+  );
+});
 
 describe("vendorPrice", () => {
   it.each([
