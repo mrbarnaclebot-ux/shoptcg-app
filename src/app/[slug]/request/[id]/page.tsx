@@ -104,6 +104,21 @@ export default async function RequestPage({
 async function Sold(props: { requestId: string; slug: string }) {
   const sale = await saleForRequest(getDb(), props.requestId);
   if (!sale) notFound();
+  if (sale.voided)
+    return (
+      <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col gap-5 px-4 pt-6 pb-16 md:pt-10">
+        <Ended
+          title="This sale was voided."
+          sub={`${sale.storeName} voided receipt ${sale.receiptNo}. Ask the seller if you have questions.`}
+          action={
+            <Link href={`/${props.slug}`} className={lineButton}>
+              Back to store
+            </Link>
+          }
+        />
+        <ReceiptSummary sale={sale} />
+      </main>
+    );
   return (
     <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col gap-5 px-4 pt-6 pb-16 md:pt-10">
       <h1 className="sr-only">Your receipt</h1>

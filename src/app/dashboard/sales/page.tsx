@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { paidBy } from "@/components/receipt-summary";
+import { Stamp } from "@/components/stamp";
 import { lineButton } from "@/components/ticket-button";
 import { TicketLoading } from "@/components/ticket";
 import { getDb } from "@/db";
@@ -38,7 +39,8 @@ export default function SalesPage() {
 async function Today() {
   const { store } = await requireStore();
   const sales = await salesToday(getDb(), store.id, await sellerTimeZone());
-  const takings = sales.reduce((sum, s) => sum + Number(s.total), 0);
+  const kept = sales.filter((s) => !s.voided);
+  const takings = kept.reduce((sum, s) => sum + Number(s.total), 0);
   if (!sales.length)
     return (
       <>
@@ -54,7 +56,7 @@ async function Today() {
   return (
     <>
       <p className="num text-lg font-semibold">
-        {sales.length} {sales.length === 1 ? "sale" : "sales"}, {usd(takings)}
+        {kept.length} {kept.length === 1 ? "sale" : "sales"}, {usd(takings)}
       </p>
       <ul className="mt-1 w-full border-b border-border">
         {sales.map((s) => (
@@ -65,6 +67,9 @@ async function Today() {
             >
               <span className="min-w-0 font-semibold [overflow-wrap:anywhere]">
                 {shortName(s.buyerName)}
+                {s.voided && (
+                  <Stamp className="ml-2 align-middle">Voided</Stamp>
+                )}
                 <small className="num block text-sm font-normal text-muted-foreground">
                   {s.receiptNo}.{" "}
                   {s.createdAt.toLocaleTimeString("en-US", {
@@ -75,7 +80,9 @@ async function Today() {
                   {paidBy({ paymentMethod: s.method, paymentNote: null })}
                 </small>
               </span>
-              <span className="font-display num text-[1.875rem] leading-none font-extrabold">
+              <span
+                className={`font-display num text-[1.875rem] leading-none font-extrabold ${s.voided ? "text-muted-foreground line-through" : ""}`}
+              >
                 {usd(Number(s.total))}
               </span>
             </Link>

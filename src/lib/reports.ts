@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, inArray, sql, sum } from "drizzle-orm";
 import type { Db } from "@/db/open";
-import { PAYMENT_METHODS, sale, saleLine } from "@/db/schema";
+import { PAYMENT_METHODS, sale, saleLine, saleVoid } from "@/db/schema";
 import { LANGUAGE_LABEL } from "@/lib/format";
 import { fromCents, toCents } from "@/lib/money";
 import { METHOD_LABEL } from "@/lib/receipt-email";
@@ -87,12 +87,17 @@ export function parseRange(params: Params, timeZone: string, now: Date): Range {
   return { from, to, preset };
 }
 
+export const voided = sql<boolean>`exists (select 1 from ${saleVoid} where ${saleVoid.saleId} = ${sale.id})`;
+const notVoided = sql`not ${voided}`;
+
 // A sale belongs to the day on its receipt, in the zone it was sold in, so a past
 // show's report doesn't change when the seller travels. The expression can't use
 // the index; the UTC bounds, a day wider than any zone's offset, can.
+// A voided sale is in no total: report, CSV and ledger all read through here.
 export const inRange = (storeId: string, r: Pick<Range, "from" | "to">) =>
   and(
     eq(sale.storeId, storeId),
+    notVoided,
     sql`${sale.createdAt} >= (${r.from}::date - 1)::timestamp at time zone 'UTC'`,
     sql`${sale.createdAt} < (${r.to}::date + 2)::timestamp at time zone 'UTC'`,
     sql`${sale.createdAt} >= (${r.from}::date)::timestamp at time zone ${sale.timeZone}`,
