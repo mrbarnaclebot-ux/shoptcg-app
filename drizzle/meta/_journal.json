@@ -162,6 +162,13 @@
       "when": 1794490440673,
       "tag": "0022_sale_void",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1794491024434,
+      "tag": "0023_drop_logo_url",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-12. The table sale (walk-up quick sale, from step 4 under "Next up") is in a PR on branch `quick-sale`. `main` and `production` are level with the ledger until it merges._
+_Last updated: 2026-11-12. Step 4 is finished on `main` (table sale #23, voids #24, cost on add #25), plus the search fixes (#27) and the `logo_url` drop (#26). Step 5 is in progress on branch `ledger-two`. Production still runs the ledger build until `main` is pushed to `production`._
 
 ## Where things stand
 
@@ -20,7 +20,7 @@ _Last updated: 2026-11-12. The table sale (walk-up quick sale, from step 4 under
   - Upload goes to `POST /api/store-image?kind=banner|avatar` (raw body, 4 MB cap, 20 an hour per store). `src/lib/store-image.ts` checks the file is a real JPEG, PNG or WebP, crops around the centre and re-encodes to WebP with `sharp`, which also strips metadata.
   - Files live on the owner's Pinata account (`src/lib/image-store.ts`). `PINATA_JWT` and `PINATA_GATEWAY_URL` are set on `web` and `web-staging`. The URL holds the content hash, so it never changes; replacing or removing an image deletes the old file from Pinata.
   - Without the Pinata variables a deployed server refuses uploads. Locally and in e2e the image is kept in the row as a data URL, so tests never reach Pinata.
-  - Migration `0017` added `banner_url`, `banner_file_id`, `avatar_url`, `avatar_file_id`. `stores.logo_url` is no longer read; drop it in the next release.
+  - Migration `0017` added `banner_url`, `banner_file_id`, `avatar_url`, `avatar_file_id`. Migration `0023` dropped the old `stores.logo_url`.
 - **Settings and admin:**
   - "More" (`/dashboard/settings`) is a menu on a phone and a side list on desktop (`settings/menu.tsx`, `settings/layout.tsx`). Each section is its own page with its own Save: `store` (name, images), `pricing`, `table`, `alerts`. The menu works without a store, so an admin with no store can reach `/admin`.
   - The store name can be changed. The link (slug) can't, and old receipts keep the old name.
@@ -40,15 +40,26 @@ _Last updated: 2026-11-12. The table sale (walk-up quick sale, from step 4 under
   - Not built: a stored daily total. Counts older than 30 days are gone; add a daily row when the ledger wants a funnel.
 - **Ledger (step 4, first half):** `/dashboard/ledger`, linked from Sales and More, shows for any day range: takings after discounts, what the sold items cost, profit, stock on hand valued at market and at cost, and every stock change.
   - Every quantity change writes a `stock_move` row from a database trigger (`listing_stock_move`, migration `0020`), so no code path can skip it. The reason comes from a transaction setting: call `stockReason(tx, "sold", saleId)` in `src/lib/ledger.ts` before changing quantities. Unlabelled changes are "added" (new listing) or "adjusted". Existing stock got an "opening" row.
-  - Cost is optional per listing (`listing.cost`, private to the vendor), set in the inventory edit panel or a `cost` CSV column. It is copied to `sale_line.unit_cost` when sold. Profit only counts lines that have a cost and says how many were left out.
-  - Not built yet from step 4: voids. The cost field is not in the two "add item" panels.
+  - Cost is optional per listing (`listing.cost`, private to the vendor), set in either add form, the inventory edit panel (all share `CostField` in `edit-panel.tsx`) or a `cost` CSV column. It is copied to `sale_line.unit_cost` when sold. Profit only counts lines that have a cost and says how many were left out.
+- **Voids (PR #24):** a vendor voids a whole sale from its detail page, with "Put the items back in stock" ticked by default and an optional reason (80 characters at most). A `sale_void` row (migration `0022`) marks it. The sale itself never changes, and there is no un-void or partial void.
+  - `voidSale` in `src/lib/sales.ts` writes "voided" stock moves through `stockReason`, skips listings deleted since the sale, and caps at 9,999. A second void does nothing.
+  - `inRange` in `src/lib/reports.ts` leaves voided sales out of the report, CSV and ledger. The Sales tab and the dashboard "Today" line list them marked "Voided", outside the totals.
+  - The receipt and the buyer's page say the sale was voided. No email is sent, and Resend is hidden. A `voided` live event refreshes open dashboards.
 - **Table sale (quick sale for walk-up buyers):** an in-stock, priced, visible inventory row has a "Sell" button. Each tap adds one unit to the store's one open table sale, a request with `request.walk_up` (migration `0021`), named "Walk-up". A bar on Inventory shows its items and total and links to the normal sale screen.
   - Logic in `addToTableSale` and `tableSale` (`src/lib/requests.ts`). The store row is locked first so two quick taps make one sale. Units are held like any buyer's list, and each tap renews the hold.
   - `sale.buyer_email` is now nullable. A table sale has no email, so it makes no customer record and no receipt email, and the receipt page says "Sold at the table".
   - It never chimes and is left out of the "waiting" count. Confirming doesn't check store state, so it can be sold while paused.
   - Covered by a unit test in `src/lib/sales.test.ts` and `e2e/table-sale.spec.ts`.
+- **Toasts on the sale screen (PR #25):** while a `[data-toast-clear]` bar is on screen (the Confirm sale bar), toasts stay at the top and show only the newest two. The chime is unchanged.
+- **Graded art** shows in the card's own shape, `aspect-[63/88]`, in `tile.tsx` and `card-thumb.tsx`.
+- **Catalog search (PR #27):**
+  - A "busy" search no longer counts against the hourly limit (`missLimit`, `SearchBusyError`). The LIKE escape works. A card added in the last 10 minutes with no price says "No price yet".
+  - A graded search returns one row per raw card. The add panel asks for grader and grade, and `gradedItem` creates the graded catalog row then. CSV import matches slabs the same way. A grade PPT has no sales for gets no price.
+  - Every provider answer is cached per process for 10 minutes for the whole query, before the prefix match.
+  - Not done: trigram matching (the migration is sketched in PR #27). Price on add shares the search throttle, so searches say "busy" during a big import.
+  - Unverified live: the shape of a sealed lookup by id and its history. The parser now accepts an object or a one-item list. One real sealed price on production settles it.
 - **Invites:** the owner created the first one on production.
-- **In progress:** the five-step plan under "Next up"; steps 1 to 3 are shipped, plus the ledger and the table sale from step 4. Search and graded-card work is researched but not started. The repo has one branch (`main`, plus `production`) and no worktrees.
+- **In progress:** step 5 of the plan under "Next up" (branch `ledger-two`). Steps 1 to 4 and the search fixes are on `main`.
 
 ## How to ship
 
@@ -92,25 +103,15 @@ Railway notes (more in memory `railway-config-ignored`):
 
 ## Next up
 
-- [ ] On a phone, "New request" toasts stack over the Confirm sale bar while the seller is on a sale (see `.planning/phases/08-e2e/shots/phone-confirm.png`). Decide whether they should hide on the sale screen.
-- [ ] Price on add has only run against TCGdex (free). Add one real card on production and check it shows a market price and a chart within a minute.
+- [ ] Price on add has only run against TCGdex (free). Add one real card and one sealed product on production and check each shows a market price and a chart within a minute.
 - [ ] The owner's plan from 2026-11-10, one PR per step:
   1. ~~Settings and nav rework, admin entry and vendor controls.~~ Shipped.
   2. ~~Preview mode.~~ Shipped.
   3. ~~Live baskets and visitor counts.~~ Shipped.
-  4. Ledger part one. Shipped: stock moves, cost and profit, the ledger page. Left:
-     - ~~Quick sale for walk-up buyers.~~ Shipped as the table sale.
-     - Voids as a new `sale_void` record with a "put back in stock" choice (`stockReason(tx, "voided", saleId)`), netted out of the report, ledger, sales list and CSV.
-     - Cost field in the catalog and custom "add item" panels.
+  4. ~~Ledger part one: stock moves, cost and profit, table sale, voids, cost on add.~~ Shipped.
   5. Ledger part two: buys and trade-ins, float and a cash check at close. This reverses "No float field" below; the owner agreed.
   - Sales tax is left out unless the owner asks for it.
-- [ ] Drop `stores.logo_url` (unused since store images shipped).
-- [ ] Graded cards show cropped: the scan sits in a 3:5 box with `object-cover` (`ART_ASPECT.graded` in `src/app/[slug]/tile.tsx`, and `card-thumb.tsx`). Use the card's own shape, `aspect-[63/88]`.
-- [ ] Catalog search, from the 2026-11-10 review, in this order:
-  1. Small bugs: a "busy" search still counts as an hourly miss, and the LIKE escape in `src/lib/catalog.ts` does nothing. Show "no price yet" on a card added moments ago.
-  2. Graded search lists one row per grade, which reads as duplicates. Show one result per card and let the vendor pick grader and grade in the add panel; create the graded catalog row then.
-  3. Speed: searches wait on the shared 4 s PPT gap and the local cache only matches prefixes. Cache whole queries, cancel stale searches, and consider trigram matching.
-  4. Unchecked: whether sealed products get a price (the single-item PPT response has a different shape).
+- [ ] Search: give price on add its own throttle (or a lower priority) so searches don't say "busy" during a big import. Trigram matching if contains-matching gets slow.
 
 ## Kept on purpose (don't "fix" without a reason)
 
