@@ -166,6 +166,34 @@ describe("store state", () => {
     expect(await live()).toMatchObject({ live: "paused", autoPaused: true });
   });
 
+  it("an online store stays open with no 14-hour window", async () => {
+    await set({
+      state: "open",
+      sellingMode: "online",
+      openedAt: sql`now() - interval '3 days'`,
+    });
+    expect(await live()).toMatchObject({
+      live: "open",
+      autoPaused: false,
+      changesInMs: null,
+    });
+    // A timed pause that ran out long ago reopens it too.
+    await set({
+      state: "paused",
+      pausedUntil: sql`now() - interval '2 days'`,
+    });
+    expect(await live()).toMatchObject({ live: "open", autoPaused: false });
+    // Pauses still count down, and switching back brings the window back.
+    await setStoreState(db, "u1", "paused", 15 * 60_000);
+    expect(await live()).toMatchObject({ live: "paused", resumesInMin: 15 });
+    await set({
+      state: "open",
+      sellingMode: "table",
+      openedAt: sql`now() - interval '15 hours'`,
+    });
+    expect(await live()).toMatchObject({ live: "paused", autoPaused: true });
+  });
+
   it("not vending ignores every timer", async () => {
     await set({
       state: "off",

@@ -160,13 +160,13 @@ test("a vendor runs a whole show", async ({ page, browser }) => {
     ).toBeVisible();
   });
 
-  await test.step("buyer A sends a list; the seller hears in 3 seconds", async () => {
+  await test.step("buyer A sends a cart; the seller hears in 3 seconds", async () => {
     await a.goto(`/${slug}`);
-    await a.getByRole("button", { name: "Add Mew ex to your list" }).click();
-    await a.getByRole("button", { name: `Add ${CUSTOM} to your list` }).click();
-    await a.getByRole("link", { name: "Review list" }).click();
-    await expect(a.getByRole("heading", { name: "Your list" })).toBeVisible();
-    await check(a, "list");
+    await a.getByRole("button", { name: "Add Mew ex to your cart" }).click();
+    await a.getByRole("button", { name: `Add ${CUSTOM} to your cart` }).click();
+    await a.getByRole("link", { name: "Review cart" }).click();
+    await expect(a.getByRole("heading", { name: "Your cart" })).toBeVisible();
+    await check(a, "cart");
     codeA = await sendList(a, slug, [], {
       name: "Ana Reyes",
       email: emailA,
@@ -185,7 +185,7 @@ test("a vendor runs a whole show", async ({ page, browser }) => {
     await b.goto(`/${slug}`);
     await expect(tile(b, "Mew ex")).toContainText("On hold");
     await expect(
-      b.getByRole("button", { name: "Add Mew ex to your list" }),
+      b.getByRole("button", { name: "Add Mew ex to your cart" }),
     ).toHaveCount(0);
 
     await sendList(b, slug, ["Umbreon VMAX"], {
@@ -203,7 +203,7 @@ test("a vendor runs a whole show", async ({ page, browser }) => {
     ).toBeVisible();
     await b.goto(`/${slug}`);
     await expect(
-      b.getByRole("button", { name: "Add Umbreon VMAX to your list" }),
+      b.getByRole("button", { name: "Add Umbreon VMAX to your cart" }),
     ).toBeVisible();
   });
 
@@ -289,9 +289,9 @@ test("a vendor runs a whole show", async ({ page, browser }) => {
     await setStore(page, { pause: "Until I reopen" });
     await a.goto(`/${slug}`);
     await expect(a.getByText("Browsing only.")).toBeVisible();
-    await expect(a.getByRole("button", { name: /to your list/ })).toHaveCount(
+    await expect(a.getByRole("button", { name: /to your cart/ })).toHaveCount(
       0,
     );
-    await expect(a.getByRole("link", { name: "Review list" })).toHaveCount(0);
+    await expect(a.getByRole("link", { name: "Review cart" })).toHaveCount(0);
   });
 });

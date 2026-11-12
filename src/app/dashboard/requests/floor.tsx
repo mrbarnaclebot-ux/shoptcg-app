@@ -3,6 +3,7 @@ import { getDb } from "@/db";
 import { floor, type FloorBasket } from "@/lib/floor";
 import { usd } from "@/lib/format";
 import { sellerTimeZone } from "@/lib/session";
+import { modeCopy } from "@/lib/selling-mode";
 import { getPublicStore } from "@/lib/storefront";
 
 const people = (n: number) => `${n} ${n === 1 ? "person" : "people"}`;
@@ -21,11 +22,11 @@ export async function Floor({ slug }: { slug: string }) {
       console.error("[floor] load failed", err);
       return null;
     }));
-  if (!now) return null;
+  if (!store || !now) return null;
   return (
     <section aria-labelledby="floor-h" className="flex flex-col gap-4">
       <SectionMark n={2} id="floor-h">
-        At your table
+        {modeCopy(store.sellingMode).floorTitle}
       </SectionMark>
       <p data-testid="floor-counts">
         <span className="font-semibold">
@@ -43,7 +44,7 @@ export async function Floor({ slug }: { slug: string }) {
         </ul>
       ) : (
         <p className="max-w-[44ch] border-t border-dashed border-border-strong pt-4 text-muted-foreground">
-          No open lists. A buyer&apos;s list shows here while they build it,
+          No open carts. A buyer&apos;s cart shows here while they build it,
           before they send it.
         </p>
       )}
@@ -78,7 +79,7 @@ function Basket({ b }: { b: FloorBasket }) {
               {l.qty > 1 && <span className="num"> x{l.qty}</span>}
               {l.others > 0 && (
                 <span className="block text-xs font-semibold text-brand-text">
-                  Also on {l.others} other {l.others === 1 ? "list" : "lists"}
+                  Also on {l.others} other {l.others === 1 ? "cart" : "carts"}
                 </span>
               )}
             </span>

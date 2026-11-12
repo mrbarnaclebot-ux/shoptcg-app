@@ -2,6 +2,7 @@ import { eq, getTableColumns, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db";
 import { store, type Store } from "@/db/schema";
+import { SELLING_MODES } from "@/lib/selling-mode";
 import { createStoreSchema } from "@/lib/slug";
 import {
   autoPaused,
@@ -137,8 +138,9 @@ export const pricingSchema = pricingFields.superRefine((v, ctx) => {
     });
 });
 
-/** The Table and sign settings page. */
+/** The How you sell settings page. */
 export const tableSchema = z.object({
+  sellingMode: z.enum(SELLING_MODES),
   tableLabel: tableLabelSchema,
   nfcEnabled: checkbox,
 });

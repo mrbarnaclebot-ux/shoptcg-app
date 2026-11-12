@@ -8,13 +8,11 @@ import { gradeLabel, LANGUAGE_LABEL } from "@/lib/format";
 import type { PublicItem } from "@/lib/storefront";
 import { AddButton } from "./list-island";
 
-// A slab's scan is the card itself, so it keeps the card's shape and shows
-// whole; sealed product is roughly square.
-export const ART_ASPECT = {
-  raw: "aspect-[63/88]",
-  graded: "aspect-[63/88]",
-  sealed: "aspect-square",
-} as const;
+// One card-shaped box for every kind, so a row of tiles lines up. A catalog
+// card's scan is the card itself and fills it; sealed product and vendor
+// photos can be any shape, so they show whole on the surface colour.
+const fills = (it: Pick<PublicItem, "kind" | "catalogItemId">) =>
+  it.kind !== "sealed" && it.catalogItemId !== null;
 
 const PLACEHOLDER = { raw: "Card", graded: "Slab", sealed: "Sealed" };
 
@@ -35,11 +33,13 @@ export function metaLine(
   return where ? `${where}. ${grade}` : grade;
 }
 
-/** "3 left", "Last one", the hold line, or "Sold out". */
-export function stockLine(it: PublicItem) {
+/** "3 left", "Last one", the hold line, or "Sold out". Short fits a tile's one line. */
+export function stockLine(it: PublicItem, short = false) {
   if (!it.qty) return "Sold out";
   if (!it.available)
-    return `On hold. Back in about ${it.holdMin ?? 1} min if not sold.`;
+    return short
+      ? `On hold, about ${it.holdMin ?? 1} min`
+      : `On hold. Back in about ${it.holdMin ?? 1} min if not sold.`;
   return it.available === 1 ? "Last one" : `${it.available} left`;
 }
 
@@ -51,13 +51,14 @@ export function Art(props: {
   className?: string;
   /** Sold out: fades the art, but never the small print, which must stay readable. */
   dim?: boolean;
+  /** Laid over the art, so it never makes the tile taller. */
+  children?: React.ReactNode;
 }) {
   const { it } = props;
   return (
     <span
       className={cn(
-        "relative block overflow-hidden bg-surface",
-        ART_ASPECT[it.kind],
+        "relative block aspect-[63/88] overflow-hidden bg-surface",
         props.className,
       )}
     >
@@ -70,7 +71,7 @@ export function Art(props: {
           quality={70}
           loading={props.eager ? "eager" : "lazy"}
           className={cn(
-            it.kind === "sealed" ? "object-contain p-3" : "object-cover",
+            fills(it) ? "object-cover" : "object-contain p-3",
             props.dim && DIM,
           )}
         />
@@ -86,7 +87,7 @@ export function Art(props: {
             {it.number ?? PLACEHOLDER[it.kind]}
           </span>
           {it.setName && (
-            <span className="line-clamp-2 text-xs text-subtle">
+            <span className="line-clamp-2 text-xs text-muted-foreground">
               {it.setName}
             </span>
           )}
@@ -97,6 +98,7 @@ export function Art(props: {
           {LANGUAGE_LABEL[it.language]}
         </span>
       )}
+      {props.children}
     </span>
   );
 }
@@ -108,6 +110,8 @@ export function Tile(props: {
   slug: string;
   currency: string | null;
   canAdd: boolean;
+  /** "Ask at the table" or "Ask the seller", for an unpriced item. */
+  askPrice: string;
   eager: boolean;
 }) {
   const { it } = props;
@@ -119,10 +123,20 @@ export function Tile(props: {
       eager={props.eager}
       sizes="(min-width:1024px) 180px, 45vw"
       dim={soldOut}
-    />
+    >
+      {it.underPct !== null && !soldOut && (
+        <Stamp className="absolute bottom-2 left-2 bg-bg">
+          {it.underPct}% under market
+        </Stamp>
+      )}
+    </Art>
   );
+  // Every row has a fixed height, so the add buttons line up across a row.
   return (
-    <article className="relative flex flex-col [contain-intrinsic-size:auto_420px] [content-visibility:auto]">
+    <article
+      data-tile
+      className="relative flex flex-col [contain-intrinsic-size:auto_420px] [content-visibility:auto]"
+    >
       <Link
         href={`/${props.slug}/item/${it.id}`}
         className="group flex flex-col"
@@ -134,21 +148,27 @@ export function Tile(props: {
         ) : (
           art
         )}
-        {it.underPct !== null && !soldOut && (
-          <Stamp className="mt-2.5 self-start">
-            {it.underPct}% under market
-          </Stamp>
-        )}
+        {/* Two lines kept whether the name needs them or not. */}
         <h3
           lang={HTML_LANG[it.language]}
-          className="mt-2 line-clamp-2 text-[0.96875rem] leading-tight font-semibold group-hover:underline"
+          className="mt-2 line-clamp-2 h-[2lh] text-[0.96875rem] leading-tight font-semibold group-hover:underline"
         >
           {it.name}
         </h3>
       </Link>
-      <p className="num mt-0.5 text-xs text-muted-foreground">{metaLine(it)}</p>
-      <div className="mt-2 flex min-h-11 items-end justify-between gap-2">
-        {soldOut ? <span /> : <PriceBlock it={it} currency={props.currency} />}
+      <p className="num mt-0.5 truncate text-xs text-muted-foreground">
+        {metaLine(it)}
+      </p>
+      <div className="mt-2 flex h-14 items-end justify-between gap-2">
+        {soldOut ? (
+          <span />
+        ) : (
+          <PriceBlock
+            it={it}
+            currency={props.currency}
+            askPrice={props.askPrice}
+          />
+        )}
         {props.canAdd &&
           !soldOut &&
           it.price !== null &&
@@ -168,14 +188,14 @@ export function Tile(props: {
       </div>
       <p
         className={cn(
-          "mt-1.5 text-xs",
+          "mt-1.5 truncate text-xs",
           it.available === 1 && !onHold
             ? "font-semibold text-text"
             : "text-muted-foreground",
-          soldOut && "text-subtle",
+          soldOut && "text-muted-foreground",
         )}
       >
-        {stockLine(it)}
+        {stockLine(it, true)}
       </p>
     </article>
   );
@@ -184,12 +204,14 @@ export function Tile(props: {
 function PriceBlock({
   it,
   currency,
+  askPrice,
 }: {
   it: PublicItem;
   currency: string | null;
+  askPrice: string;
 }) {
   if (it.price === null)
-    return <span className="text-sm font-semibold">Ask at the table</span>;
+    return <span className="text-sm font-semibold">{askPrice}</span>;
   return (
     <span className="flex flex-col">
       <span className="font-display num text-[1.875rem] leading-[0.9] font-extrabold">

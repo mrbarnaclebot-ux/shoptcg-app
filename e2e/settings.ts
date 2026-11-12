@@ -6,6 +6,7 @@ type Settings = {
   currency?: [code: string, rate: string];
   table?: string;
   nfc?: boolean;
+  mode?: "At a table" | "Online store";
 };
 
 const save = async (page: Page) => {
@@ -26,8 +27,9 @@ export async function saveSettings(page: Page, set: Settings) {
     }
     await save(page);
   }
-  if (set.table !== undefined || set.nfc !== undefined) {
+  if (set.table !== undefined || set.nfc !== undefined || set.mode) {
     await page.goto("/dashboard/settings/table");
+    if (set.mode) await page.getByText(set.mode, { exact: true }).click();
     if (set.table !== undefined)
       await page.getByLabel("Table number").fill(set.table);
     if (set.nfc !== undefined)

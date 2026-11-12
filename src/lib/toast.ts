@@ -255,15 +255,9 @@ export const toast = {
   },
 
   // Buyer: the page changes too; these name the change for anyone looking away.
-  holdEnding: (table: string | null) =>
-    show(
-      "warn",
-      "3 minutes left",
-      table ? `Find the seller at table ${table}.` : "Find the seller soon.",
-      8000,
-    ),
+  holdEnding: (soon: string) => show("warn", "3 minutes left", soon, 8000),
   holdOver: (sendAgain: () => void) =>
-    show("warn", "Hold's over", "Those cards are back on the table.", 6000, {
+    show("warn", "Hold's over", "Those cards are back in the store.", 6000, {
       title: "Send again",
       onClick: sendAgain,
     }),
@@ -271,14 +265,14 @@ export const toast = {
     show(
       "info",
       "Not this time",
-      "Ask the seller at the table, or pick something else.",
+      "Ask the seller, or pick something else.",
       8000,
-      { title: "Back to the table", onClick: back },
+      { title: "Back to store", onClick: back },
     ),
 
   // Seller.
   newRequest: (review: () => void) =>
-    show("ok", "New request", "A buyer just sent a list.", 10000, {
+    show("ok", "New request", "A buyer just sent a cart.", 10000, {
       title: "Review",
       onClick: review,
     }),

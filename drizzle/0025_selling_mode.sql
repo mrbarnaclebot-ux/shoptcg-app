@@ -1,0 +1,2 @@
+ALTER TABLE "store" ADD COLUMN "selling_mode" text DEFAULT 'table' NOT NULL;--> statement-breakpoint
+ALTER TABLE "store" ADD CONSTRAINT "store_selling_mode_valid" CHECK ("store"."selling_mode" in ('table', 'online'));

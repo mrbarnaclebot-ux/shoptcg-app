@@ -6,6 +6,7 @@ import { vapid } from "@/lib/push";
 import { usd } from "@/lib/format";
 import { storeQueue, type QueueTicket as Row } from "@/lib/request-reads";
 import { salesToday } from "@/lib/sales";
+import { modeCopy, type SellingMode } from "@/lib/selling-mode";
 import { sellerTimeZone } from "@/lib/session";
 import { AlertsRow, InstallNudge } from "./alerts";
 import { QueueLive, QueueTicket, SendTestRequest } from "./queue-live";
@@ -21,7 +22,13 @@ const view = (t: Row) => ({
   lines: t.lines,
 });
 
-export async function RequestQueue({ storeId }: { storeId: string }) {
+export async function RequestQueue({
+  storeId,
+  mode,
+}: {
+  storeId: string;
+  mode: SellingMode;
+}) {
   const tz = await sellerTimeZone();
   const queue = await storeQueue(getDb(), storeId, tz).catch((err) => {
     console.error("[queue] load failed", err);
@@ -49,7 +56,7 @@ export async function RequestQueue({ storeId }: { storeId: string }) {
               ))}
             </ul>
           ) : (
-            <Empty />
+            <Empty mode={mode} />
           )}
           {queue.expired.length > 0 && (
             <details className="border-t border-border pt-3">
@@ -98,15 +105,14 @@ export async function RequestQueue({ storeId }: { storeId: string }) {
   );
 }
 
-function Empty() {
+function Empty({ mode }: { mode: SellingMode }) {
   return (
     <div className="flex flex-col items-start gap-3 border-t border-dashed border-border-strong pt-5">
       <p className="font-display text-[2rem] leading-none font-extrabold">
         No requests yet.
       </p>
       <p className="max-w-[44ch] text-muted-foreground">
-        When a buyer scans your table sign and sends a list, it lands here and
-        your phone chimes. Stock your table first.
+        {modeCopy(mode).queueEmpty}
       </p>
       <div className="mt-1 flex flex-wrap gap-3">
         <Link href="/dashboard/inventory" className={lineButton}>

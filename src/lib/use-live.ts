@@ -106,5 +106,9 @@ export const useNow = () =>
 export function clock(at: number, now: number) {
   if (!now) return "--:--";
   const s = Math.max(0, Math.ceil((at - now) / 1000));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  const ss = String(s % 60).padStart(2, "0");
+  // An online hold runs for hours: "23:59:59" rather than "1439:59".
+  if (s >= 3600)
+    return `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${ss}`;
+  return `${Math.floor(s / 60)}:${ss}`;
 }

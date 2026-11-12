@@ -1,20 +1,21 @@
-import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cache, Suspense } from "react";
+import { cache, Fragment, Suspense } from "react";
 import { HangTag } from "@/components/hang-tag";
 import { RefreshAt } from "@/components/refresh-at";
 import { Stamp } from "@/components/stamp";
 import { getDb } from "@/db";
+import { modeCopy } from "@/lib/selling-mode";
 import { formatAlt, usdTag } from "@/lib/fx";
-import { usd } from "@/lib/format";
+import { gradeLabel, usd } from "@/lib/format";
 import {
   getPublicItem,
   type PublicItem,
   type PublicStore,
 } from "@/lib/storefront";
-import { AddButton } from "../../list-island";
+import { BackToStore, CartAction, ShareItem } from "../../list-island";
+import { ArtZoom } from "./art-zoom";
 import { parseRange } from "../../params";
 import { NotVending } from "../../store-header";
 import { storeOr404 } from "../../store-lookup";
@@ -39,7 +40,23 @@ export async function generateMetadata({
   const { store, item } = await itemOr404(slug, id);
   if (store.state === "off")
     return { title: `${store.name} - shoptcg`, robots: { index: false } };
-  return { title: `${item.name} - ${store.name} - shoptcg` };
+  const title = `${item.name} - ${store.name}`;
+  const price = item.qty && item.price !== null ? `${usd(item.price)}. ` : "";
+  const description = `${price}${metaLine(item)}. ${stockLine(item)}.`;
+  // A shared link shows the card, else the store's banner. Data URLs (local
+  // uploads) mean nothing to another site.
+  const image = [item.imageUrl, store.bannerUrl, store.avatarUrl].find((u) =>
+    u?.startsWith("https://"),
+  );
+  return {
+    title: `${title} - shoptcg`,
+    description,
+    openGraph: {
+      title,
+      description,
+      ...(image && { images: [{ url: image, alt: item.name }] }),
+    },
+  };
 }
 
 export default async function ItemPage({
@@ -52,6 +69,14 @@ export default async function ItemPage({
   // store is gone". No price, stock or history while not vending.
   if (store.state === "off") return <NotVending store={store} />;
   const days = parseRange(await searchParams);
+  const art = (
+    <Art
+      it={item}
+      eager
+      sizes="(min-width:1024px) 420px, 80vw"
+      dim={!item.qty}
+    />
+  );
   return (
     <main className="mx-auto grid w-full max-w-[1200px] flex-1 content-start gap-x-12 px-4 pt-4 pb-32 md:px-6 lg:grid-cols-[minmax(0,420px)_1fr] lg:px-8 lg:pt-8">
       {/* Re-reads when a timer flips the state; closed pages also poll. */}
@@ -59,20 +84,15 @@ export default async function ItemPage({
         inMs={store.changesInMs}
         everyMs={store.isOpen ? undefined : 60_000}
       />
-      <Link
-        href={`/${slug}`}
-        className="flex min-h-11 items-center gap-2 self-start font-semibold lg:col-span-2"
-      >
-        <ArrowLeft aria-hidden className="size-5" />
-        Back to store
-      </Link>
-      <div className="mt-3 lg:sticky lg:top-8 lg:self-start">
-        <Art
-          it={item}
-          eager
-          sizes="(min-width:1024px) 420px, 80vw"
-          className={`mx-auto w-4/5 lg:w-full ${item.qty ? "" : "opacity-60 grayscale-[0.8]"}`}
-        />
+      <BackToStore slug={slug} />
+      <div className="mx-auto mt-3 w-4/5 max-w-[420px] lg:sticky lg:top-8 lg:w-full lg:self-start">
+        {item.imageUrl ? (
+          <ArtZoom src={item.imageUrl} name={item.name} className="w-full">
+            {art}
+          </ArtZoom>
+        ) : (
+          art
+        )}
       </div>
       <div className="mt-6 flex flex-col gap-6 lg:mt-3">
         <Details item={item} store={store} />
@@ -145,8 +165,45 @@ function Details({ item, store }: { item: PublicItem; store: PublicStore }) {
       >
         {stockLine(item)}
       </p>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-6 border-t border-border text-sm [&>dd]:border-b [&>dd]:border-border [&>dd]:py-2 [&>dt]:border-b [&>dt]:border-border [&>dt]:py-2 [&>dt]:text-muted-foreground">
+        {facts(item).map(([k, v]) => (
+          <Fragment key={k}>
+            <dt>{k}</dt>
+            <dd className="num font-semibold">{v}</dd>
+          </Fragment>
+        ))}
+      </dl>
+      <ShareItem title={`${item.name} - ${store.name}`} />
     </div>
   );
+}
+
+const CONDITION = {
+  NM: "Near Mint",
+  LP: "Lightly Played",
+  MP: "Moderately Played",
+  HP: "Heavily Played",
+  DMG: "Damaged",
+} as Record<string, string>;
+const KIND = { raw: "Single card", graded: "Graded slab", sealed: "Sealed" };
+const LANGUAGE = { en: "English", ja: "Japanese", zh: "Chinese" };
+
+/** The rows a collector checks before buying, only those this item has. */
+function facts(it: PublicItem): [string, string][] {
+  const rows: [string, string | null][] = [
+    ["Type", KIND[it.kind]],
+    ["Grade", it.kind === "graded" ? gradeLabel(it) || null : null],
+    [
+      "Condition",
+      it.kind === "raw" && it.condition
+        ? `${CONDITION[it.condition] ?? it.condition} (${it.condition})`
+        : null,
+    ],
+    ["Set", it.setName],
+    ["Number", it.number],
+    ["Language", LANGUAGE[it.language]],
+  ];
+  return rows.filter((r): r is [string, string] => Boolean(r[1]));
 }
 
 function RangeLinks({ base, days }: { base: string; days: number }) {
@@ -191,20 +248,22 @@ function Action({ store, item }: { store: PublicStore; item: PublicItem }) {
     );
   else if (item.price === null)
     body = (
-      <p className="font-semibold">Ask the seller for a price at the table.</p>
+      <p className="font-semibold">
+        {modeCopy(store.sellingMode).askPriceLine}
+      </p>
     );
   else
     body = (
-      <AddButton
+      <CartAction
         slug={store.slug}
         id={item.id}
         name={item.name}
         price={item.price}
-        big
+        available={item.available}
       />
     );
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:static lg:col-start-2 lg:mt-8 lg:border-0 lg:bg-transparent lg:p-0">
+    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:static lg:col-start-2 lg:mt-8 lg:border-0 lg:bg-transparent lg:p-0">
       <div className="mx-auto max-w-[560px] lg:mx-0 lg:max-w-sm">{body}</div>
     </div>
   );

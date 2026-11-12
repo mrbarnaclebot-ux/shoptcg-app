@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { altPrice, formatAlt } from "@/lib/fx";
 import { usd } from "@/lib/format";
+import { modeCopy, type SellingMode } from "@/lib/selling-mode";
 import { useLines, writeList } from "../list-island";
 import { sendRequest, startBuyerSession } from "./actions";
 
@@ -35,6 +36,7 @@ type ReviewStore = {
   isOpen: boolean;
   currency: string | null;
   fxRate: number | null;
+  mode: SellingMode;
 };
 
 const noop = () => () => {};
@@ -54,7 +56,7 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
-export function ListReview(props: {
+export function CartReview(props: {
   store: ReviewStore;
   items: ReviewItem[];
   loaded: string[];
@@ -79,12 +81,13 @@ export function ListReview(props: {
     startBuyerSession().catch(() => {});
   }, []);
   useEffect(() => {
-    if (stale) router.replace(`/${store.slug}/list?ids=${ids}`);
+    if (stale) router.replace(`/${store.slug}/cart?ids=${ids}`);
   }, [stale, ids, store.slug, router]);
 
   if (!hydrated) return null;
 
-  const closedCopy = `${store.name} just closed. Your list is saved on this phone.`;
+  const copy = modeCopy(store.mode);
+  const closedCopy = `${store.name} just closed. Your cart is saved on this phone.`;
   const rows = items
     .filter((it) => lines[it.id])
     .map((it) => {
@@ -104,7 +107,7 @@ export function ListReview(props: {
   if (!rows.length && !missing.length)
     return (
       <p className="text-lg">
-        Your list is empty. Tap the plus on any card to add it.
+        Your cart is empty. Tap the plus on any card to add it.
       </p>
     );
 
@@ -203,7 +206,7 @@ export function ListReview(props: {
             className="flex items-start justify-between gap-3 border-b border-border py-3 first:pt-0"
           >
             <p className="font-semibold">
-              {lines[id].name ?? "An item on your list"}
+              {lines[id].name ?? "An item in your cart"}
               {overLimit(id)
                 ? ` won't be sent. A request holds ${maxLines} cards.`
                 : " is no longer for sale."}
@@ -221,7 +224,7 @@ export function ListReview(props: {
       </ul>
       <div>
         <p className="flex items-baseline justify-between font-semibold">
-          Total at the table
+          {copy.cartTotal}
           <span className="font-display num text-[2rem] leading-none font-extrabold">
             {usd(total)}
           </span>
@@ -231,9 +234,7 @@ export function ListReview(props: {
             approx. {formatAlt(store.currency, alt)}
           </p>
         )}
-        <p className="mt-1 text-sm text-muted-foreground">
-          The seller may adjust prices or add a discount when you meet.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{copy.adjust}</p>
       </div>
       {!store.isOpen ? (
         <p role="alert" className="font-semibold">
@@ -259,7 +260,7 @@ export function ListReview(props: {
               aria-describedby="name-help name-error"
             />
             <p id="name-help" className="text-sm text-muted-foreground">
-              So the seller knows who to look for.
+              {copy.nameHelp}
             </p>
             <FieldError id="name-error" message={errors.name} />
           </div>
@@ -312,9 +313,7 @@ export function ListReview(props: {
                 ? "Send without it"
                 : "Send to seller"}
           </TicketButton>
-          <p className="text-sm text-muted-foreground">
-            Items are held for you for 15 minutes.
-          </p>
+          <p className="text-sm text-muted-foreground">{copy.holdNote}</p>
         </form>
       )}
     </div>

@@ -9,7 +9,7 @@ import type { Line } from "@/lib/request-reads";
 import { toast } from "@/lib/toast";
 import { clock, useLive, useNow, useRefreshWhile } from "@/lib/use-live";
 import { listOn, writeList } from "../../list-island";
-import { cancelMyRequest } from "../../list/actions";
+import { cancelMyRequest } from "../../cart/actions";
 
 const WARN_MS = 3 * 60_000;
 
@@ -22,7 +22,7 @@ const sameLines = (a: Record<string, { qty: number }>, b: typeof a) => {
   return key(a) === key(b);
 };
 
-/** Puts what was on the request back on the list; the review clamps it to what's left. */
+/** Puts what was on the request back in the cart; the review clamps it to what's left. */
 function useSendAgain(slug: string, lines: Line[]) {
   const router = useRouter();
   return () => {
@@ -37,12 +37,12 @@ function useSendAgain(slug: string, lines: Line[]) {
       Object.keys(newer).length &&
       !sameLines(newer, again) &&
       !window.confirm(
-        "Replace the list you started with this request? Your newer list will be lost.",
+        "Replace the cart you started with this request? Your newer cart will be lost.",
       )
     )
       return;
     writeList(slug, again);
-    router.push(`/${slug}/list`);
+    router.push(`/${slug}/cart`);
   };
 }
 
@@ -70,7 +70,7 @@ export function RequestLive(props: {
   return null;
 }
 
-export function HoldClock(props: { at: number; table: string | null }) {
+export function HoldClock(props: { at: number; soon: string }) {
   const router = useRouter();
   const now = useNow();
   const left = props.at - now;
@@ -80,9 +80,9 @@ export function HoldClock(props: { at: number; table: string | null }) {
   useEffect(() => {
     if (warn && !over && !warned.current) {
       warned.current = true;
-      toast.holdEnding(props.table);
+      toast.holdEnding(props.soon);
     }
-  }, [warn, over, props.table]);
+  }, [warn, over, props.soon]);
   // Expiry is lazy on the server, so a re-read at zero shows it.
   useEffect(() => {
     if (over) router.refresh();
@@ -97,13 +97,12 @@ export function HoldClock(props: { at: number; table: string | null }) {
   );
 }
 
-export function HoldWarning(props: { at: number; table: string | null }) {
+export function HoldWarning(props: { at: number; soon: string }) {
   const now = useNow();
   if (!now || props.at - now >= WARN_MS) return null;
   return (
     <p className="mt-2 font-semibold text-brand-text">
-      Hold ends soon.
-      {props.table && ` Find the seller at table ${props.table}.`}
+      Hold ends soon. {props.soon}
     </p>
   );
 }

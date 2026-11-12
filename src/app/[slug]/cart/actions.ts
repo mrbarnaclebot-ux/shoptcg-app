@@ -10,12 +10,8 @@ import { seedAllowed } from "@/lib/e2e-seed";
 import { previewing } from "@/lib/preview";
 import { pushNewRequest } from "@/lib/push";
 import { ipHash } from "@/lib/request-limit";
-import {
-  cancelRequest,
-  createRequest,
-  HOLD_MS,
-  MAX_LINES,
-} from "@/lib/requests";
+import { cancelRequest, createRequest, MAX_LINES } from "@/lib/requests";
+import { HOLD_MS, type SellingMode } from "@/lib/selling-mode";
 import { clientIp } from "@/lib/sign-in-limit";
 import { getPublicStore } from "@/lib/storefront";
 
@@ -61,11 +57,11 @@ function parseLines(raw: FormDataEntryValue | null) {
   }
 }
 
-/** e2e shortens holds with a cookie; never honoured on a deployed service. */
-async function holdMs() {
-  if (!seedAllowed(process.env)) return HOLD_MS;
+/** The store's hold; e2e shortens it with a cookie, never on a deployed service. */
+async function holdMs(mode: SellingMode) {
+  if (!seedAllowed(process.env)) return HOLD_MS[mode];
   const ms = Number((await cookies()).get("e2e_hold_ms")?.value);
-  return ms > 0 ? ms : HOLD_MS;
+  return ms > 0 ? ms : HOLD_MS[mode];
 }
 
 // e2e sends from one machine; the per-phone limits still apply there.
@@ -93,7 +89,7 @@ export async function sendRequest(
   if (!store || (store.state !== "open" && !isTest)) return { closed: true };
   const sessionId = await ensureBuyerSid();
   const ip = await addressHash();
-  const hold = await holdMs();
+  const hold = await holdMs(store.sellingMode);
   let r;
   try {
     r = await createRequest(db, {

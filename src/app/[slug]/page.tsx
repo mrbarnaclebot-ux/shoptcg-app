@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { RefreshAt } from "@/components/refresh-at";
 import { lineButton } from "@/components/ticket-button";
 import { getDb } from "@/db";
+import { modeCopy } from "@/lib/selling-mode";
 import {
   listPublicStock,
   storeSummary,
@@ -11,7 +12,7 @@ import {
   type PublicStore,
 } from "@/lib/storefront";
 import { Controls, SortMenu } from "./controls";
-import { ListBar } from "./list-island";
+import { ListBar, RememberStore } from "./list-island";
 import { filterHref, parseFilter } from "./params";
 import { storeOr404 } from "./store-lookup";
 import { NotVending, StoreHeader } from "./store-header";
@@ -26,8 +27,20 @@ export async function generateMetadata({
   params,
 }: PageProps<"/[slug]">): Promise<Metadata> {
   const store = await storeOr404((await params).slug);
+  const description = `Pokemon cards from ${store.name}: prices next to market, stock and price history.`;
+  // The banner reads best in a link preview; the profile image is next best.
+  const image = store.bannerUrl ?? store.avatarUrl;
   return {
     title: `${store.name} - shoptcg`,
+    description,
+    openGraph: {
+      title: store.name,
+      description,
+      // Data URLs (local and e2e uploads) mean nothing to another site.
+      ...(image?.startsWith("https://") && {
+        images: [{ url: image, alt: store.name }],
+      }),
+    },
     // Nothing to index while not vending, and no stale prices in search results.
     ...(store.state === "off" && { robots: { index: false } }),
   };
@@ -70,6 +83,7 @@ export default async function StorePage({
         </Link>
       </footer>
       {store.isOpen && <ListBar slug={store.slug} />}
+      <RememberStore slug={store.slug} href={filterHref(store.slug, f)} />
     </main>
   );
 }
@@ -108,6 +122,7 @@ async function Grid({ store, f }: { store: PublicStore; f: PublicFilter }) {
             slug={store.slug}
             currency={store.secondCurrency}
             canAdd={store.isOpen}
+            askPrice={modeCopy(store.sellingMode).askPrice}
             // One row on desktop, two on phones: the art above the fold.
             eager={i < 4}
           />
@@ -116,8 +131,8 @@ async function Grid({ store, f }: { store: PublicStore; f: PublicFilter }) {
       {store.secondCurrency && store.fxRate !== null && (
         <p className="mt-10 text-xs text-muted-foreground">
           {store.secondCurrency} shown at the seller&apos;s rate: 1 USD ={" "}
-          {store.fxRate} {store.secondCurrency}. You pay in whatever the seller
-          accepts at the table.
+          {store.fxRate} {store.secondCurrency}.{" "}
+          {modeCopy(store.sellingMode).payNote}
         </p>
       )}
     </section>
@@ -132,7 +147,7 @@ function Empty(props: {
   if (!props.filtered)
     return (
       <p className="py-16 text-lg">
-        This store hasn&apos;t added stock yet. Ask at the table.
+        {modeCopy(props.store.sellingMode).noStock}
       </p>
     );
   return (

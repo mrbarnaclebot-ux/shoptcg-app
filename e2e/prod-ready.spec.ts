@@ -31,16 +31,9 @@ test("robots and sitemap are real files", async ({ request, baseURL }) => {
   expect(await map.text()).toContain(`<loc>${baseURL}/terms</loc>`);
 });
 
-// ponytail: the no-photo art placeholder in [slug]/tile.tsx draws the set name
-// in text-subtle (2.55:1). Reported to the storefront work; drop this exclude
-// once it uses text-muted-foreground.
-const KNOWN = ".line-clamp-2.text-subtle";
-
 async function noSeriousViolations(page: Page, name: string) {
   await expect(async () => {
-    const { violations } = await new AxeBuilder({ page })
-      .exclude(KNOWN)
-      .analyze();
+    const { violations } = await new AxeBuilder({ page }).analyze();
     const bad = violations
       .filter((v) => v.impact === "serious" || v.impact === "critical")
       .map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(" | ")}`);

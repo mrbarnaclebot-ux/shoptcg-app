@@ -23,7 +23,7 @@ test("a vendor previews a closed store; buyers still see it closed", async ({
   await expect(page.getByText(/Your store is not vending/)).toBeVisible();
   const frame = page.frameLocator("iframe");
   await expect(
-    frame.getByRole("button", { name: `Add ${CARD} to your list` }),
+    frame.getByRole("button", { name: `Add ${CARD} to your cart` }),
   ).toBeVisible();
   // The dashboard already says "preview", so the frame carries no strip.
   await expect(frame.getByText("Exit preview")).toHaveCount(0);

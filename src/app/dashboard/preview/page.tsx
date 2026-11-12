@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Preview - shoptcg" };
 const NOW = {
   open: "Your store is open, so this is what buyers see right now.",
   paused:
-    "Your store is paused. Buyers can browse, but only you see the list bar.",
+    "Your store is paused. Buyers can browse, but only you see the cart bar.",
   off: "Your store is not vending. Buyers see no stock; only you see this.",
 } as const;
 
@@ -33,7 +33,7 @@ async function Preview() {
           Preview
         </h1>
         <p className="max-w-[60ch] text-sm text-muted-foreground">
-          {NOW[store.live]} A list you send from here arrives as a test request.
+          {NOW[store.live]} A cart you send from here arrives as a test request.
         </p>
       </div>
       <PreviewFrame slug={store.slug} name={store.name} />

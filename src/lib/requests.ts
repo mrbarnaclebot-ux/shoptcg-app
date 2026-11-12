@@ -10,13 +10,15 @@ import {
   heldByListing,
   pendingDuplicate,
 } from "@/lib/request-reads";
+import { HOLD_MS as MODE_HOLD_MS } from "@/lib/selling-mode";
 import { storeState } from "@/lib/store-state";
 import { uniqueViolation } from "@/lib/stores";
 import { vendorPrice } from "@/lib/vendor-price";
 
 /** Bumped when the buyer consent wording or the Terms change. */
-export const TERMS_VERSION = "2026-11";
-export const HOLD_MS = 15 * 60_000;
+export const TERMS_VERSION = "2026-11-12";
+/** A table hold: the vendor's own table sale and test requests use it. */
+export const HOLD_MS = MODE_HOLD_MS.table;
 export const MAX_LINES = 30;
 
 // No 0/O, 1/I/L or U: the code is read aloud across a table.

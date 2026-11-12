@@ -27,8 +27,8 @@ const STORE: Row[] = [
   },
   {
     href: `${HOME}/table`,
-    label: "Table and sign",
-    hint: "Table number, NFC tag, printable sign",
+    label: "How you sell",
+    hint: "At a table or online, table number, sign",
   },
   {
     href: `${HOME}/alerts`,

@@ -5,9 +5,9 @@ const CARD = "Charizard ex";
 
 /** The tag on the buyer's own list bar. */
 async function tagOf(buyer: Page) {
-  const bar = buyer.getByRole("status").filter({ hasText: "Your list" });
+  const bar = buyer.getByRole("status").filter({ hasText: "Your cart" });
   await expect(bar).toContainText("The seller can see it.");
-  return (await bar.textContent())!.match(/Your list, (\w{3})\./)![1];
+  return (await bar.textContent())!.match(/Your cart, (\w{3})\./)![1];
 }
 
 test("the vendor sees who is on the page and the lists they are building", async ({
@@ -17,7 +17,7 @@ test("the vendor sees who is on the page and the lists they are building", async
   const slug = await openVendor(page);
   const counts = page.getByTestId("floor-counts");
   await expect(counts).toContainText("0 people on your page now");
-  await expect(page.getByText("No open lists.")).toBeVisible();
+  await expect(page.getByText("No open carts.")).toBeVisible();
 
   const a = await newBuyer(browser, slug);
   await expect(counts).toContainText("1 person on your page now");
@@ -32,7 +32,7 @@ test("the vendor sees who is on the page and the lists they are building", async
   await add(b, CARD);
   const listB = page.locator(`[data-basket="${await tagOf(b)}"]`);
   await expect(listB).toContainText(CARD);
-  await expect(listA).toContainText("Also on 1 other list");
+  await expect(listA).toContainText("Also on 1 other cart");
   await expect(counts).toContainText("2 people on your page now");
   await expect(counts).toContainText("2 people today");
 
@@ -51,8 +51,8 @@ test("the vendor sees who is on the page and the lists they are building", async
   await sent(a);
   await expect(listA).toHaveCount(0);
   await expect(page.getByText("Maya Robinson")).toBeVisible();
-  await b.getByRole("button", { name: `Add ${CARD} to your list` }).click();
-  await expect(page.getByText("No open lists.")).toBeVisible();
+  await b.getByRole("button", { name: `Add ${CARD} to your cart` }).click();
+  await expect(page.getByText("No open carts.")).toBeVisible();
 });
 
 test("the visit endpoint takes only this site's own well-formed pings", async ({

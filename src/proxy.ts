@@ -25,7 +25,7 @@ async function missing(req: NextRequest, slug: string, page?: string, id = "") {
 // The paths that need a store or session check. Everything else only gets the
 // canonical-host redirect, so a printed sign on the old domain still lands.
 const CHECKED =
-  /^\/(?:dashboard(?:\/.*)?|join\/[^/]+|[^/]+(?:\/list|\/(?:item|request)\/[^/]+)?)$/;
+  /^\/(?:dashboard(?:\/.*)?|join\/[^/]+|[^/]+(?:\/(?:cart|list)|\/(?:item|request)\/[^/]+)?)$/;
 
 export async function proxy(req: NextRequest) {
   const moved = canonicalRedirect(
@@ -53,6 +53,12 @@ export async function proxy(req: NextRequest) {
   }
   // Top-level routes and files (favicon.ico) are not stores.
   if (RESERVED_SLUGS.has(slug) || slug.includes(".")) return;
+  // The buyer's list became a cart; old links and bookmarks still land.
+  if (page === "list" && id === undefined)
+    return NextResponse.redirect(
+      new URL(`/${slug}/cart${req.nextUrl.search}`, req.url),
+      308,
+    );
   if (await missing(req, slug, page, id))
     return NextResponse.rewrite(new URL("/_not-found", req.url));
 }
