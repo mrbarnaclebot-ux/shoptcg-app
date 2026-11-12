@@ -2,13 +2,18 @@ import { randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { newVendor } from "./auth";
 import {
+  add,
   buyerEmail,
   confirm,
+  fillForm,
+  newBuyer,
   openVendor,
   outboxLine,
   pay,
+  reviewList,
   reviewSale,
   sendList,
+  sent,
 } from "./buyer";
 
 test("a full table sale: edit, discount, confirm, receipt, stock, buyer", async ({
@@ -317,14 +322,25 @@ test("on a phone, new request toasts stay clear of the Confirm sale bar", async 
   await page.setViewportSize({ width: 390, height: 844 });
   const slug = await openVendor(page);
   const toasts = page.locator(".toasts li").filter({ hasText: "New request" });
-  const a = await (await browser.newContext()).newPage();
-  await sendList(a, slug, ["Charizard ex"], { name: "Ana Reyes" });
-  await expect(toasts).toHaveCount(1);
-  const b = await (await browser.newContext()).newPage();
-  await sendList(b, slug, ["Gengar"], { name: "Ben Carter" });
-  await expect(toasts).toHaveCount(2);
-  await page.getByRole("button", { name: "Send a test request" }).click();
-  await expect(toasts).toHaveCount(3);
+  const buyers = [
+    ["Ana Reyes", "Charizard ex"],
+    ["Ben Carter", "Gengar"],
+    ["Cleo Park", "Mew ex"],
+  ];
+  // Lists filled first, then sent back to back: toasts last 10 seconds.
+  const ready = [];
+  for (const [name, item] of buyers) {
+    const buyer = await newBuyer(browser, slug);
+    await add(buyer, item);
+    await reviewList(buyer);
+    await fillForm(buyer, name, buyerEmail());
+    ready.push(buyer);
+  }
+  for (const [i, buyer] of ready.entries()) {
+    await buyer.getByRole("button", { name: "Send to seller" }).click();
+    await sent(buyer);
+    await expect(toasts).toHaveCount(i + 1);
+  }
 
   await page
     .getByRole("listitem")
