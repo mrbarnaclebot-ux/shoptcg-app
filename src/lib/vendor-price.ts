@@ -22,6 +22,27 @@ export function vendorPrice(
   return Math.max(rounded, step) / 100;
 }
 
+// Price on add runs right after the add; a big import takes a few minutes.
+const PRICE_WAIT_MS = 10 * 60_000;
+
+/** A catalog card added moments ago whose first market price hasn't landed yet. */
+export function awaitingPrice(
+  row: {
+    catalogItemId: string | null;
+    market: number | null;
+    overridePrice: number | null;
+    createdAt: Date;
+  },
+  now = Date.now(),
+) {
+  return (
+    row.catalogItemId !== null &&
+    row.market === null &&
+    row.overridePrice === null &&
+    now - row.createdAt.getTime() < PRICE_WAIT_MS
+  );
+}
+
 /** Whole percent under market for the stamp, or null under 5% (SCREENS 5). Never "above". */
 export function underMarket(price: number | null, market: number | null) {
   if (price === null || market === null || market <= 0) return null;

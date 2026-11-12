@@ -57,8 +57,19 @@ const stock = {
   cost: priceSchema.default(null),
 };
 
+export const GRADERS = ["PSA", "BGS", "CGC", "SGC"] as const;
+// 10, 9.5, 9 ... 1, as the catalog_item_grade check allows.
+export const GRADES = Array.from({ length: 19 }, (_, i) => String(10 - i / 2));
+
 export const catalogListingSchema = z.object({
   catalogItemId: z.uuid(),
+  // A raw card listed as a slab: both set, and the graded catalog row is made then.
+  grader: z.enum(GRADERS).nullable().default(null),
+  grade: z
+    .string()
+    .refine((g) => GRADES.includes(g), "Pick a grade")
+    .nullable()
+    .default(null),
   ...stock,
 });
 

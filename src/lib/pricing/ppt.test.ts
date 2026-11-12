@@ -3,10 +3,10 @@ import gradedCard from "./fixtures/ppt-card-graded.json";
 import history from "./fixtures/ppt-card-history.json";
 import jaCards from "./fixtures/ppt-cards-ja.json";
 import rawCards from "./fixtures/ppt-cards-search.json";
+import sealedOne from "./fixtures/ppt-sealed-one-docs.json";
 import sealed from "./fixtures/ppt-sealed-search.json";
 import { PartialPricesError } from "./errors";
 import { ppt } from "./ppt";
-import { parseGradeKey } from "./ppt-map";
 import { raw, query, serve } from "./test-fetch";
 import { tcgdex } from "./tcgdex";
 
@@ -40,16 +40,6 @@ describe("ppt adapter (recorded fixtures)", () => {
     });
     expect(calls[0].searchParams.get("search")).toBe("charizard 199");
     expect(calls[0].searchParams.get("limit")).toBe("10");
-  });
-
-  it("maps graded search to one hit per supported grader (TAG dropped)", async () => {
-    serve([["/cards?", { data: [gradedCard.data] }]]);
-    const hits = await client.search(query({ kind: "graded" }));
-    expect(hits.map((h) => `${h.grader} ${h.grade}`)).toEqual([
-      "PSA 10",
-      "CGC 9.5",
-      "PSA 8",
-    ]);
   });
 
   it("prices raw, graded and sealed, sharing one call per card", async () => {
@@ -125,6 +115,23 @@ describe("ppt adapter (recorded fixtures)", () => {
     ]);
   });
 
+  // Shaped per the docs (llms-full.txt, 2026-11-12), not recorded: no live
+  // single-item /sealed-products response has been seen yet.
+  it("prices sealed and reads its history from one object or a one-item list", async () => {
+    const box = { ...raw, providerId: "506640", kind: "sealed" as const };
+    const calls = serve([["/sealed-products?", sealedOne]]);
+    expect((await client.getPrices([box]))[0].marketUsd).toBe(6750);
+    expect(calls[0].searchParams.get("tcgPlayerId")).toBe("506640");
+    expect(await client.getHistory(box, 90)).toEqual([
+      { date: "2026-11-05", marketUsd: 6700 },
+      { date: "2026-11-07", marketUsd: 6750 },
+    ]);
+    serve([["/sealed-products?", { data: [sealedOne.data] }]]);
+    expect((await client.getPrices([box]))[0].marketUsd).toBe(6750);
+    serve([["/sealed-products?", { data: [] }]]);
+    expect(await client.getPrices([box])).toEqual([]);
+  });
+
   it("retries a 429 after Retry-After, then fails after max retries", async () => {
     let n = 0;
     vi.stubGlobal("fetch", async () =>
@@ -169,15 +176,6 @@ describe("ppt adapter (recorded fixtures)", () => {
     const [hit] = await client.search(query({}));
     expect(hit.providerId).toBe("");
   });
-
-  it.each([
-    ["psa10", { grader: "PSA", grade: "10" }],
-    ["bgs9_5", { grader: "BGS", grade: "9.5" }],
-    ["tag10", null],
-    ["psa11", null],
-  ])("parses grade key %s", (key, want) =>
-    expect(parseGradeKey(key)).toEqual(want),
-  );
 });
 
 describe.skipIf(!process.env.LIVE)("live smoke (LIVE=1)", () => {

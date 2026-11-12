@@ -5,6 +5,8 @@ import { SearchError } from "@/lib/pricing/errors";
 import {
   catalogListingSchema,
   customListingSchema,
+  GRADERS,
+  GRADES,
   type CustomListingInput,
 } from "@/lib/listing-input";
 import type { ImportRow } from "@/lib/listings";
@@ -89,12 +91,14 @@ const norm = (s: string | null | undefined) =>
  * guessed: two candidates make the row a custom item the vendor can fix later.
  */
 export function pickMatch(input: CustomListingInput, hits: CatalogItem[]) {
+  // A slab matches its raw card (graded search returns those); the grade must
+  // be one the catalog can hold, or it stays custom (e.g. ACE, TAG).
+  if (input.kind === "graded" && !slab(input)) return null;
+  const kind = input.kind === "graded" ? "raw" : input.kind;
   const wanted = hits.filter(
     (h) =>
-      h.kind === input.kind &&
+      h.kind === kind &&
       h.language === input.language &&
-      (h.grader ?? null) === (input.kind === "graded" ? input.grader : null) &&
-      (h.grade ?? null) === (input.kind === "graded" ? input.grade : null) &&
       (!input.setName || norm(h.setName) === norm(input.setName)) &&
       (!input.number ||
         norm(h.number?.split("/")[0]) === norm(input.number.split("/")[0])),
@@ -113,10 +117,28 @@ export function toImportRow(
 ): ImportRow {
   if (!match) return { kind: "custom", input };
   const { qty, condition, overridePrice, cost } = input;
+  const { grader, grade } = slab(input) ?? { grader: null, grade: null };
   return {
     kind: "catalog",
-    input: { catalogItemId: match.id, qty, condition, overridePrice, cost },
+    input: {
+      catalogItemId: match.id,
+      grader,
+      grade,
+      qty,
+      condition,
+      overridePrice,
+      cost,
+    },
   };
+}
+
+/** The grader and grade if this is a slab the catalog can hold, else null. */
+function slab(input: CustomListingInput) {
+  const grader = GRADERS.find((g) => g === input.grader);
+  const grade = input.grade ?? "";
+  if (input.kind !== "graded" || !grader || !GRADES.includes(grade))
+    return null;
+  return { grader, grade };
 }
 
 /** What the confirm step accepts back from the browser; validated again on the server. */

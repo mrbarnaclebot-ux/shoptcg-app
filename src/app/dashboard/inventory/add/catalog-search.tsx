@@ -66,7 +66,14 @@ export function CatalogSearch({ onCustom }: { onCustom: () => void }) {
     setPicked(null);
     search.schedule(q, k, l);
   };
-  if (picked) return <AddPanel item={picked} onClose={() => setPicked(null)} />;
+  if (picked)
+    return (
+      <AddPanel
+        item={picked}
+        graded={kind === "graded"}
+        onClose={() => setPicked(null)}
+      />
+    );
   return (
     <div className="flex flex-col gap-4">
       <div className="relative">

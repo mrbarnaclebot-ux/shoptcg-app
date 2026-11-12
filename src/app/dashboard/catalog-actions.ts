@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { getDb } from "@/db";
-import { chargeMiss, MISSES_PER_HOUR, searchCatalog } from "@/lib/catalog";
+import { MISSES_PER_HOUR, missLimit, searchCatalog } from "@/lib/catalog";
 import { SearchError, SearchLimitError } from "@/lib/pricing/errors";
 import { defaultProvider } from "@/lib/pricing/provider";
 import { requireUser } from "@/lib/session";
@@ -27,7 +27,7 @@ export async function searchCatalogAction(input: unknown) {
       query,
       { kind, language, force },
       defaultProvider(),
-      () => chargeMiss(db, user.id),
+      missLimit(db, user.id),
     );
     return { items };
   } catch (err) {
