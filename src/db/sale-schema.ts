@@ -166,3 +166,28 @@ export const customer = pgTable(
     check("customer_email_lower", sql`${t.email} = lower(${t.email})`),
   ],
 );
+
+export const VOID_REASON_MAX = 80;
+
+// A whole sale taken back. The sale itself never changes; reads net it out.
+// One row per sale, so a second void is a no-op, and there is no un-void.
+export const saleVoid = pgTable(
+  "sale_void",
+  {
+    saleId: uuid("sale_id")
+      .primaryKey()
+      .references(() => sale.id, { onDelete: "cascade" }),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => store.id, { onDelete: "cascade" }),
+    // Whether the sold units went back on their listings.
+    restocked: boolean("restocked").notNull(),
+    reason: text("reason"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    check("sale_void_reason", sql`char_length(${t.reason}) between 1 and 80`),
+  ],
+);

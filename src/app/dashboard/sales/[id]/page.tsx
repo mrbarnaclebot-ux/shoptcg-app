@@ -13,6 +13,7 @@ import { saleWithLines } from "@/lib/sales";
 import { requireStore } from "@/lib/session";
 import { UUID } from "@/lib/storefront";
 import { ReceiptEmailStatus } from "./receipt-email-status";
+import { VoidSale } from "./void-sale";
 
 export const metadata: Metadata = { title: "Receipt - shoptcg" };
 
@@ -55,7 +56,7 @@ async function Receipt({
           />
         }
       >
-        <Stamp className="self-start">Paid</Stamp>
+        <Stamp className="self-start">{sale.void ? "Voided" : "Paid"}</Stamp>
         <h1 className="font-display text-[2.5rem] leading-[0.9] font-black [overflow-wrap:anywhere]">
           {sale.storeName}
         </h1>
@@ -64,7 +65,24 @@ async function Receipt({
         </p>
         <ReceiptSummary sale={sale} />
       </Ticket>
-      {sale.buyerEmail ? (
+      {sale.void ? (
+        <div role="status" className="flex flex-col gap-1">
+          <p className="font-semibold">
+            Voided {receiptTime(sale.void.createdAt, sale.timeZone)}.{" "}
+            {sale.void.restocked
+              ? "The items went back in stock."
+              : "The items stayed out of stock."}
+          </p>
+          {sale.void.reason && (
+            <p className="text-muted-foreground [overflow-wrap:anywhere]">
+              {sale.void.reason}
+            </p>
+          )}
+          <p className="text-sm text-muted-foreground">
+            It isn&apos;t in your report, ledger or today&apos;s total.
+          </p>
+        </div>
+      ) : sale.buyerEmail ? (
         <ReceiptEmailStatus
           saleId={sale.id}
           status={sale.emailStatus}
@@ -77,6 +95,7 @@ async function Receipt({
       <p className="text-sm text-muted-foreground">
         Receipts can&apos;t be changed once saved.
       </p>
+      {!sale.void && <VoidSale saleId={sale.id} receiptNo={sale.receiptNo} />}
       <Link href="/dashboard/sales" className={`${lineButton} self-start`}>
         All sales
       </Link>

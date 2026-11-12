@@ -27,7 +27,9 @@ export async function RequestQueue({ storeId }: { storeId: string }) {
     console.error("[queue] load failed", err);
     return null;
   });
-  const sold = await salesToday(getDb(), storeId, tz).catch(() => []);
+  const sold = (await salesToday(getDb(), storeId, tz).catch(() => [])).filter(
+    (s) => !s.voided,
+  );
   const takings = sold.reduce((sum, s) => sum + Number(s.total), 0);
   return (
     <section aria-labelledby="requests-h" className="flex flex-col gap-4">

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
@@ -13,6 +13,8 @@ import {
   request,
   sale,
   saleLine,
+  saleVoid,
+  stockMove,
   store,
   user,
 } from "@/db/schema";
@@ -29,7 +31,14 @@ import {
   tableSale,
   type NewRequest,
 } from "@/lib/requests";
-import { confirmSale, optOut, type ConfirmInput } from "@/lib/sales";
+import {
+  confirmSale,
+  optOut,
+  saleWithLines,
+  salesToday,
+  voidSale,
+  type ConfirmInput,
+} from "@/lib/sales";
 import { addStore, migratedDb } from "@/lib/test-fixtures";
 
 async function shop(db: Db, qty = 3, price = "10.00") {
@@ -171,6 +180,25 @@ function suite(name: string, open: () => Promise<Db>) {
       expect(a.saleId).toBe(b.saleId);
       expect(await qtyOf(db, s.listingId)).toBe(2);
       expect(await salesOf(db, s.storeId)).toHaveLength(1);
+    });
+
+    test("a double tap on Void voids once and restocks once", async () => {
+      const s = await shop(db, 3);
+      const r = await confirmSale(
+        db,
+        s.storeId,
+        input(s, await ask(db, s, {}, 2), {}, 2),
+      );
+      if (!("ok" in r)) throw new Error("expected a sale");
+      const results = await Promise.all([
+        voidSale(db, s.storeId, r.saleId, { restock: true }),
+        voidSale(db, s.storeId, r.saleId, { restock: true }),
+      ]);
+      expect(results.filter((x) => "already" in x)).toHaveLength(1);
+      expect(await qtyOf(db, s.listingId)).toBe(3);
+      expect(
+        await db.select().from(saleVoid).where(eq(saleVoid.saleId, r.saleId)),
+      ).toHaveLength(1);
     });
 
     test("concurrent sales number without gaps", async () => {
@@ -485,4 +513,97 @@ test("today starts at midnight in the seller's zone", async () => {
   expect(await expired()).toBe(0);
   await lapseAt("0 seconds");
   expect(await expired()).toBe(1);
+});
+
+async function soldOne(db: Db, qty = 3, n = 2) {
+  const s = await shop(db, qty);
+  const r = await confirmSale(
+    db,
+    s.storeId,
+    input(s, await ask(db, s, {}, n), {}, n),
+  );
+  if (!("ok" in r)) throw new Error("expected a sale");
+  return { ...s, saleId: r.saleId };
+}
+
+test("a void with restock puts the units back, labelled in the ledger", async () => {
+  const db = await migratedDb();
+  const s = await soldOne(db);
+  expect(await qtyOf(db, s.listingId)).toBe(1);
+  expect(
+    await voidSale(db, s.storeId, s.saleId, {
+      restock: true,
+      reason: "  Wrong card  ",
+    }),
+  ).toEqual({ ok: true });
+  expect(await qtyOf(db, s.listingId)).toBe(3);
+  const [move] = await db
+    .select()
+    .from(stockMove)
+    .where(
+      and(eq(stockMove.listingId, s.listingId), eq(stockMove.reason, "voided")),
+    );
+  expect(move).toMatchObject({ delta: 2, qtyAfter: 3, ref: s.saleId });
+  const read = await saleWithLines(db, s.storeId, s.saleId);
+  expect(read?.void).toMatchObject({ restocked: true, reason: "Wrong card" });
+  // Still listed today, marked, so callers can leave it out of the total.
+  const [today] = await salesToday(db, s.storeId, "UTC");
+  expect(today).toMatchObject({ id: s.saleId, voided: true });
+  // The sale itself is untouched.
+  expect((await salesOf(db, s.storeId))[0].total).toBe("20.00");
+});
+
+test("a void without restock leaves stock alone", async () => {
+  const db = await migratedDb();
+  const s = await soldOne(db);
+  await voidSale(db, s.storeId, s.saleId, { restock: false });
+  expect(await qtyOf(db, s.listingId)).toBe(1);
+  expect(
+    await db
+      .select()
+      .from(stockMove)
+      .where(
+        and(
+          eq(stockMove.listingId, s.listingId),
+          eq(stockMove.reason, "voided"),
+        ),
+      ),
+  ).toHaveLength(0);
+  // A second void changes nothing, even if it asks for the restock.
+  expect(await voidSale(db, s.storeId, s.saleId, { restock: true })).toEqual({
+    ok: true,
+    already: true,
+  });
+  expect(await qtyOf(db, s.listingId)).toBe(1);
+});
+
+test("a void skips a listing deleted since the sale", async () => {
+  const db = await migratedDb();
+  const s = await soldOne(db);
+  await db.delete(listing).where(eq(listing.id, s.listingId));
+  expect(await voidSale(db, s.storeId, s.saleId, { restock: true })).toEqual({
+    ok: true,
+  });
+});
+
+test("another store can't void a sale", async () => {
+  const db = await migratedDb();
+  const s = await soldOne(db);
+  const other = await shop(db);
+  expect(
+    await voidSale(db, other.storeId, s.saleId, { restock: true }),
+  ).toEqual({ gone: true });
+  expect(await qtyOf(db, s.listingId)).toBe(1);
+  expect(await db.select().from(saleVoid)).toHaveLength(0);
+});
+
+test("a void reason is capped in the database", async () => {
+  const db = await migratedDb();
+  const s = await soldOne(db);
+  await expect(
+    voidSale(db, s.storeId, s.saleId, {
+      restock: false,
+      reason: "x".repeat(81),
+    }),
+  ).rejects.toThrow();
 });

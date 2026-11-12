@@ -7,7 +7,13 @@ import type { Db } from "@/db/open";
 
 // "floor" is a buyer arriving or changing an unsent list; it carries no request.
 export type LiveType =
-  "new" | "expired" | "declined" | "cancelled" | "confirmed" | "floor";
+  | "new"
+  | "expired"
+  | "declined"
+  | "cancelled"
+  | "confirmed"
+  | "voided"
+  | "floor";
 export type LiveEvent = { s: string; r: string; t: LiveType };
 
 const CHANNEL = "live";

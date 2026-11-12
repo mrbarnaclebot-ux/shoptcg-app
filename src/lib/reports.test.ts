@@ -10,9 +10,11 @@ import {
   request,
   sale,
   saleLine,
+  saleVoid,
   store,
   type PaymentMethod,
 } from "@/db/schema";
+import { ledger } from "@/lib/ledger";
 import {
   MAX_SPAN_DAYS,
   addDays,
@@ -93,6 +95,7 @@ async function addSale(
       ...l,
     })),
   );
+  return s.id;
 }
 
 const day = (from: string, to = from) => ({ from, to });
@@ -392,6 +395,43 @@ describe("salesReport", () => {
       10,
     );
     expect(a.join()).not.toContain("maya@");
+  });
+
+  it("a voided sale is in no report, CSV or ledger total", async () => {
+    const id = await storeOf();
+    const at = "2026-11-07T15:00:00Z";
+    await addSale(db, id, at, {
+      total: "30.00",
+      lines: [{ qty: 1, unitPrice: "30.00", unitCost: "20.00" }],
+    });
+    const gone = await addSale(db, id, at, {
+      total: "50.00",
+      lines: [{ qty: 2, unitPrice: "25.00", unitCost: "10.00" }],
+    });
+    await db
+      .insert(saleVoid)
+      .values({ saleId: gone, storeId: id, restocked: false });
+    const r = day("2026-11-07");
+    const report = await salesReport(db, id, r);
+    expect(report.summary).toMatchObject({
+      sales: 1,
+      revenue: "30.00",
+      items: 1,
+    });
+    expect(report.sales.map((s) => s.id)).not.toContain(gone);
+    expect(report.byMethod.find((m) => m.method === "cash")).toMatchObject({
+      sales: 1,
+      total: "30.00",
+    });
+    expect(report.bestSellers.map((b) => b.qty)).toEqual([1]);
+    expect(await reportCsvRows(db, id, r)).toHaveLength(2);
+    const { money } = await ledger(db, id, r, "UTC");
+    expect(money).toMatchObject({
+      revenue: 30,
+      units: 1,
+      cost: 20,
+      profit: 10,
+    });
   });
 
   it("another store's sales are never in the CSV", async () => {

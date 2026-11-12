@@ -10,6 +10,7 @@ import {
   requestLine,
   sale,
   saleLine,
+  saleVoid,
   store,
   type PaymentMethod,
 } from "@/db/schema";
@@ -20,6 +21,7 @@ import { notifyLive } from "@/lib/live";
 import { fromCents, priceSale, toCents, type Discount } from "@/lib/money";
 import { safeImageUrl } from "@/lib/pricing/images";
 import { dayStart, effectiveStatus } from "@/lib/request-reads";
+import { voided } from "@/lib/reports";
 
 export type ConfirmInput = {
   requestId: string;
@@ -344,6 +346,74 @@ export const saleLines = (db: Db, id: string) =>
     .where(eq(saleLine.saleId, id))
     .orderBy(saleLine.lineNo);
 
+export type VoidResult = { ok: true; already?: true } | { gone: true };
+
+/**
+ * Takes a whole sale back. With `restock` each line's units go back on its
+ * listing, labelled "voided" in the ledger; a listing deleted since is skipped.
+ * Safe to repeat: the second void changes nothing.
+ */
+export function voidSale(
+  db: Db,
+  storeId: string,
+  saleId: string,
+  opts: { restock: boolean; reason?: string },
+): Promise<VoidResult> {
+  return db.transaction(async (t) => {
+    const tx = t as Db;
+    // Same lock order as a confirm (store, then listings by id).
+    await tx
+      .select({ id: store.id })
+      .from(store)
+      .where(eq(store.id, storeId))
+      .for("no key update");
+    const [s] = await tx
+      .select({ requestId: sale.requestId })
+      .from(sale)
+      .where(and(eq(sale.id, saleId), eq(sale.storeId, storeId)));
+    if (!s) return { gone: true };
+    const [row] = await tx
+      .insert(saleVoid)
+      .values({
+        saleId,
+        storeId,
+        restocked: opts.restock,
+        reason: opts.reason?.trim() || null,
+      })
+      .onConflictDoNothing()
+      .returning({ saleId: saleVoid.saleId });
+    if (!row) return { ok: true, already: true };
+    if (opts.restock) {
+      const lines = await saleLines(tx, saleId);
+      await tx
+        .select({ id: listing.id })
+        .from(listing)
+        .where(
+          inArray(
+            listing.id,
+            lines.map((l) => l.listingId),
+          ),
+        )
+        .orderBy(listing.id)
+        .for("update");
+      await stockReason(tx, "voided", saleId);
+      for (const l of lines)
+        await tx
+          .update(listing)
+          // ponytail: capped at the listing max rather than failing the void.
+          .set({
+            qty: sql`least(${listing.qty} + ${l.qty}, 9999)`,
+            updatedAt: sql`now()`,
+          })
+          .where(
+            and(eq(listing.id, l.listingId), eq(listing.storeId, storeId)),
+          );
+    }
+    await notifyLive(tx, { s: storeId, r: s.requestId, t: "voided" });
+    return { ok: true };
+  });
+}
+
 /** A sale of this store with its lines and email state, or null. */
 export async function saleWithLines(db: Db, storeId: string, id: string) {
   const [row] = await db
@@ -351,15 +421,18 @@ export async function saleWithLines(db: Db, storeId: string, id: string) {
       sale,
       emailStatus: receiptEmail.status,
       emailAttempts: receiptEmail.attempts,
+      void: saleVoid,
     })
     .from(sale)
     .leftJoin(receiptEmail, eq(receiptEmail.saleId, sale.id))
+    .leftJoin(saleVoid, eq(saleVoid.saleId, sale.id))
     .where(and(eq(sale.id, id), eq(sale.storeId, storeId)));
   if (!row) return null;
   return {
     ...row.sale,
     emailStatus: row.emailStatus,
     emailAttempts: row.emailAttempts,
+    void: row.void,
     lines: await saleLines(db, id),
   };
 }
@@ -367,7 +440,7 @@ export async function saleWithLines(db: Db, storeId: string, id: string) {
 /** The sale a buyer's own confirmed request became; the caller checks the cookie. */
 export async function saleForRequest(db: Db, requestId: string) {
   const [row] = await db
-    .select({ sale, emailStatus: receiptEmail.status })
+    .select({ sale, emailStatus: receiptEmail.status, voided })
     .from(sale)
     .leftJoin(receiptEmail, eq(receiptEmail.saleId, sale.id))
     .where(eq(sale.requestId, requestId));
@@ -375,11 +448,12 @@ export async function saleForRequest(db: Db, requestId: string) {
   return {
     ...row.sale,
     emailStatus: row.emailStatus,
+    voided: row.voided,
     lines: await saleLines(db, row.sale.id),
   };
 }
 
-/** Today's sales, newest first, for the Sales tab and the line under the queue. */
+/** Today's sales, newest first, voided ones too; callers leave those out of totals. */
 export function salesToday(db: Db, storeId: string, timeZone: string) {
   return db
     .select({
@@ -390,6 +464,7 @@ export function salesToday(db: Db, storeId: string, timeZone: string) {
       method: sale.paymentMethod,
       createdAt: sale.createdAt,
       timeZone: sale.timeZone,
+      voided,
       items:
         sql<number>`(select coalesce(sum(${saleLine.qty}), 0) from ${saleLine} where ${saleLine.saleId} = ${sale.id})`.mapWith(
           Number,
