@@ -55,7 +55,7 @@ export function CreateStoreForm() {
         <Label htmlFor="slug">Store link</Label>
         <div className="flex h-12 items-center bg-bg pl-3.5 shadow-[inset_0_0_0_1.5px_var(--border-strong)] focus-within:shadow-[inset_0_0_0_2.5px_var(--focus)] has-aria-invalid:shadow-[inset_0_0_0_2px_var(--danger)]">
           <span className="text-base text-muted-foreground select-none">
-            shoptcg.app/
+            tcgmart.app/
           </span>
           <Input
             id="slug"

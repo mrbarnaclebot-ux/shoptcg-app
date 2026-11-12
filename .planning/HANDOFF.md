@@ -2,11 +2,12 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-12. `main` and `production` are level at `3e74f8f` (PR #28): the whole five-step plan is live on both._
+_Last updated: 2026-11-13. The product is now **tcgmart.app** (PR #33 renames it). Staging runs on `staging.tcgmart.app`; production switches to `tcgmart.app` with this PR's deploy (see `.planning/CUSTOM-DOMAIN.md`)._
 
 ## Where things stand
 
-- **Live:** production https://web-production-2d3b0.up.railway.app and staging https://web-staging-staging-6b4e.up.railway.app both run `3e74f8f` (migrations up to `0024`), deployed and smoked on 2026-11-12. Before that, production was still on PR #19, so settings, preview, the floor and the ledger reached it on the same day.
+- **Live:** production https://tcgmart.app (also `www.tcgmart.app`) and staging https://staging.tcgmart.app. The Railway hosts (`web-production-2d3b0.up.railway.app`, `web-staging-staging-6b4e.up.railway.app`) stay attached forever and 308 to the custom domain, because printed signs point at them. Migrations are up to `0025`.
+  - Domains were added with the Railway CLI (`railway domain`). DNS lives at the owner's registrar (CNAME + `_railway-verify` TXT per host). Each service has `BETTER_AUTH_URL` and `CANONICAL_HOST` set to its custom domain.
 - **Shipped:** all eight phases, plus:
   - the CI pipeline
   - the known-gap fixes (PR #11)
@@ -56,6 +57,16 @@ _Last updated: 2026-11-12. `main` and `production` are level at `3e74f8f` (PR #2
   - The dashboard's cash check closes the box and saves counted and expected. Expected = float + unvoided cash sales − cash buys since the box opened. It is saved at close, so a later void doesn't change it.
   - The ledger shows buys (money out, not in takings or profit) and cash checks with over or short. Buys have their own CSV at `/dashboard/ledger/buys`.
   - Not built: catalog search in the buy flow (add a priced card at qty 0 first), and linking a trade to a sale.
+- **Production readiness (PR #30):** security headers on every response (HSTS, nosniff, Referrer-Policy, Permissions-Policy, SAMEORIGIN framing). The CSP has only `frame-ancestors`, `base-uri`, `object-src` and `form-action`, because nonces don't work with `cacheComponents`.
+  - `CANONICAL_HOST` (off when unset) makes `src/proxy.ts` 308 any other host to the custom domain; `/api/health` and POSTs are exempt. The boot check refuses a mismatch with `BETTER_AUTH_URL`. The proxy now runs on every path; `CHECKED` decides which get store or session checks.
+  - `robots.txt` and `sitemap.xml` are real (the sitemap lists vending stores only). There is a root `error.tsx` and `global-error.tsx`. The boot check and `/admin` warn about `EMAIL_FROM`; `pnpm smoke` checks headers and robots.
+- **Add-stock search (PR #31):** the add screen calls `POST /api/catalog-search` twice: `cached` returns catalog rows at once, then `fresh` asks the provider (unless that query was answered in the last 10 minutes) and merges, ranked exact number, then name starts with, then contains (`searchCached`, `searchFresh`, `mergeRows` in `src/lib/catalog.ts`). Every word must match name or set name, any order; a number-like word can match the card number. CSV import still uses `searchCatalog`, where any cached hit wins.
+  - Background PPT calls (`SYNC_RATE.yields`) wait while a search is queued, so imports no longer make searches "busy". E2E builds search a fake provider (`src/lib/pricing/e2e.ts`). Every new query now costs a provider call after typing pauses. Not done: rarity (needs a column).
+- **Storefront (PR #32):** every tile shares one 63:88 art box (catalog cards fill it; sealed and vendor photos show whole) with fixed text rows, so a grid row lines up; `e2e/storefront.spec.ts` checks it at three widths.
+  - Buyers have a **cart**: `/[slug]/cart`, and the proxy 308s the old `/[slug]/list`. The localStorage key is still `list:<slug>`.
+  - The item page has tap-to-zoom art, a details list, a quantity picker, an in-cart state, back-to-store that keeps filters and scroll, Share, and OG metadata. The store page has a description and OG image (banner, else avatar).
+  - Migration `0025` adds `store.selling_mode` (`table` | `online`), set under More, "How you sell". All mode wording and hold lengths live in `src/lib/selling-mode.ts`; read copy from there instead of branching on the mode.
+  - Online mode: no 14 h auto-pause (an `ENDLESS` term inside the single store-state expression), 24 h buyer holds, no table number, and the hold clock shows h:mm:ss. Walk-up and test requests keep 15 min. `TERMS_VERSION` is `2026-11-12`.
 - **Toasts on the sale screen (PR #25):** while a `[data-toast-clear]` bar is on screen (the Confirm sale bar), toasts stay at the top and show only the newest two. The chime is unchanged.
 - **Graded art** shows in the card's own shape, `aspect-[63/88]`, in `tile.tsx` and `card-thumb.tsx`.
 - **Catalog search (PR #27):**
@@ -102,7 +113,9 @@ Railway notes (more in memory `railway-config-ignored`):
 
 ## Owner to-dos
 
-1. Buy a domain, verify it in Resend and set `EMAIL_FROM`. Until then, mail only reaches the Resend account owner, so an invited vendor can't receive a sign-in link and buyer receipts show "Email didn't send".
+1. Verify `tcgmart.app` in Resend and set `EMAIL_FROM` (e.g. `tcgmart <receipts@tcgmart.app>`) on `web` and `web-staging`; steps in `.planning/CUSTOM-DOMAIN.md` section 2. Until then, mail only reaches the Resend account owner.
+5. Turn on Railway Postgres backups (daily) and test a restore once. Add a free uptime check on `https://tcgmart.app/api/health`. Decide on error monitoring (errors only reach Railway logs today).
+6. Reprint table signs at leisure: new ones say tcgmart.app; old ones keep working through the redirect.
 2. Test push and the chime on a real phone. Scan a printed sign from 1 m. Open both CSV exports in Excel and Sheets.
 3. Check the Railway cron history for `price-sync` the morning after the first vendor adds stock.
 4. Before the first public show, decide whether to move PPT to Business ($99/mo). PPT's terms reserve Pro for hobby and pre-launch use (`research/PRICING-API.md`).
@@ -117,7 +130,8 @@ Railway notes (more in memory `railway-config-ignored`):
   4. ~~Ledger part one: stock moves, cost and profit, table sale, voids, cost on add.~~ Shipped.
   5. ~~Ledger part two: buys and trade-ins, float and a cash check at close.~~ Shipped (PR #28).
   - Sales tax is left out unless the owner asks for it.
-- [ ] Search: give price on add its own throttle (or a lower priority) so searches don't say "busy" during a big import. Trigram matching if contains-matching gets slow.
+- [ ] Search: trigram index if the unindexed ILIKE gets slow (sketch in PR #27); a rarity column for result rows.
+- [ ] Online stores: payment and delivery are still arranged outside the app. Decide whether online mode needs more than copy.
 
 ## Kept on purpose (don't "fix" without a reason)
 

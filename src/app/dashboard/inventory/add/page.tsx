@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AddFlow } from "./add-flow";
 
-export const metadata: Metadata = { title: "Add stock - shoptcg" };
+export const metadata: Metadata = { title: "Add stock - tcgmart" };
 
 export default function AddPage() {
   return (

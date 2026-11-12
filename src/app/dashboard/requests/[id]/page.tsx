@@ -13,7 +13,7 @@ import { requireStore } from "@/lib/session";
 import { UUID } from "@/lib/storefront";
 import { SaleForm } from "./sale-form";
 
-export const metadata: Metadata = { title: "Review sale - shoptcg" };
+export const metadata: Metadata = { title: "Review sale - tcgmart" };
 
 export default function ReviewSalePage({
   params,

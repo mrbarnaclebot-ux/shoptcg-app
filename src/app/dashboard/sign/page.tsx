@@ -9,7 +9,7 @@ import "./sign.css";
 import { TableForm } from "./table-form";
 import { TableSign, type SignSize } from "./table-sign";
 
-export const metadata: Metadata = { title: "Table sign - shoptcg" };
+export const metadata: Metadata = { title: "Table sign - tcgmart" };
 
 // Printed signs are permanent, so the source tag is baked in now even though
 // nothing reads it yet.

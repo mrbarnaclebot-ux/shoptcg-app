@@ -13,7 +13,7 @@ import { ledger, MOVES_SHOWN, type StockReason } from "@/lib/ledger";
 import { localDate, parseRange } from "@/lib/reports";
 import { requireStore, sellerTimeZone } from "@/lib/session";
 
-export const metadata: Metadata = { title: "Ledger - shoptcg" };
+export const metadata: Metadata = { title: "Ledger - tcgmart" };
 
 type Search = Pick<PageProps<"/dashboard/ledger">, "searchParams">;
 

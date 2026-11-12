@@ -102,7 +102,7 @@ function useCatalogSearch() {
 
 // The last Type and Language picked, so a vendor listing JP slabs all
 // afternoon doesn't re-pick them each time.
-const PREFS_KEY = "shoptcg:add-search";
+const PREFS_KEY = "tcgmart:add-search";
 const noop = () => () => {};
 function readPrefs() {
   try {

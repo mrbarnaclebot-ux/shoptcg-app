@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "shoptcg",
-    short_name: "shoptcg",
+    name: "tcgmart",
+    short_name: "tcgmart",
     description: "Your card show table: buyer requests on your phone.",
     start_url: "/dashboard",
     display: "standalone",

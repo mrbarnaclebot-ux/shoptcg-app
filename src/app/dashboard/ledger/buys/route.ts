@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const days =
     range.from === range.to ? range.from : `${range.from}_${range.to}`;
   return csvResponse(
-    `shoptcg-${store.slug}-buys-${days}.csv`,
+    `tcgmart-${store.slug}-buys-${days}.csv`,
     await buyCsvRows(getDb(), store.id, range, timeZone),
   );
 }

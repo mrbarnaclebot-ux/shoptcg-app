@@ -15,7 +15,7 @@ import {
 import { requireStore, sellerTimeZone } from "@/lib/session";
 import { RemoveCustomer } from "./remove-customer";
 
-export const metadata: Metadata = { title: "Customers - shoptcg" };
+export const metadata: Metadata = { title: "Customers - tcgmart" };
 
 type Search = Pick<PageProps<"/dashboard/customers">, "searchParams">;
 

@@ -26,7 +26,7 @@ const body = Schibsted_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "shoptcg",
+  title: "tcgmart",
   description:
     "Your card show table, priced live. Buyers scan your QR, pick and ping you.",
 };

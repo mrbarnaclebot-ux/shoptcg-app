@@ -4,7 +4,7 @@ import { lineButton } from "@/components/ticket-button";
 import { requireUser } from "@/lib/session";
 import { SignOut } from "./sign-out";
 
-export const metadata: Metadata = { title: "More - shoptcg" };
+export const metadata: Metadata = { title: "More - tcgmart" };
 
 // The menu comes from the layout; this page is the account block under it.
 export default function AccountPage() {

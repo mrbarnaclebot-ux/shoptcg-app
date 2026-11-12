@@ -11,7 +11,7 @@ export default function StoreNotFound() {
         Check the link on the table sign.
       </p>
       <Link href="/" className={lineButton}>
-        Go to shoptcg.app
+        Go to tcgmart.app
       </Link>
     </main>
   );

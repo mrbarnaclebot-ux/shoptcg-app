@@ -11,7 +11,7 @@ export async function GET() {
   if (!exportAllowed(store.id)) return new Response(null, { status: 429 });
   const timeZone = await sellerTimeZone();
   return csvResponse(
-    `shoptcg-${store.slug}-promo-list-${localDate(new Date(), timeZone)}.csv`,
+    `tcgmart-${store.slug}-promo-list-${localDate(new Date(), timeZone)}.csv`,
     await promoRows(getDb(), store.id, timeZone),
   );
 }

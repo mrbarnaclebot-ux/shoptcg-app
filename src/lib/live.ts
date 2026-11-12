@@ -59,16 +59,16 @@ export async function subscribe(
 }
 
 // Route handler bundles each get their own module copy, so the hub lives on globalThis.
-const g = globalThis as { shoptcgLive?: Hub };
+const g = globalThis as { tcgmartLive?: Hub };
 
 /** The process-wide hub; a failed LISTEN is dropped so the next caller retries. */
 export function liveHub(db: Db): Hub {
-  if (!g.shoptcgLive) {
+  if (!g.tcgmartLive) {
     const hub = createHub(db);
     hub.ready.catch(() => {
-      if (g.shoptcgLive === hub) g.shoptcgLive = undefined;
+      if (g.tcgmartLive === hub) g.tcgmartLive = undefined;
     });
-    g.shoptcgLive = hub;
+    g.tcgmartLive = hub;
   }
-  return g.shoptcgLive;
+  return g.tcgmartLive;
 }

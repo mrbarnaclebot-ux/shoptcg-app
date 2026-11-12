@@ -14,7 +14,7 @@ export default function GlobalError({ retry }: { retry: () => void }) {
           padding: "4rem 1rem",
         }}
       >
-        <title>shoptcg</title>
+        <title>tcgmart</title>
         <main style={{ maxWidth: "44ch" }}>
           <h1 style={{ fontSize: "2rem", margin: "0 0 1rem" }}>
             Something went wrong.

@@ -15,7 +15,7 @@ import { UUID } from "@/lib/storefront";
 import { ReceiptEmailStatus } from "./receipt-email-status";
 import { VoidSale } from "./void-sale";
 
-export const metadata: Metadata = { title: "Receipt - shoptcg" };
+export const metadata: Metadata = { title: "Receipt - tcgmart" };
 
 export default function ReceiptPage({
   params,

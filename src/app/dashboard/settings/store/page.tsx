@@ -5,7 +5,7 @@ import { SettingsPage } from "../section";
 import { NameForm } from "../settings-form";
 import { StoreImages } from "../store-images";
 
-export const metadata: Metadata = { title: "Store profile - shoptcg" };
+export const metadata: Metadata = { title: "Store profile - tcgmart" };
 
 export default function StoreProfilePage() {
   return (

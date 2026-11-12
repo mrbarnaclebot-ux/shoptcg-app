@@ -39,7 +39,7 @@ export async function generateMetadata({
   const { slug, id } = await params;
   const { store, item } = await itemOr404(slug, id);
   if (store.state === "off")
-    return { title: `${store.name} - shoptcg`, robots: { index: false } };
+    return { title: `${store.name} - tcgmart`, robots: { index: false } };
   const title = `${item.name} - ${store.name}`;
   const price = item.qty && item.price !== null ? `${usd(item.price)}. ` : "";
   const description = `${price}${metaLine(item)}. ${stockLine(item)}.`;
@@ -49,7 +49,7 @@ export async function generateMetadata({
     u?.startsWith("https://"),
   );
   return {
-    title: `${title} - shoptcg`,
+    title: `${title} - tcgmart`,
     description,
     openGraph: {
       title,

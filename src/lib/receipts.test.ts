@@ -127,7 +127,7 @@ test("a provider refusal is recorded, never thrown, and a resend can recover", a
   const id = await soldRequest(db);
   expect(await state(db, id)).toMatchObject({ status: "pending", attempts: 0 });
   vi.stubEnv("RESEND_API_KEY", "fake");
-  vi.stubEnv("BETTER_AUTH_URL", "https://shoptcg.test");
+  vi.stubEnv("BETTER_AUTH_URL", "https://tcgmart.test");
   vi.spyOn(console, "error").mockImplementation(() => {});
   const refuse = vi.fn(
     async () => new Response("domain not verified", { status: 403 }),
@@ -162,7 +162,7 @@ test("resends stop at the attempt cap", async () => {
   const db = await migratedDb();
   const id = await soldRequest(db);
   vi.stubEnv("RESEND_API_KEY", "fake");
-  vi.stubEnv("BETTER_AUTH_URL", "https://shoptcg.test");
+  vi.stubEnv("BETTER_AUTH_URL", "https://tcgmart.test");
   const accept = vi.fn(async () => new Response("{}", { status: 200 }));
   vi.stubGlobal("fetch", accept);
   for (let i = 0; i < MAX_ATTEMPTS; i++)

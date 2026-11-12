@@ -1,4 +1,4 @@
-# shoptcg.app: your card table, on every buyer's phone
+# tcgmart.app: your card table, on every buyer's phone
 
 Put a QR code on your table. Buyers scan it and browse your whole stock with live market prices while you keep dealing. No more flipping through binders or answering "how much?" for every card.
 

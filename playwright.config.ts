@@ -10,7 +10,7 @@ export const admin = (n: number) =>
   `owner-${process.env.E2E_RUN}-${n}@example.test`;
 // Sign-in links land here instead of being emailed (see src/lib/email.ts).
 // Outside test-results, which Playwright empties while the server is running.
-export const OUTBOX = join(tmpdir(), "shoptcg-magic-links.txt");
+export const OUTBOX = join(tmpdir(), "tcgmart-magic-links.txt");
 // E2E_PORT lets two checkouts run e2e side by side.
 const port = Number(process.env.E2E_PORT ?? 3000);
 const url = `http://localhost:${port}`;

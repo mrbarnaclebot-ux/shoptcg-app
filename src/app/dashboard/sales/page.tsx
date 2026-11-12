@@ -11,7 +11,7 @@ import { salesToday } from "@/lib/sales";
 import { requireStore, sellerTimeZone } from "@/lib/session";
 import { shortName } from "@/lib/short-name";
 
-export const metadata: Metadata = { title: "Sales - shoptcg" };
+export const metadata: Metadata = { title: "Sales - tcgmart" };
 
 export default function SalesPage() {
   return (

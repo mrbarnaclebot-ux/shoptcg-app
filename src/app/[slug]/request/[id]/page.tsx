@@ -28,7 +28,7 @@ import {
 export const instant = false;
 
 export const metadata: Metadata = {
-  title: "Your request - shoptcg",
+  title: "Your request - tcgmart",
   robots: { index: false },
 };
 

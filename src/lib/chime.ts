@@ -1,7 +1,7 @@
 // Two short tones plus a buzz. Browsers keep audio locked until a tap, so the
 // "Sound on" toggle plays it once and any later tap unlocks it after a reload.
-const KEY = "shoptcg:sound";
-const EVENT = "shoptcg:sound";
+const KEY = "tcgmart:sound";
+const EVENT = "tcgmart:sound";
 let ctx: AudioContext | undefined;
 
 export function soundOn() {

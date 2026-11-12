@@ -19,7 +19,7 @@ export function StoreCreated({ slug }: { slug: string }) {
   return (
     <ShowMoment stamp="Set up" headline="Your table is set" no="0001">
       <p className="text-muted-foreground">
-        shoptcg.app/{slug} is live with <span className="num">0</span> items.
+        tcgmart.app/{slug} is live with <span className="num">0</span> items.
         Stock the table, then open it below when doors open.
       </p>
       <TicketButton href="/dashboard/inventory/add" className="self-start">

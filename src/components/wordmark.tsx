@@ -7,7 +7,7 @@ export function Wordmark() {
       href="/"
       className="font-display inline-flex min-h-11 items-center text-[1.625rem] leading-none font-extrabold tracking-[0.01em]"
     >
-      shoptcg<span className="text-brand">.</span>app
+      tcgmart<span className="text-brand">.</span>app
     </Link>
   );
 }

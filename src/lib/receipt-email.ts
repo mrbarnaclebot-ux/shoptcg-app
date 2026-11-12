@@ -108,7 +108,7 @@ ${fx ? `<tr><td colspan="2" align="right" style="font:13px/1.4 Arial,sans-serif;
 </tr></table>
 </td></tr>
 </table>
-<p style="max-width:600px;margin:14px auto 0;font:13px/1.5 Arial,sans-serif;color:#a6a8b0">You got this because you bought from ${store} on shoptcg.app.${unsub}</p>
+<p style="max-width:600px;margin:14px auto 0;font:13px/1.5 Arial,sans-serif;color:#a6a8b0">You got this because you bought from ${store} on tcgmart.app.${unsub}</p>
 </td></tr></table>
 </body></html>`;
   const text = [
@@ -126,7 +126,7 @@ ${fx ? `<tr><td colspan="2" align="right" style="font:13px/1.4 Arial,sans-serif;
     ...(fx ? [fx] : []),
     `Paid by ${paidBy(d)}`,
     "",
-    `You got this because you bought from ${d.storeName} on shoptcg.app.`,
+    `You got this because you bought from ${d.storeName} on tcgmart.app.`,
     ...(d.unsubscribeUrl
       ? [`You're on the store's update list. Unsubscribe: ${d.unsubscribeUrl}`]
       : []),

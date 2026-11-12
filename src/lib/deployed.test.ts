@@ -11,8 +11,8 @@ describe("isDeployed", () => {
 
 describe("appUrl", () => {
   it("uses BETTER_AUTH_URL, falls back to localhost only in development", () => {
-    expect(appUrl({ BETTER_AUTH_URL: "https://shoptcg.app/" }).host).toBe(
-      "shoptcg.app",
+    expect(appUrl({ BETTER_AUTH_URL: "https://tcgmart.app/" }).host).toBe(
+      "tcgmart.app",
     );
     expect(appUrl({ NODE_ENV: "development" }).origin).toBe(
       "http://localhost:3000",

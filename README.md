@@ -1,4 +1,4 @@
-# shoptcg.app
+# tcgmart.app
 
 Live-priced Pokemon TCG stock for card show vendors. Spec: `.planning/PROJECT.md`.
 
