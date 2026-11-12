@@ -252,6 +252,7 @@ export const STOCK_REASONS = [
   "adjusted",
   "sold",
   "voided",
+  "bought",
 ] as const;
 
 // Every change to a listing's quantity, written by the listing_stock_move
@@ -270,7 +271,7 @@ export const stockMove = pgTable(
     delta: integer("delta").notNull(),
     qtyAfter: integer("qty_after").notNull(),
     reason: text("reason", { enum: STOCK_REASONS }).notNull(),
-    // The sale behind a "sold" or "voided" move.
+    // The sale behind a "sold" or "voided" move, or the buy behind "bought".
     ref: uuid("ref"),
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -278,7 +279,7 @@ export const stockMove = pgTable(
     index("stock_move_store_at_idx").on(t.storeId, t.at.desc()),
     check(
       "stock_move_reason",
-      sql`${t.reason} in ('opening', 'added', 'adjusted', 'sold', 'voided')`,
+      sql`${t.reason} in ('opening', 'added', 'adjusted', 'sold', 'voided', 'bought')`,
     ),
   ],
 );

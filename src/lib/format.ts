@@ -5,6 +5,14 @@ const usdFmt = new Intl.NumberFormat("en-US", {
 
 export const usd = (n: number) => usdFmt.format(n);
 
+/** A cash check's result: "$2.50 short", "$1.00 over" or "Right on". */
+export function overShort(counted: string, expected: string) {
+  const d =
+    Math.round(Number(counted) * 100) - Math.round(Number(expected) * 100);
+  if (d === 0) return "Right on";
+  return `${usd(Math.abs(d) / 100)} ${d < 0 ? "short" : "over"}`;
+}
+
 /** "Nov 7" from an ISO date, read as UTC so the day never shifts by timezone. */
 export function shortDate(iso: string) {
   return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {

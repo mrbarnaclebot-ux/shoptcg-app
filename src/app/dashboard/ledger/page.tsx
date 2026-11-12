@@ -5,7 +5,10 @@ import { RangeForm, RangePresets } from "@/components/range-picker";
 import { SectionMark } from "@/components/section-mark";
 import { TicketLoading } from "@/components/ticket";
 import { getDb } from "@/db";
-import { usd } from "@/lib/format";
+import { ExportButton } from "@/components/export-button";
+import { lineButton } from "@/components/ticket-button";
+import type { BuyMethod } from "@/db/schema";
+import { overShort, usd } from "@/lib/format";
 import { ledger, MOVES_SHOWN, type StockReason } from "@/lib/ledger";
 import { localDate, parseRange } from "@/lib/reports";
 import { requireStore, sellerTimeZone } from "@/lib/session";
@@ -21,6 +24,13 @@ const REASON: Record<StockReason, string> = {
   adjusted: "Adjusted",
   sold: "Sold",
   voided: "Sale voided",
+  bought: "Bought",
+};
+const PAID_WITH: Record<BuyMethod, string> = {
+  cash: "Cash",
+  card: "Card",
+  paypal: "PayPal",
+  trade: "Trade",
 };
 
 export default function LedgerPage({ searchParams }: Search) {
@@ -62,7 +72,7 @@ async function Ledger({ searchParams }: Search) {
   const timeZone = await sellerTimeZone();
   const now = new Date();
   const range = parseRange(await searchParams, timeZone, now);
-  const { money, stock, moves } = await ledger(
+  const { money, stock, moves, buys, checks } = await ledger(
     getDb(),
     store.id,
     range,
@@ -108,8 +118,96 @@ async function Ledger({ searchParams }: Search) {
         )}
       </section>
 
+      <section aria-labelledby="buys-h" className="flex w-full flex-col gap-3">
+        <SectionMark n={2} id="buys-h">
+          Bought in these days
+        </SectionMark>
+        <dl className="border-b border-border">
+          <Row k="Paid out">{usd(Number(buys.paid))}</Row>
+          <Row k="In cash">{usd(Number(buys.cash))}</Row>
+        </dl>
+        {buys.list.length > 0 && (
+          <ul aria-label="Buys" className="w-full border-b border-border">
+            {buys.list.map((b) => {
+              const n = b.lines.reduce((s, l) => s + l.qty, 0);
+              return (
+                <li
+                  key={b.id}
+                  className="grid grid-cols-[1fr_auto] items-baseline gap-x-4 border-t border-border py-2"
+                >
+                  <span className="min-w-0 font-semibold [overflow-wrap:anywhere]">
+                    {b.lines.map((l) => l.name).join(", ")}
+                    <small className="block text-sm font-normal text-muted-foreground">
+                      {time.format(b.createdAt)}. {units(n)},{" "}
+                      {PAID_WITH[b.method].toLowerCase()}
+                      {b.seller && `, from ${b.seller}`}.
+                    </small>
+                  </span>
+                  <span className="num font-semibold">
+                    −{usd(Number(b.total))}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <div className="flex flex-wrap gap-3">
+          <Link href="/dashboard/buy" className={lineButton}>
+            Record a buy
+          </Link>
+          <ExportButton
+            href={`/dashboard/ledger/buys?from=${range.from}&to=${range.to}`}
+            unit="line"
+            disabled={buys.list.length === 0}
+          >
+            Export buys
+          </ExportButton>
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="checks-h"
+        className="flex w-full flex-col gap-3"
+      >
+        <SectionMark n={3} id="checks-h">
+          Cash checks
+        </SectionMark>
+        {checks.length === 0 ? (
+          <p className="text-muted-foreground">
+            No cash checks in these days. Count your cash from the dashboard
+            when you close.
+          </p>
+        ) : (
+          <ul
+            aria-label="Cash checks"
+            className="w-full border-b border-border"
+          >
+            {checks.map((c) => (
+              <li
+                key={c.id}
+                className="grid grid-cols-[1fr_auto] items-baseline gap-x-4 border-t border-border py-2"
+              >
+                <span className="min-w-0 font-semibold">
+                  {time.format(c.closedAt!)}
+                  <small className="block text-sm font-normal text-muted-foreground">
+                    Counted {usd(Number(c.counted))}, expected{" "}
+                    {usd(Number(c.expected))}
+                    {c.openingFloat !== null &&
+                      ` with a ${usd(Number(c.openingFloat))} float`}
+                    .
+                  </small>
+                </span>
+                <span className="num font-semibold">
+                  {overShort(c.counted!, c.expected!)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section aria-labelledby="stock-h" className="flex w-full flex-col gap-3">
-        <SectionMark n={2} id="stock-h">
+        <SectionMark n={4} id="stock-h">
           Stock right now
         </SectionMark>
         <dl className="border-b border-border">
@@ -129,7 +227,7 @@ async function Ledger({ searchParams }: Search) {
       </section>
 
       <section aria-labelledby="moves-h" className="flex w-full flex-col gap-3">
-        <SectionMark n={3} id="moves-h">
+        <SectionMark n={5} id="moves-h">
           Stock in and out
         </SectionMark>
         {moves.length === 0 ? (

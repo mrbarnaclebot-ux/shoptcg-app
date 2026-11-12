@@ -5,7 +5,9 @@ import { TableNumber } from "@/components/table-number";
 import { Ticket } from "@/components/ticket";
 import { getDb } from "@/db";
 import { appUrl } from "@/lib/deployed";
-import { requireUser } from "@/lib/session";
+import { requireUser, sellerTimeZone } from "@/lib/session";
+import { currentTill } from "@/lib/till";
+import { CashBox } from "./cash-box";
 import { waitingCount } from "@/lib/request-reads";
 import { getStoreByOwner } from "@/lib/stores";
 import { RefreshAt } from "@/components/refresh-at";
@@ -50,6 +52,7 @@ async function Dashboard({
             store={store}
             waiting={await waitingCount(getDb(), store.id)}
           />
+          <Till storeId={store.id} closing={store.live === "off"} />
           <RequestQueue storeId={store.id} />
           <Floor slug={store.slug} />
         </>
@@ -57,6 +60,36 @@ async function Dashboard({
         <NewStore />
       )}
     </main>
+  );
+}
+
+async function Till(props: { storeId: string; closing: boolean }) {
+  const [t, timeZone] = await Promise.all([
+    currentTill(getDb(), props.storeId),
+    sellerTimeZone(),
+  ]);
+  const since = t
+    ? new Intl.DateTimeFormat("en-US", {
+        weekday: "short",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone,
+      }).format(t.openedAt)
+    : "";
+  return (
+    <CashBox
+      closing={props.closing}
+      till={
+        t && {
+          id: t.id,
+          since,
+          float: t.openingFloat,
+          cashSales: t.cashSales,
+          cashBuys: t.cashBuys,
+          expected: t.expected,
+        }
+      }
+    />
   );
 }
 
