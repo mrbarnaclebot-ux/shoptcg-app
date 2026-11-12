@@ -169,6 +169,13 @@
       "when": 1794491024434,
       "tag": "0023_drop_logo_url",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1794491402738,
+      "tag": "0024_ledger_two",
+      "breakpoints": true
     }
   ]
 }

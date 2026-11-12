@@ -98,6 +98,9 @@ function Header(props: { count: number | null; synced: string | null }) {
         </p>
       </div>
       <div className="flex gap-3">
+        <Link href="/dashboard/buy" className={`${lineButton} px-3.5`}>
+          Buy
+        </Link>
         <Link
           href="/dashboard/inventory/import"
           className={`${lineButton} px-3.5`}

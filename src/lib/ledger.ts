@@ -8,8 +8,11 @@ import {
   stockMove,
   STOCK_REASONS,
 } from "@/db/schema";
+import { buysIn } from "@/lib/buys";
 import { listStock } from "@/lib/listings";
+import { fromCents, toCents } from "@/lib/money";
 import { inRange, type Range } from "@/lib/reports";
+import { checksIn } from "@/lib/till";
 
 export type StockReason = (typeof STOCK_REASONS)[number];
 
@@ -36,7 +39,7 @@ export async function ledger(
   r: Pick<Range, "from" | "to">,
   timeZone: string,
 ) {
-  const [[money], moves, active, hidden] = await Promise.all([
+  const [[money], moves, active, hidden, buys, checks] = await Promise.all([
     db
       .select({
         revenue: sql<string>`coalesce(sum(${net}), 0)`.mapWith(Number),
@@ -85,6 +88,8 @@ export async function ledger(
       .limit(MOVES_SHOWN),
     listStock(db, storeId),
     listStock(db, storeId, { kind: "hidden" }),
+    buysIn(db, storeId, r, timeZone),
+    checksIn(db, storeId, r, timeZone),
   ]);
   const held = [...active, ...hidden].filter((s) => s.qty > 0);
   const total = (of: (s: (typeof held)[number]) => number | null) =>
@@ -101,5 +106,17 @@ export async function ledger(
       atMarket: total((s) => s.market),
     },
     moves,
+    // Money out: never in takings or profit. Bought units reach profit
+    // through listing.cost, copied to each sold line.
+    buys: {
+      list: buys,
+      paid: fromCents(buys.reduce((c, b) => c + toCents(b.total), 0)),
+      cash: fromCents(
+        buys
+          .filter((b) => b.method === "cash")
+          .reduce((c, b) => c + toCents(b.total), 0),
+      ),
+    },
+    checks,
   };
 }

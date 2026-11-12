@@ -8,7 +8,7 @@ import { getDb } from "@/db";
 import { getAuth } from "@/lib/auth";
 import { seedAllowed } from "@/lib/e2e-seed";
 import { removePush } from "@/lib/push";
-import { getCurrentUser, requireUser } from "@/lib/session";
+import { getCurrentUser, requireStore, requireUser } from "@/lib/session";
 import {
   createStore,
   getStoreByOwner,
@@ -16,6 +16,7 @@ import {
   SLUG_TAKEN,
   type FieldErrors,
 } from "@/lib/stores";
+import { cashSchema, closeTill, openTill, setFloat } from "@/lib/till";
 
 export type CreateStoreState = { errors?: FieldErrors; taken?: string };
 
@@ -79,10 +80,46 @@ export async function setStateAction(
   if (!parsed.success) return { error: "Pick open, pause or not vending." };
   const v = parsed.data;
   const ms = v.state === "paused" ? await pauseMs(v.minutes) : null;
-  if ((await getStoreByOwner(getDb(), user.id))?.suspendedAt)
-    return { error: "An admin has stopped this store." };
+  const store = await getStoreByOwner(getDb(), user.id);
+  if (store?.suspendedAt) return { error: "An admin has stopped this store." };
   const ok = await setStoreState(getDb(), user.id, v.state, ms);
-  if (!ok) return { error: "Create your store first." };
+  if (!ok || !store) return { error: "Create your store first." };
+  // Opening starts a cash box; one already open (across a pause) carries on.
+  if (v.state === "open") await openTill(getDb(), store.id);
   refresh();
   return {};
+}
+
+const GONE = "That cash box is closed. Reload the page.";
+const optionalCash = z.preprocess(
+  (v) => (typeof v === "string" && !v.trim() ? null : v),
+  cashSchema.nullable(),
+);
+
+/** Sets the open cash box's float, starting a box if none is open. */
+export async function setFloatAction(
+  amount: string,
+): Promise<{ error?: string }> {
+  const { store } = await requireStore();
+  const v = optionalCash.safeParse(amount);
+  if (!v.success) return { error: v.error.issues[0].message };
+  await setFloat(getDb(), store.id, v.data);
+  refresh();
+  return {};
+}
+
+/** The cash check at close: counted against expected, and the box closes. */
+export async function cashCheckAction(
+  tillId: string,
+  counted: string,
+): Promise<{ error?: string; expected?: string; counted?: string }> {
+  const { store } = await requireStore();
+  const v = cashSchema.safeParse(counted);
+  if (!v.success) return { error: v.error.issues[0].message };
+  const id = z.uuid().safeParse(tillId);
+  if (!id.success) return { error: GONE };
+  const r = await closeTill(getDb(), store.id, id.data, v.data);
+  if (!("ok" in r)) return { error: GONE };
+  refresh();
+  return { expected: r.expected, counted: r.counted };
 }
