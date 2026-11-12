@@ -263,7 +263,7 @@ function Action({ store, item }: { store: PublicStore; item: PublicItem }) {
       />
     );
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:static lg:col-start-2 lg:mt-8 lg:border-0 lg:bg-transparent lg:p-0">
+    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:static lg:col-start-2 lg:mt-8 lg:border-0 lg:bg-transparent lg:p-0">
       <div className="mx-auto max-w-[560px] lg:mx-0 lg:max-w-sm">{body}</div>
     </div>
   );
