@@ -32,6 +32,19 @@ export function checkEnv(env: Env) {
   if (pinata.length === 1) errors.push(`Set both of ${PINATA.join(", ")}`);
   if (!pinata.length)
     warnings.push("Pinata unset: store image uploads are off");
+  if (!env.EMAIL_FROM || /@resend[.]dev>?$/i.test(env.EMAIL_FROM.trim()))
+    warnings.push(
+      "EMAIL_FROM unset or Resend's test sender: mail only reaches the Resend account owner",
+    );
+  const canonical = env.CANONICAL_HOST?.trim().toLowerCase();
+  if (canonical && parsed.success) {
+    const host = new URL(env.BETTER_AUTH_URL!).host;
+    // Redirecting every visit away from the host sign-in links point at loops.
+    if (host !== canonical)
+      errors.push(
+        `CANONICAL_HOST is ${canonical} but BETTER_AUTH_URL is ${host}`,
+      );
+  }
   if (!env.PPT_API_KEY)
     warnings.push("PPT_API_KEY unset: catalog search falls back to TCGdex");
   if (isDeployed(env))

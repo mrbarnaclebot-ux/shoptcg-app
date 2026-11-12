@@ -12,6 +12,7 @@ const ok = {
   VAPID_SUBJECT: "mailto:o@example.test",
   PINATA_JWT: "j",
   PINATA_GATEWAY_URL: "x.mypinata.cloud",
+  EMAIL_FROM: "shoptcg <hello@shop.example>",
 };
 
 describe("checkEnv", () => {
@@ -50,5 +51,19 @@ describe("checkEnv", () => {
     expect(
       checkEnv({ ...hooks, RAILWAY_ENVIRONMENT: "production" }).errors,
     ).toHaveLength(2);
+  });
+
+  it("warns while mail still goes from Resend's test sender", () => {
+    for (const EMAIL_FROM of [undefined, "shoptcg <onboarding@resend.dev>"])
+      expect(checkEnv({ ...ok, EMAIL_FROM }).warnings[0]).toMatch(/EMAIL_FROM/);
+  });
+
+  it("refuses a canonical host that isn't BETTER_AUTH_URL's", () => {
+    expect(checkEnv({ ...ok, CANONICAL_HOST: "shop.example" }).errors).toEqual(
+      [],
+    );
+    expect(
+      checkEnv({ ...ok, CANONICAL_HOST: "other.example" }).errors[0],
+    ).toMatch(/CANONICAL_HOST/);
   });
 });
