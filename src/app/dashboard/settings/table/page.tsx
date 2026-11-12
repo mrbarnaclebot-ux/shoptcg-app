@@ -5,11 +5,11 @@ import { requireStore } from "@/lib/session";
 import { SettingsPage } from "../section";
 import { TableForm } from "../settings-form";
 
-export const metadata: Metadata = { title: "Table and sign - shoptcg" };
+export const metadata: Metadata = { title: "How you sell - shoptcg" };
 
 export default function TablePage() {
   return (
-    <SettingsPage title="Table and sign">
+    <SettingsPage title="How you sell">
       <Table />
     </SettingsPage>
   );
@@ -20,6 +20,7 @@ async function Table() {
   return (
     <>
       <TableForm
+        sellingMode={store.sellingMode}
         tableLabel={store.tableLabel ?? ""}
         nfcEnabled={store.nfcEnabled}
       />

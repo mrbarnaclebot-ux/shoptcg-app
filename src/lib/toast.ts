@@ -255,13 +255,7 @@ export const toast = {
   },
 
   // Buyer: the page changes too; these name the change for anyone looking away.
-  holdEnding: (table: string | null) =>
-    show(
-      "warn",
-      "3 minutes left",
-      table ? `Find the seller at table ${table}.` : "Find the seller soon.",
-      8000,
-    ),
+  holdEnding: (soon: string) => show("warn", "3 minutes left", soon, 8000),
   holdOver: (sendAgain: () => void) =>
     show("warn", "Hold's over", "Those cards are back in the store.", 6000, {
       title: "Send again",

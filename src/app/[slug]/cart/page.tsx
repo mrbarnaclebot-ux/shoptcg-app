@@ -65,6 +65,7 @@ export default async function CartPage({
           isOpen: store.isOpen,
           currency: store.secondCurrency,
           fxRate: store.fxRate,
+          mode: store.sellingMode,
         }}
         items={items}
         loaded={ids}

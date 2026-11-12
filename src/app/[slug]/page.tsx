@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { RefreshAt } from "@/components/refresh-at";
 import { lineButton } from "@/components/ticket-button";
 import { getDb } from "@/db";
+import { modeCopy } from "@/lib/selling-mode";
 import {
   listPublicStock,
   storeSummary,
@@ -121,6 +122,7 @@ async function Grid({ store, f }: { store: PublicStore; f: PublicFilter }) {
             slug={store.slug}
             currency={store.secondCurrency}
             canAdd={store.isOpen}
+            askPrice={modeCopy(store.sellingMode).askPrice}
             // One row on desktop, two on phones: the art above the fold.
             eager={i < 4}
           />
@@ -129,8 +131,8 @@ async function Grid({ store, f }: { store: PublicStore; f: PublicFilter }) {
       {store.secondCurrency && store.fxRate !== null && (
         <p className="mt-10 text-xs text-muted-foreground">
           {store.secondCurrency} shown at the seller&apos;s rate: 1 USD ={" "}
-          {store.fxRate} {store.secondCurrency}. You pay in whatever the seller
-          accepts at the table.
+          {store.fxRate} {store.secondCurrency}.{" "}
+          {modeCopy(store.sellingMode).payNote}
         </p>
       )}
     </section>
@@ -145,7 +147,7 @@ function Empty(props: {
   if (!props.filtered)
     return (
       <p className="py-16 text-lg">
-        This store hasn&apos;t added stock yet. Ask at the table.
+        {modeCopy(props.store.sellingMode).noStock}
       </p>
     );
   return (

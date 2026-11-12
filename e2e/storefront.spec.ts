@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
-import { openVendor } from "./buyer";
-import { mixStock } from "./db";
+import { openVendor, sendList } from "./buyer";
+import { mixStock, openedHoursAgo } from "./db";
+import { saveSettings } from "./settings";
 
 /** Top, height and the add button's top for every tile, grouped by row. */
 async function rows(page: Page) {
@@ -24,9 +25,7 @@ test("add to cart from a tile; the old list link lands on the cart", async ({
   const slug = await openVendor(page);
   const buyer = await (await browser.newContext()).newPage();
   await buyer.goto(`/${slug}`);
-  await buyer
-    .getByRole("button", { name: "Add Mew ex to your cart" })
-    .click();
+  await buyer.getByRole("button", { name: "Add Mew ex to your cart" }).click();
   await expect(
     buyer.getByRole("status").filter({ hasText: "Your cart" }),
   ).toContainText("1 item, $48.10");
@@ -49,14 +48,20 @@ test("the item page: zoom, details, add a quantity, back to the same filters", a
     await browser.newContext({ viewport: { width: 390, height: 844 } })
   ).newPage();
   await buyer.goto(`/${slug}?type=raw`);
-  await buyer.getByRole("link", { name: /Charizard ex/ }).first().click();
+  await buyer
+    .getByRole("link", { name: /Charizard ex/ })
+    .first()
+    .click();
   await expect(buyer).toHaveTitle(/^Charizard ex - E2E Cards/);
-  await expect(
-    buyer.locator('meta[property="og:image"]'),
-  ).toHaveAttribute("content", /tcgdex/);
+  await expect(buyer.locator('meta[property="og:image"]')).toHaveAttribute(
+    "content",
+    /tcgdex/,
+  );
   await expect(buyer.getByText("Near Mint (NM)")).toBeVisible();
 
-  await buyer.getByRole("button", { name: "View Charizard ex full size" }).click();
+  await buyer
+    .getByRole("button", { name: "View Charizard ex full size" })
+    .click();
   await expect(buyer.getByRole("dialog")).toBeVisible();
   await buyer.keyboard.press("Escape");
   await expect(buyer.getByRole("dialog")).toBeHidden();
@@ -77,6 +82,44 @@ test("the item page: zoom, details, add a quantity, back to the same filters", a
   ).toContainText("2 items, $531.00");
 });
 
+test("online mode: the copy says order, the hold is a day, no 14-hour pause", async ({
+  page,
+  browser,
+}) => {
+  const slug = await openVendor(page);
+  await saveSettings(page, { table: "B14" });
+  const buyer = await (await browser.newContext()).newPage();
+  await buyer.goto(`/${slug}`);
+  await expect(buyer.getByText("B14")).toBeVisible();
+
+  await saveSettings(page, { mode: "Online store" });
+  await expect(page.getByText(/arrange payment and pickup/)).toBeVisible();
+  await buyer.reload();
+  await expect(buyer.getByText("B14")).toHaveCount(0);
+  await sendList(buyer, slug, ["Mew ex"]);
+  await expect(buyer.getByText("Your order code")).toBeVisible();
+  await expect(
+    buyer.getByText(/confirm your order and email you to arrange payment/),
+  ).toBeVisible();
+  await expect(buyer.getByTestId("hold-clock")).toHaveText(/^2[34]:\d\d:\d\d$/);
+
+  // A table store would have paused itself by now; an online one stays open.
+  await openedHoursAgo(slug, 20);
+  await buyer.goto(`/${slug}`);
+  await expect(buyer.getByText("Browsing only.")).toHaveCount(0);
+  await page.goto("/dashboard");
+  await expect(
+    page.getByRole("heading", { name: /On your page/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Your store" }),
+  ).toHaveAttribute("data-state", "open");
+
+  await saveSettings(page, { mode: "At a table" });
+  await buyer.goto(`/${slug}`);
+  await expect(buyer.getByText("Browsing only.")).toBeVisible();
+});
+
 test("every tile in a row is the same size, buttons in line", async ({
   page,
   browser,
@@ -89,11 +132,15 @@ test("every tile in a row is the same size, buttons in line", async ({
     ).newPage();
     await buyer.goto(`/${slug}`);
     await expect(buyer.locator("[data-tile]")).toHaveCount(9);
+    // Streamed in hidden, then revealed: measure once it is on screen.
+    await expect(buyer.locator("[data-tile]").last()).toBeVisible();
     // content-visibility skips off-screen tiles; scroll them all into layout.
     await buyer.evaluate(() =>
       document
         .querySelectorAll("[data-tile]")
-        .forEach((t) => ((t as HTMLElement).style.contentVisibility = "visible")),
+        .forEach(
+          (t) => ((t as HTMLElement).style.contentVisibility = "visible"),
+        ),
     );
     const grid = await rows(buyer);
     expect(grid.length).toBeGreaterThan(1);

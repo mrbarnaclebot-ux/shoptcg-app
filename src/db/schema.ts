@@ -40,6 +40,11 @@ export const store = pgTable(
       .default("paused"),
     // Set by an admin: the store reads as "off" until cleared, whatever the vendor chose.
     suspendedAt: timestamp("suspended_at", { withTimezone: true }),
+    // At a show table or an online store: the copy buyers see, hold length and
+    // whether an open store pauses itself (src/lib/selling-mode.ts, store-state.ts).
+    sellingMode: text("selling_mode", { enum: ["table", "online"] })
+      .notNull()
+      .default("table"),
     // A timed pause resumes by itself once now() passes this.
     pausedUntil: timestamp("paused_until", { withTimezone: true }),
     // An open store pauses itself 14 hours after this, so nobody pings a vendor who went home.
@@ -77,6 +82,10 @@ export const store = pgTable(
       sql`${t.secondCurrency} ~ '^[A-Z]{3}$'`,
     ),
     check("store_state_valid", sql`${t.state} in ('open', 'paused', 'off')`),
+    check(
+      "store_selling_mode_valid",
+      sql`${t.sellingMode} in ('table', 'online')`,
+    ),
     check(
       "store_table_label_format",
       sql`${t.tableLabel} ~ '^[A-Za-z0-9-]{1,8}$'`,

@@ -25,6 +25,8 @@ export function TableSign(props: {
   shownUrl: string;
   tableLabel: string | null;
   nfc: boolean;
+  /** "Pay at the table" or, for an online store, "Order on your phone". */
+  fact: string;
 }) {
   const code = qr(props.url);
   const u = UNIT[props.size];
@@ -64,7 +66,7 @@ export function TableSign(props: {
       <div className="ts-facts">
         <span>Market-checked prices</span>
         <span>Updated daily</span>
-        <span>Pay at the table</span>
+        <span>{props.fact}</span>
       </div>
       <div className="ts-foot">
         <span>Powered by shoptcg.app</span>

@@ -6,6 +6,7 @@ import { HangTag } from "@/components/hang-tag";
 import { RefreshAt } from "@/components/refresh-at";
 import { Stamp } from "@/components/stamp";
 import { getDb } from "@/db";
+import { modeCopy } from "@/lib/selling-mode";
 import { formatAlt, usdTag } from "@/lib/fx";
 import { gradeLabel, usd } from "@/lib/format";
 import {
@@ -40,8 +41,7 @@ export async function generateMetadata({
   if (store.state === "off")
     return { title: `${store.name} - shoptcg`, robots: { index: false } };
   const title = `${item.name} - ${store.name}`;
-  const price =
-    item.qty && item.price !== null ? `${usd(item.price)}. ` : "";
+  const price = item.qty && item.price !== null ? `${usd(item.price)}. ` : "";
   const description = `${price}${metaLine(item)}. ${stockLine(item)}.`;
   // A shared link shows the card, else the store's banner. Data URLs (local
   // uploads) mean nothing to another site.
@@ -248,7 +248,9 @@ function Action({ store, item }: { store: PublicStore; item: PublicItem }) {
     );
   else if (item.price === null)
     body = (
-      <p className="font-semibold">Ask the seller for a price at the table.</p>
+      <p className="font-semibold">
+        {modeCopy(store.sellingMode).askPriceLine}
+      </p>
     );
   else
     body = (

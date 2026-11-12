@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { appUrl } from "@/lib/deployed";
+import { modeCopy } from "@/lib/selling-mode";
 import { requireStore } from "@/lib/session";
 import { PrintButton } from "./print-button";
 import "./sign.css";
@@ -43,6 +44,7 @@ async function Sign({
   const { store } = await requireStore();
   const size: SignSize = (await searchParams).size === "a4" ? "a4" : "a5";
   const sign = storeUrl(store.slug, "sign");
+  const copy = modeCopy(store.sellingMode);
   const nfc = storeUrl(store.slug, "nfc");
   return (
     <div className="grid items-start gap-10 lg:grid-cols-[auto_1fr]">
@@ -55,8 +57,9 @@ async function Sign({
             name={store.name}
             url={sign.url}
             shownUrl={sign.shown}
-            tableLabel={store.tableLabel}
+            tableLabel={copy.showTable ? store.tableLabel : null}
             nfc={store.nfcEnabled}
+            fact={copy.signFact}
           />
         </div>
       </div>

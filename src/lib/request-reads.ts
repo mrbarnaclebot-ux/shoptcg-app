@@ -114,6 +114,7 @@ export async function buyerRequest(db: Db, id: string, sessionId: string) {
       storeName: store.name,
       slug: store.slug,
       tableLabel: store.tableLabel,
+      sellingMode: store.sellingMode,
     })
     .from(request)
     .innerJoin(store, eq(store.id, request.storeId))

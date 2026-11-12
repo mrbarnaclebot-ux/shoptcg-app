@@ -41,7 +41,7 @@ test("on a phone, More is a menu and its pages lead back to it", async ({
   await page.goto("/dashboard/settings");
   const menu = page.getByRole("navigation", { name: "Settings" });
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
-  await menu.getByRole("link", { name: "Table and sign" }).click();
+  await menu.getByRole("link", { name: "How you sell" }).click();
   await expect(page.getByLabel("Table number")).toBeVisible();
   await expect(menu.getByRole("link", { name: "Pricing" })).toBeHidden();
   await expect(

@@ -27,6 +27,7 @@ export async function getPublicStore(db: Db, slug: string) {
       resumesInMin,
       changesInMs,
       tableLabel: store.tableLabel,
+      sellingMode: store.sellingMode,
       secondCurrency: store.secondCurrency,
       fxRate: store.fxRate,
       nfcEnabled: store.nfcEnabled,

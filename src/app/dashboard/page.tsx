@@ -53,7 +53,7 @@ async function Dashboard({
             waiting={await waitingCount(getDb(), store.id)}
           />
           <Till storeId={store.id} closing={store.live === "off"} />
-          <RequestQueue storeId={store.id} />
+          <RequestQueue storeId={store.id} mode={store.sellingMode} />
           <Floor slug={store.slug} />
         </>
       ) : (

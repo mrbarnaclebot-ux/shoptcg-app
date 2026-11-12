@@ -44,10 +44,10 @@ export default function TermsPage() {
           <h2>Buyer requests</h2>
           <p>
             When you send a cart, the vendor sees your name, your email and what
-            you asked for, and the items are held for 15 minutes. If the request
-            doesn&apos;t end in a sale, your details are deleted after 30 days.
-            Promo emails are separate: they need the optional box, which starts
-            unticked.
+            you asked for, and the items are held for 15 minutes (24 hours for
+            an online store). If the request doesn&apos;t end in a sale, your
+            details are deleted after 30 days. Promo emails are separate: they
+            need the optional box, which starts unticked.
           </p>
           <h2>Store images</h2>
           <p>

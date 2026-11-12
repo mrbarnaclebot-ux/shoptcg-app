@@ -12,6 +12,7 @@ import { getDb } from "@/db";
 import { readBuyerSid } from "@/lib/buyer-session";
 import { buyerRequest } from "@/lib/request-reads";
 import { saleForRequest } from "@/lib/sales";
+import { modeCopy } from "@/lib/selling-mode";
 import { UUID } from "@/lib/storefront";
 import { storeOr404 } from "../../store-lookup";
 import {
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
 const COPY = {
   declined: {
     title: "The seller couldn't do this one.",
-    sub: "Items are back in the store. You can talk to the seller at the table or send a new cart.",
+    sub: "", // By selling mode: modeCopy().declined.
   },
   expired: {
     title: "Your hold ended.",
@@ -55,6 +56,8 @@ export default async function RequestPage({
   const r = sid && UUID.test(id) ? await buyerRequest(getDb(), id, sid) : null;
   if (!r || r.slug !== slug) notFound();
   if (r.status === "confirmed") return <Sold requestId={r.id} slug={slug} />;
+  const copy = modeCopy(r.sellingMode);
+  const soon = copy.holdSoon(r.tableLabel);
   return (
     <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col gap-5 px-4 pt-6 pb-16 md:pt-10">
       <RequestLive id={r.id} slug={slug} status={r.status} lines={r.lines} />
@@ -62,23 +65,20 @@ export default async function RequestPage({
         <>
           <Ticket
             as="div"
-            stub={<HoldClock at={r.expiresAt.getTime()} table={r.tableLabel} />}
+            stub={<HoldClock at={r.expiresAt.getTime()} soon={soon} />}
           >
             <h1 className="font-display text-[2.5rem] leading-[0.9] font-black text-balance [overflow-wrap:anywhere]">
               Sent to {store.name}
             </h1>
-            <p className="mt-2 mb-4 text-muted-foreground">
-              Head to the table and show this screen. Your items are held for
-              you.
-            </p>
-            <p className="text-sm font-semibold">Show the seller this code</p>
+            <p className="mt-2 mb-4 text-muted-foreground">{copy.sentNext}</p>
+            <p className="text-sm font-semibold">{copy.codeLabel}</p>
             <p
               data-testid="request-code"
               className="font-display num text-[4.5rem] leading-none font-black"
             >
               {r.code}
             </p>
-            <HoldWarning at={r.expiresAt.getTime()} table={r.tableLabel} />
+            <HoldWarning at={r.expiresAt.getTime()} soon={soon} />
             <RequestLines lines={r.lines} />
           </Ticket>
           <CancelRequest id={r.id} />
@@ -86,6 +86,7 @@ export default async function RequestPage({
       ) : (
         <Ended
           {...COPY[r.status]}
+          sub={r.status === "declined" ? copy.declined : COPY[r.status].sub}
           action={
             r.status === "expired" ? (
               <SendAgain slug={slug} lines={r.lines} />

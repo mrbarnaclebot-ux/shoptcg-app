@@ -2,6 +2,7 @@ import Link from "next/link";
 import { RefreshAt } from "@/components/refresh-at";
 import { TableNumber } from "@/components/table-number";
 import { shortDate } from "@/lib/format";
+import { modeCopy } from "@/lib/selling-mode";
 import type { PublicStore } from "@/lib/storefront";
 
 const STATUS = { open: "Open", paused: "Paused", off: "Not vending" } as const;
@@ -13,8 +14,8 @@ export function NotVending({ store }: { store: PublicStore }) {
       <StoreHeader store={store} />
       <RefreshAt inMs={null} everyMs={60_000} />
       <p className="max-w-[32ch] py-12 text-lg text-balance">
-        {store.name} isn&apos;t vending right now. Check back at their next
-        show.
+        {store.name} isn&apos;t vending right now.{" "}
+        {modeCopy(store.sellingMode).notVending}
       </p>
       <footer className="mt-auto border-t border-border pt-4 pb-16 text-xs text-muted-foreground">
         <Link href="/terms" className="underline underline-offset-2">
@@ -77,7 +78,7 @@ function StoreTitle(props: {
       <h1 className="font-display text-[2.5rem] leading-[0.9] font-black text-balance md:text-[4rem]">
         {store.name}
       </h1>
-      {store.tableLabel && (
+      {store.tableLabel && modeCopy(store.sellingMode).showTable && (
         <TableNumber
           label="Table"
           value={store.tableLabel}

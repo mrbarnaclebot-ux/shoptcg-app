@@ -176,6 +176,13 @@
       "when": 1794491402738,
       "tag": "0024_ledger_two",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1794503246171,
+      "tag": "0025_selling_mode",
+      "breakpoints": true
     }
   ]
 }

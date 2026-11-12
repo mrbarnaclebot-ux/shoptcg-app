@@ -70,7 +70,7 @@ export function RequestLive(props: {
   return null;
 }
 
-export function HoldClock(props: { at: number; table: string | null }) {
+export function HoldClock(props: { at: number; soon: string }) {
   const router = useRouter();
   const now = useNow();
   const left = props.at - now;
@@ -80,9 +80,9 @@ export function HoldClock(props: { at: number; table: string | null }) {
   useEffect(() => {
     if (warn && !over && !warned.current) {
       warned.current = true;
-      toast.holdEnding(props.table);
+      toast.holdEnding(props.soon);
     }
-  }, [warn, over, props.table]);
+  }, [warn, over, props.soon]);
   // Expiry is lazy on the server, so a re-read at zero shows it.
   useEffect(() => {
     if (over) router.refresh();
@@ -97,13 +97,12 @@ export function HoldClock(props: { at: number; table: string | null }) {
   );
 }
 
-export function HoldWarning(props: { at: number; table: string | null }) {
+export function HoldWarning(props: { at: number; soon: string }) {
   const now = useNow();
   if (!now || props.at - now >= WARN_MS) return null;
   return (
     <p className="mt-2 font-semibold text-brand-text">
-      Hold ends soon.
-      {props.table && ` Find the seller at table ${props.table}.`}
+      Hold ends soon. {props.soon}
     </p>
   );
 }

@@ -110,6 +110,8 @@ export function Tile(props: {
   slug: string;
   currency: string | null;
   canAdd: boolean;
+  /** "Ask at the table" or "Ask the seller", for an unpriced item. */
+  askPrice: string;
   eager: boolean;
 }) {
   const { it } = props;
@@ -158,7 +160,15 @@ export function Tile(props: {
         {metaLine(it)}
       </p>
       <div className="mt-2 flex h-14 items-end justify-between gap-2">
-        {soldOut ? <span /> : <PriceBlock it={it} currency={props.currency} />}
+        {soldOut ? (
+          <span />
+        ) : (
+          <PriceBlock
+            it={it}
+            currency={props.currency}
+            askPrice={props.askPrice}
+          />
+        )}
         {props.canAdd &&
           !soldOut &&
           it.price !== null &&
@@ -194,12 +204,14 @@ export function Tile(props: {
 function PriceBlock({
   it,
   currency,
+  askPrice,
 }: {
   it: PublicItem;
   currency: string | null;
+  askPrice: string;
 }) {
   if (it.price === null)
-    return <span className="text-sm font-semibold">Ask at the table</span>;
+    return <span className="text-sm font-semibold">{askPrice}</span>;
   return (
     <span className="flex flex-col">
       <span className="font-display num text-[1.875rem] leading-[0.9] font-extrabold">

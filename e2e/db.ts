@@ -103,6 +103,17 @@ export async function invitesLabelled(label: string) {
   }
 }
 
+/** Moves the store's opening back, as if it had been open this many hours. */
+export async function openedHoursAgo(slug: string, hours: number) {
+  const sql = localDb();
+  try {
+    await sql`update store set opened_at = now() - make_interval(hours => ${hours})
+      where slug = ${slug}`;
+  } finally {
+    await sql.end();
+  }
+}
+
 /**
  * Mixed art for layout checks: a wide product shot on the sealed box and a
  * hand-added item with a long name and an odd-ratio photo.

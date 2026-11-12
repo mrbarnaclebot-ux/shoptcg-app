@@ -32,7 +32,10 @@ test("storefront at three widths", async ({ page, browser }) => {
     await buyer.goto(`/${slug}/item/${long}`);
     await shot(buyer, "item-long", width, false);
     await buyer.goto(`/${slug}`);
-    await buyer.getByRole("link", { name: /Charizard ex/ }).first().click();
+    await buyer
+      .getByRole("link", { name: /Charizard ex/ })
+      .first()
+      .click();
     await buyer.waitForURL(/\/item\//);
     await shot(buyer, "item", width, false);
     await buyer.context().close();

@@ -3,6 +3,7 @@ import { getDb } from "@/db";
 import { floor, type FloorBasket } from "@/lib/floor";
 import { usd } from "@/lib/format";
 import { sellerTimeZone } from "@/lib/session";
+import { modeCopy } from "@/lib/selling-mode";
 import { getPublicStore } from "@/lib/storefront";
 
 const people = (n: number) => `${n} ${n === 1 ? "person" : "people"}`;
@@ -21,11 +22,11 @@ export async function Floor({ slug }: { slug: string }) {
       console.error("[floor] load failed", err);
       return null;
     }));
-  if (!now) return null;
+  if (!store || !now) return null;
   return (
     <section aria-labelledby="floor-h" className="flex flex-col gap-4">
       <SectionMark n={2} id="floor-h">
-        At your table
+        {modeCopy(store.sellingMode).floorTitle}
       </SectionMark>
       <p data-testid="floor-counts">
         <span className="font-semibold">

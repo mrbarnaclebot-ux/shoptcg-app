@@ -14,6 +14,7 @@ import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usd } from "@/lib/format";
+import { MODE_COPY, SELLING_MODES, type SellingMode } from "@/lib/selling-mode";
 import { toast } from "@/lib/toast";
 import { vendorPrice } from "@/lib/vendor-price";
 import {
@@ -98,11 +99,30 @@ export function PricingForm({ values }: { values: PricingValues }) {
   );
 }
 
-export function TableForm(props: { tableLabel: string; nfcEnabled: boolean }) {
+export function TableForm(props: {
+  sellingMode: SellingMode;
+  tableLabel: string;
+  nfcEnabled: boolean;
+}) {
+  const [mode, setMode] = useState(props.sellingMode);
   return (
     <SettingsShell action={saveTableAction}>
       {(e) => (
         <div className="flex flex-col gap-2">
+          <div className="mb-4 flex flex-col gap-2">
+            <Segmented
+              name="sellingMode"
+              label="Where you sell"
+              value={mode}
+              options={SELLING_MODES.map(
+                (m) => [m, MODE_COPY[m].label] as const,
+              )}
+              onChange={setMode}
+            />
+            <p className="text-sm text-muted-foreground" aria-live="polite">
+              {MODE_COPY[mode].hint}
+            </p>
+          </div>
           <div className="mb-2 flex flex-col gap-2">
             <Label htmlFor="tableLabel">Table number</Label>
             <Input
