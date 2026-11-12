@@ -20,7 +20,7 @@ _Last updated: 2026-11-12. The table sale (walk-up quick sale, from step 4 under
   - Upload goes to `POST /api/store-image?kind=banner|avatar` (raw body, 4 MB cap, 20 an hour per store). `src/lib/store-image.ts` checks the file is a real JPEG, PNG or WebP, crops around the centre and re-encodes to WebP with `sharp`, which also strips metadata.
   - Files live on the owner's Pinata account (`src/lib/image-store.ts`). `PINATA_JWT` and `PINATA_GATEWAY_URL` are set on `web` and `web-staging`. The URL holds the content hash, so it never changes; replacing or removing an image deletes the old file from Pinata.
   - Without the Pinata variables a deployed server refuses uploads. Locally and in e2e the image is kept in the row as a data URL, so tests never reach Pinata.
-  - Migration `0017` added `banner_url`, `banner_file_id`, `avatar_url`, `avatar_file_id`. `stores.logo_url` is no longer read; drop it in the next release.
+  - Migration `0017` added `banner_url`, `banner_file_id`, `avatar_url`, `avatar_file_id`. Migration `0023` dropped the old `stores.logo_url`.
 - **Settings and admin:**
   - "More" (`/dashboard/settings`) is a menu on a phone and a side list on desktop (`settings/menu.tsx`, `settings/layout.tsx`). Each section is its own page with its own Save: `store` (name, images), `pricing`, `table`, `alerts`. The menu works without a store, so an admin with no store can reach `/admin`.
   - The store name can be changed. The link (slug) can't, and old receipts keep the old name.
@@ -104,7 +104,6 @@ Railway notes (more in memory `railway-config-ignored`):
      - Cost field in the catalog and custom "add item" panels.
   5. Ledger part two: buys and trade-ins, float and a cash check at close. This reverses "No float field" below; the owner agreed.
   - Sales tax is left out unless the owner asks for it.
-- [ ] Drop `stores.logo_url` (unused since store images shipped).
 - [ ] Graded cards show cropped: the scan sits in a 3:5 box with `object-cover` (`ART_ASPECT.graded` in `src/app/[slug]/tile.tsx`, and `card-thumb.tsx`). Use the card's own shape, `aspect-[63/88]`.
 - [ ] Catalog search, from the 2026-11-10 review, in this order:
   1. Small bugs: a "busy" search still counts as an hourly miss, and the LIKE escape in `src/lib/catalog.ts` does nothing. Show "no price yet" on a card added moments ago.
