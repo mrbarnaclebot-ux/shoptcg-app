@@ -74,7 +74,7 @@ export default async function ItemPage({
       it={item}
       eager
       sizes="(min-width:1024px) 420px, 80vw"
-      className={item.qty ? "" : "opacity-60 grayscale-[0.8]"}
+      dim={!item.qty}
     />
   );
   return (
