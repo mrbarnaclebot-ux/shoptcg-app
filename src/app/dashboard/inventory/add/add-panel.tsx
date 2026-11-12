@@ -14,6 +14,7 @@ import type { CatalogItem } from "@/db/schema";
 import { CONDITIONS, type Condition } from "@/lib/listing-input";
 import { toast } from "@/lib/toast";
 import { addCatalogAction } from "../actions";
+import { CostField } from "../edit-panel";
 
 export function AddPanel({
   item,
@@ -34,6 +35,7 @@ export function AddPanel({
         condition: item.kind === "raw" ? condition : null,
         qty: form.get("qty"),
         overridePrice: fixed,
+        cost: form.get("cost"),
       });
       setError(res.error);
       if (res.error) return void toast.notSaved(res.error);
@@ -72,44 +74,47 @@ export function AddPanel({
   );
 }
 
-/** Qty and optional fixed price; shared with the custom item form. */
+/** Qty, optional fixed price and cost; shared with the custom item form. */
 export function StockFields({
   errors = {},
 }: {
   errors?: Record<string, string>;
 }) {
   return (
-    <div className="grid grid-cols-[6rem_1fr] gap-3">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="qty">Qty</Label>
-        <Input
-          id="qty"
-          name="qty"
-          type="number"
-          min={0}
-          max={9999}
-          defaultValue={1}
-          required
-          className="num"
-        />
+    <>
+      <div className="grid grid-cols-[6rem_1fr] gap-3">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="qty">Qty</Label>
+          <Input
+            id="qty"
+            name="qty"
+            type="number"
+            min={0}
+            max={9999}
+            defaultValue={1}
+            required
+            className="num"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="overridePrice">Fixed price (optional)</Label>
+          <Input
+            id="overridePrice"
+            name="overridePrice"
+            inputMode="decimal"
+            placeholder="Use market price"
+            aria-invalid={errors.overridePrice ? true : undefined}
+            aria-describedby="price-error"
+          />
+        </div>
+        {(errors.qty || errors.overridePrice) && (
+          <p id="price-error" className="col-span-2 text-sm text-danger">
+            {errors.qty ?? errors.overridePrice}
+          </p>
+        )}
       </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="overridePrice">Fixed price (optional)</Label>
-        <Input
-          id="overridePrice"
-          name="overridePrice"
-          inputMode="decimal"
-          placeholder="Use market price"
-          aria-invalid={errors.overridePrice ? true : undefined}
-          aria-describedby="price-error"
-        />
-      </div>
-      {(errors.qty || errors.overridePrice) && (
-        <p id="price-error" className="col-span-2 text-sm text-danger">
-          {errors.qty ?? errors.overridePrice}
-        </p>
-      )}
-    </div>
+      <CostField id="cost" error={errors.cost} />
+    </>
   );
 }
 
