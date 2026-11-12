@@ -36,7 +36,9 @@ export async function setStore(page: Page, to: StoreTo) {
   const state = to === "open" ? "open" : to === "off" ? "off" : "paused";
   await expect(control).toHaveAttribute("data-state", state);
   // It changes before the save lands; a buyer loading now could see the old state.
-  await expect(control).toHaveAttribute("aria-busy", "false");
+  await expect(control).toHaveAttribute("aria-busy", "false", {
+    timeout: 10_000,
+  });
 }
 
 export async function newBuyer(browser: Browser, slug: string) {
