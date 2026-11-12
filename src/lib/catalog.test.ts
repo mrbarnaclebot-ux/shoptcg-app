@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import type { Db } from "@/db/open";
 import * as schema from "@/db/schema";
 import {
+  gradedItem,
   MISSES_PER_HOUR,
   missLimit,
   parseQuery,
@@ -149,6 +150,25 @@ describe("searchCatalog", () => {
     expect(provider.search).not.toHaveBeenCalled();
   });
 
+  it("answers a graded search with one raw row per card", async () => {
+    const provider = fakeProvider([hit({ providerId: "g1", name: "Gengar" })]);
+    const rows = await searchCatalog(
+      db,
+      "gengar",
+      { kind: "graded", language: "en" },
+      provider,
+    );
+    expect(rows.map((r) => [r.kind, r.grader])).toEqual([["raw", null]]);
+    expect(provider.search).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "raw" }),
+    );
+    // The slab row is made when the vendor picks a grade, and reused after.
+    const psa = await gradedItem(db, rows[0].id, "PSA", "9");
+    expect(psa).toMatchObject({ kind: "graded", grader: "PSA", grade: "9" });
+    expect((await gradedItem(db, rows[0].id, "PSA", "9"))?.id).toBe(psa?.id);
+    expect(await gradedItem(db, psa!.id, "PSA", "10")).toBeNull();
+  });
+
   it("keeps one row per grade and rejects inconsistent graded rows", async () => {
     const psa = hit({ kind: "graded", grader: "PSA", grade: "10" });
     await upsertHits(db, [
@@ -160,7 +180,7 @@ describe("searchCatalog", () => {
       .select()
       .from(schema.catalogItem)
       .where(eq(schema.catalogItem.kind, "graded"));
-    expect(rows).toHaveLength(2);
+    expect(rows.filter((r) => r.providerId === psa.providerId)).toHaveLength(2);
     for (const bad of [
       hit({ providerId: "x", kind: "graded" }),
       hit({ providerId: "y", grader: "PSA", grade: "10" }),

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import type { CatalogItem } from "@/db/schema";
 import { parseCsv } from "@/lib/csv";
-import { pickMatch, previewRows, readCsv } from "@/lib/csv-import";
+import { pickMatch, previewRows, readCsv, toImportRow } from "@/lib/csv-import";
 import { SearchError } from "@/lib/pricing/errors";
 
 const HEAD = "name,set,number,language,kind,condition,grader,grade,qty,price";
@@ -105,6 +105,23 @@ describe("matching", () => {
     ).toBe("c1");
     expect(pickMatch(input, [item({}), item({ id: "c2" })])).toBeNull();
     expect(pickMatch(input, [item({ setName: "Obsidian Flames" })])).toBeNull();
+  });
+
+  it("matches a slab to its raw card and carries the grade; odd graders stay custom", () => {
+    const [psa, ace] = readCsv(
+      [
+        HEAD,
+        "Charizard ex,151,199,en,graded,,psa,9.5,1,",
+        "Charizard ex,151,199,en,graded,,ace,10,1,",
+      ].join("\n"),
+    ).map((r) => (r.ok ? r.input : (null as never)));
+    const match = pickMatch(psa, [item({})]);
+    expect(match?.id).toBe("c1");
+    expect(toImportRow(psa, match)).toMatchObject({
+      kind: "catalog",
+      input: { catalogItemId: "c1", grader: "PSA", grade: "9.5" },
+    });
+    expect(pickMatch(ace, [item({})])).toBeNull();
   });
 
   it("previews matched, custom, error and search-limit rows", async () => {

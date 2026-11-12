@@ -98,7 +98,8 @@ export async function addCatalogAction(
     const db = getDb();
     const row = await addCatalogListing(db, store.id, parsed.data);
     // After the response: the vendor doesn't wait on the price provider.
-    after(() => priceNewListings(db, [parsed.data.catalogItemId]));
+    // The row's own id: a picked grade made a new graded catalog row.
+    after(() => priceNewListings(db, [row.catalogItemId!]));
     return { id: row.id, first: await isFirst(db, store.id) };
   } catch (err) {
     if (err instanceof ListingError) return { error: err.message };
@@ -178,12 +179,11 @@ export async function importCsvAction(
     return { error: "Some rows changed. Preview the file again." };
   try {
     const db = getDb();
-    const count = await importListings(db, store.id, parsed.data);
-    const ids = parsed.data.flatMap((r) =>
-      r.kind === "catalog" ? [r.input.catalogItemId] : [],
-    );
+    const added = await importListings(db, store.id, parsed.data);
+    // The listings' own ids: a slab row points at its graded catalog row.
+    const ids = added.flatMap((r) => r.catalogItemId ?? []);
     after(() => priceNewListings(db, ids));
-    return { count };
+    return { count: added.length };
   } catch (err) {
     if (err instanceof ListingError) return { error: err.message };
     console.error("[inventory] import failed", err);

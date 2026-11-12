@@ -6,6 +6,7 @@ import { safeImageUrl } from "@/lib/pricing/images";
 import {
   defaultProvider,
   type CatalogHit,
+  type Grader,
   type Kind,
   type Language,
   type PriceProvider,
@@ -64,6 +65,41 @@ export async function upsertHits(db: Db, hits: CatalogHit[]) {
       },
     })
     .returning();
+}
+
+/**
+ * The graded row for a raw catalog card at this grader and grade, made on
+ * first use so each slab keeps its own price history. Null if the card is gone
+ * or isn't a raw card.
+ */
+export async function gradedItem(
+  db: Db,
+  cardId: string,
+  grader: Grader,
+  grade: string,
+) {
+  const [card] = await db
+    .select()
+    .from(catalogItem)
+    .where(and(eq(catalogItem.id, cardId), eq(catalogItem.kind, "raw")));
+  if (!card) return null;
+  const { provider, providerId, language, name, setName, number, imageUrl } =
+    card;
+  const [row] = await upsertHits(db, [
+    {
+      provider,
+      providerId,
+      language,
+      name,
+      setName,
+      number,
+      imageUrl,
+      kind: "graded",
+      grader,
+      grade,
+    },
+  ]);
+  return row ?? null;
 }
 
 // Leading zeros and case never matter: "006" is "6", "tg05" is "TG5".
@@ -132,14 +168,20 @@ export function missLimit(db: Db, userId: string): MissLimit {
  * throttle refused the call as busy (nothing was sent).
  * Any local hit wins, so a partly cached name returns only what was cached;
  * `force` skips the cache for the add flow's "Search more".
+ * A graded search returns the raw cards, one per card; the grade is picked
+ * when adding, and `gradedItem` makes that row.
  */
 export async function searchCatalog(
   db: Db,
   text: string,
-  opts: { kind: Kind; language: Language; force?: boolean },
+  {
+    kind: wanted,
+    ...rest
+  }: { kind: Kind; language: Language; force?: boolean },
   provider: PriceProvider = defaultProvider(),
   limit: MissLimit = noLimit,
 ): Promise<CatalogItem[]> {
+  const opts = { ...rest, kind: wanted === "graded" ? "raw" : wanted };
   const q = parseQuery(text);
   if (!q.name && !q.number) return [];
   if (!opts.force) {

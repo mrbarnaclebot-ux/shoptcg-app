@@ -69,6 +69,8 @@ describe("listings", () => {
     ]);
     await addCatalogListing(db, a, {
       catalogItemId: item.id,
+      grader: null,
+      grade: null,
       condition: "LP",
       qty: 3,
       overridePrice: null,
@@ -92,6 +94,8 @@ describe("listings", () => {
     await expect(
       addCatalogListing(db, a, {
         catalogItemId: item.id,
+        grader: null,
+        grade: null,
         condition: null,
         qty: 1,
         overridePrice: null,
@@ -123,14 +127,38 @@ describe("listings", () => {
     );
   });
 
+  it("lists a raw card as a slab, making one graded catalog row per grade", async () => {
+    const [card] = await upsertHits(db, [hit({ providerId: "slab-1" })]);
+    const slab = {
+      catalogItemId: card.id,
+      grader: "PSA" as const,
+      grade: "10",
+      condition: null,
+      qty: 1,
+      overridePrice: null,
+      cost: null,
+    };
+    const one = await addCatalogListing(db, a, slab);
+    const [two] = await importListings(db, a, [
+      { kind: "catalog", input: slab },
+    ]);
+    expect(one.catalogItemId).not.toBe(card.id);
+    expect(two.catalogItemId).toBe(one.catalogItemId);
+    expect(one).toMatchObject({ kind: "graded", condition: null });
+    const [row] = await listStock(db, a, { id: one.id });
+    expect(row).toMatchObject({ grader: "PSA", grade: "10", name: card.name });
+  });
+
   it("imports all rows or none", async () => {
     const before = (await listStock(db, a)).length;
     const good = { kind: "custom" as const, input: custom() };
-    expect(await importListings(db, a, [good, good])).toBe(2);
+    expect(await importListings(db, a, [good, good])).toHaveLength(2);
     const bad = {
       kind: "catalog" as const,
       input: {
         catalogItemId: "00000000-0000-4000-8000-000000000000",
+        grader: null,
+        grade: null,
         condition: null,
         qty: 1,
         overridePrice: null,

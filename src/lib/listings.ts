@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { catalogItem, listing, pricePoint } from "@/db/schema";
+import { gradedItem } from "@/lib/catalog";
 import type {
   CatalogListingInput,
   CustomListingInput,
@@ -140,12 +141,24 @@ async function assertRoom(db: Db, storeId: string, adding: number) {
     );
 }
 
+/** A raw card picked with a grader and grade becomes its graded catalog row. */
+async function resolveGraded(
+  db: Db,
+  { grader, grade, ...input }: CatalogListingInput,
+) {
+  if (!grader || !grade) return input;
+  const item = await gradedItem(db, input.catalogItemId, grader, grade);
+  if (!item) throw new ListingError("That card is no longer in the catalog");
+  return { ...input, catalogItemId: item.id };
+}
+
 /** Lists a catalog item; kind and language come from the catalog row, not the client. */
 export async function addCatalogListing(
   db: Db,
   storeId: string,
-  input: CatalogListingInput,
+  picked: CatalogListingInput,
 ) {
+  const input = await resolveGraded(db, picked);
   const [item] = await db
     .select({ kind: catalogItem.kind, language: catalogItem.language })
     .from(catalogItem)
@@ -194,12 +207,20 @@ export type ImportRow =
   | { kind: "catalog"; input: CatalogListingInput }
   | { kind: "custom"; input: CustomListingInput };
 
-/** Inserts every row or none (one INSERT is atomic), so a failed import never leaves half a shelf. */
+/** The new listings' ids. Inserts every row or none (one INSERT is atomic), so a failed import never leaves half a shelf. */
 export async function importListings(
   db: Db,
   storeId: string,
-  rows: ImportRow[],
+  picked: ImportRow[],
 ) {
+  // ponytail: one upsert per graded row; batch them if slab imports get big.
+  const rows = [];
+  for (const r of picked)
+    rows.push(
+      r.kind === "catalog"
+        ? { ...r, input: await resolveGraded(db, r.input) }
+        : r,
+    );
   const ids = rows.flatMap((r) =>
     r.kind === "catalog" ? [r.input.catalogItemId] : [],
   );
@@ -222,14 +243,13 @@ export async function importListings(
     const { kind, language } = item;
     return { ...r.input, storeId, kind, language, condition };
   });
-  if (!values.length) return 0;
+  if (!values.length) return [];
   await assertRoom(db, storeId, values.length);
   // 1000 rows x 18 columns stays under the 65535 bind-parameter cap.
-  const inserted = await db
+  return db
     .insert(listing)
     .values(values)
-    .returning({ id: listing.id });
-  return inserted.length;
+    .returning({ id: listing.id, catalogItemId: listing.catalogItemId });
 }
 
 /** Applies a patch to one of the store's listings; false when it is not theirs. */
