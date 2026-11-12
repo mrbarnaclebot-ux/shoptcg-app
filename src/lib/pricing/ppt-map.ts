@@ -1,6 +1,5 @@
 import type {
   CatalogHit,
-  Grader,
   HistoryPoint,
   Language,
   PriceRef,
@@ -45,16 +44,7 @@ export interface PptSealed {
   priceHistory?: { date: string; unopenedPrice: number }[];
 }
 
-/** "psa10" -> PSA 10, "cgc9_5" -> CGC 9.5. Unknown keys are dropped. */
-export function parseGradeKey(key: string) {
-  const m = /^(psa|bgs|cgc|sgc)(10|[1-9](?:_5)?)$/.exec(key);
-  if (!m) return null;
-  return {
-    grader: m[1].toUpperCase() as Grader,
-    grade: m[2].replace("_", "."),
-  };
-}
-
+// PSA 10 -> "psa10", CGC 9.5 -> "cgc9_5": PPT's salesByGrade keys.
 function gradeKey(ref: PriceRef) {
   return `${ref.grader?.toLowerCase()}${ref.grade?.replace(".", "_")}`;
 }
@@ -97,13 +87,6 @@ export function cardHit(c: PptCard, language: Language): CatalogHit {
     grader: null,
     grade: null,
   };
-}
-
-export function gradedHits(c: PptCard, language: Language): CatalogHit[] {
-  return Object.keys(c.ebay?.salesByGrade ?? {})
-    .map(parseGradeKey)
-    .filter((g) => g !== null)
-    .map((g) => ({ ...cardHit(c, language), kind: "graded" as const, ...g }));
 }
 
 export function sealedHit(p: PptSealed, language: Language): CatalogHit {

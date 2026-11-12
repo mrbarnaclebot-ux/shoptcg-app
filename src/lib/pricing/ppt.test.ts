@@ -7,7 +7,6 @@ import sealedOne from "./fixtures/ppt-sealed-one-docs.json";
 import sealed from "./fixtures/ppt-sealed-search.json";
 import { PartialPricesError } from "./errors";
 import { ppt } from "./ppt";
-import { parseGradeKey } from "./ppt-map";
 import { raw, query, serve } from "./test-fetch";
 import { tcgdex } from "./tcgdex";
 
@@ -41,16 +40,6 @@ describe("ppt adapter (recorded fixtures)", () => {
     });
     expect(calls[0].searchParams.get("search")).toBe("charizard 199");
     expect(calls[0].searchParams.get("limit")).toBe("10");
-  });
-
-  it("maps graded search to one hit per supported grader (TAG dropped)", async () => {
-    serve([["/cards?", { data: [gradedCard.data] }]]);
-    const hits = await client.search(query({ kind: "graded" }));
-    expect(hits.map((h) => `${h.grader} ${h.grade}`)).toEqual([
-      "PSA 10",
-      "CGC 9.5",
-      "PSA 8",
-    ]);
   });
 
   it("prices raw, graded and sealed, sharing one call per card", async () => {
@@ -187,15 +176,6 @@ describe("ppt adapter (recorded fixtures)", () => {
     const [hit] = await client.search(query({}));
     expect(hit.providerId).toBe("");
   });
-
-  it.each([
-    ["psa10", { grader: "PSA", grade: "10" }],
-    ["bgs9_5", { grader: "BGS", grade: "9.5" }],
-    ["tag10", null],
-    ["psa11", null],
-  ])("parses grade key %s", (key, want) =>
-    expect(parseGradeKey(key)).toEqual(want),
-  );
 });
 
 describe.skipIf(!process.env.LIVE)("live smoke (LIVE=1)", () => {

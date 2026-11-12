@@ -1,7 +1,6 @@
 import { PartialPricesError, SearchBusyError } from "./errors";
 import {
   cardHit,
-  gradedHits,
   history,
   quote,
   sealedHit,
@@ -105,12 +104,9 @@ async function search(c: Client, q: SearchQuery): Promise<CatalogHit[]> {
     const rows = (await request(c, "/sealed-products", params)) ?? [];
     return (rows as PptSealed[]).map((p) => sealedHit(p, q.language));
   }
-  const extra: Params = q.kind === "graded" ? { includeEbay: true } : {};
-  const rows = ((await request(c, "/cards", { ...params, ...extra })) ??
-    []) as PptCard[];
-  return q.kind === "graded"
-    ? rows.flatMap((card) => gradedHits(card, q.language))
-    : rows.map((card) => cardHit(card, q.language));
+  // Graded searches arrive as raw (searchCatalog): one hit per card.
+  const rows = ((await request(c, "/cards", params)) ?? []) as PptCard[];
+  return rows.map((card) => cardHit(card, q.language));
 }
 
 const FAILED = Symbol("failed");
