@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import { IMAGE_HOSTS } from "./src/lib/pricing/images";
 
@@ -25,6 +26,12 @@ const SECURITY_HEADERS = [
 ];
 
 const nextConfig: NextConfig = {
+  // The browser SDK reads these at build time; Railway builds with service variables.
+  env: {
+    NEXT_PUBLIC_SENTRY_DSN: process.env.SENTRY_DSN ?? "",
+    NEXT_PUBLIC_SENTRY_ENV: process.env.RAILWAY_ENVIRONMENT_NAME ?? "",
+    NEXT_PUBLIC_SENTRY_RELEASE: process.env.RAILWAY_GIT_COMMIT_SHA ?? "",
+  },
   // Test-only routes are named *.e2e.ts and exist only in E2E_SEED=1 builds.
   pageExtensions: [
     "tsx",
@@ -68,4 +75,13 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Source maps upload only when SENTRY_AUTH_TOKEN is set on the build.
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+  release: { name: process.env.RAILWAY_GIT_COMMIT_SHA },
+  silent: !process.env.SENTRY_AUTH_TOKEN,
+  telemetry: false,
+});

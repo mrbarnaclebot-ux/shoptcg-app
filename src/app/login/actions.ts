@@ -2,12 +2,14 @@
 
 import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/db";
 import { isAdminEmail } from "@/lib/admin";
 import { getAuth } from "@/lib/auth";
-import { outboxPath } from "@/lib/email";
+import { confirmEmailChange } from "@/lib/account";
+import { outboxPath, sendEmailChangedNotice } from "@/lib/email";
 import { accountExists } from "@/lib/invites";
 import { newPassword, resetTokenEmail } from "@/lib/password";
 import {
@@ -122,4 +124,34 @@ export async function resetAction(
     redirect("/login?reset=1");
   }
   redirect("/dashboard");
+}
+
+export type ConfirmEmailState = { done?: string; error?: string };
+
+/** The new address opened its link: switch the account over and tell the old one. */
+export async function confirmEmailAction(
+  _prev: ConfirmEmailState,
+  form: FormData,
+): Promise<ConfirmEmailState> {
+  const token = String(form.get("token") ?? "");
+  if (!token) return { error: "That link has expired or was already used." };
+  try {
+    const r = await confirmEmailChange(getDb(), token);
+    if (!r.ok)
+      return {
+        error:
+          r.why === "taken"
+            ? "That address already has an account."
+            : "That link has expired or was already used.",
+      };
+    after(() =>
+      sendEmailChangedNotice(r.from, r.to).catch((err: unknown) =>
+        console.error("[email-change] notice failed", (err as Error).name),
+      ),
+    );
+    return { done: r.to };
+  } catch (err) {
+    console.error("[email-change] confirm failed", (err as Error).name);
+    return { error: "Couldn't change it. Try again in a minute." };
+  }
 }

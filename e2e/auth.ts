@@ -9,7 +9,9 @@ async function links(email: string) {
     .filter(
       (l) =>
         l.startsWith(`${email} `) &&
-        (l.includes("/api/auth/magic-link") || l.includes("/login/reset")),
+        (l.includes("/api/auth/magic-link") ||
+          l.includes("/login/reset") ||
+          l.includes("/login/email")),
     )
     .map((l) => l.split(" ")[1]);
 }
@@ -26,6 +28,17 @@ export async function newLink(email: string, send: () => Promise<unknown>) {
     .poll(async () => (url = (await links(email))[before]))
     .toBeTruthy();
   return url!;
+}
+
+/** Waits for a link-less notice ("request-received", ...) to this address. */
+export async function noticeSent(email: string, kind: string) {
+  await expect
+    .poll(async () =>
+      (await readFile(OUTBOX, "utf8").catch(() => ""))
+        .split("\n")
+        .includes(`${email} notice:${kind}`),
+    )
+    .toBe(true);
 }
 
 /** Lines the outbox holds for this address; to prove nothing was sent. */

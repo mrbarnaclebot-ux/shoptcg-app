@@ -6,10 +6,12 @@ import {
   mintInvite,
   newLink,
   newVendor,
+  noticeSent,
   PASSWORD,
   passwordSignIn,
   signIn,
 } from "./auth";
+import { confirm, openVendor, pay, reviewSale } from "./buyer";
 import { hasDb, userExists } from "./db";
 
 const fresh = () =>
@@ -122,16 +124,18 @@ test("someone asks for an invite, the admin invites them, and they set up", asyn
   await asker.getByLabel("Email").last().fill(email);
   await asker.getByLabel("How do you sell? (optional)").fill("Weekend shows");
   await asker.getByRole("button", { name: "Ask for an invite" }).click();
-  await expect(asker.getByText(/We'll email you an invite/)).toBeVisible();
+  await expect(asker.getByText(/emailed you to confirm/)).toBeVisible();
+  await noticeSent(email, "request-received");
 
   // A second, unwanted request to dismiss.
   const other = await browser.newPage();
   const spam = `Spam ${Date.now()}`;
   await other.goto("/join");
   await other.getByLabel("Your name").fill(spam);
-  await other.getByLabel("Email").last().fill(fresh());
+  const spamEmail = fresh();
+  await other.getByLabel("Email").last().fill(spamEmail);
   await other.getByRole("button", { name: "Ask for an invite" }).click();
-  await expect(other.getByText(/We'll email you an invite/)).toBeVisible();
+  await expect(other.getByText(/emailed you to confirm/)).toBeVisible();
 
   await signIn(page, admin(5));
   await page.goto("/admin");
@@ -139,6 +143,7 @@ test("someone asks for an invite, the admin invites them, and they set up", asyn
   await expect(requests.getByText("Weekend shows")).toBeVisible();
   await requests.getByRole("button", { name: `Dismiss ${spam}` }).click();
   await expect(requests.getByText(spam)).toHaveCount(0);
+  await noticeSent(spamEmail, "request-declined");
   const link = await newLink(email, () =>
     requests.getByRole("button", { name: `Invite ${name}` }).click(),
   );
@@ -171,4 +176,77 @@ test("the admin can email an invite straight to someone", async ({
   await expect(misty).toHaveURL(/\/welcome/);
   await choosePassword(misty, "Save password");
   await expect(misty.getByLabel("Store name")).toBeVisible();
+});
+
+test("a vendor moves to a new email: the link confirms it, the old one is told", async ({
+  page,
+  browser,
+}) => {
+  const id = await newVendor(page);
+  const old = `e2e-${id}@example.test`;
+  const next = fresh();
+  await page.goto("/dashboard/settings");
+  const form = page.getByRole("region", { name: "Change email" });
+  await form.getByLabel("New email").fill(admin(0));
+  await form.getByLabel("Your password").fill(PASSWORD);
+  await form.getByRole("button", { name: "Send confirm link" }).click();
+  await expect(form.getByRole("alert")).toHaveText(/can't be used/);
+  await form.getByLabel("New email").fill(next);
+  await form.getByLabel("Your password").fill("wrong-password");
+  await form.getByRole("button", { name: "Send confirm link" }).click();
+  await expect(form.getByRole("alert")).toHaveText(/isn't right/);
+  const link = await newLink(next, async () => {
+    await form.getByLabel("Your password").fill(PASSWORD);
+    await form.getByRole("button", { name: "Send confirm link" }).click();
+    await expect(form.getByRole("status")).toContainText(next);
+  });
+
+  // Opening the link alone changes nothing; the button does, once.
+  const inbox = await browser.newPage();
+  await inbox.goto(link);
+  expect(await userExists(next)).toBe(false);
+  await inbox.getByRole("button", { name: "Confirm new email" }).click();
+  await expect(inbox.getByText(`Done. Sign in with ${next}`)).toBeVisible();
+  await noticeSent(old, "email-changed");
+  await inbox.goto(link);
+  await inbox.getByRole("button", { name: "Confirm new email" }).click();
+  await expect(inbox.getByText(/expired or was already used/)).toBeVisible();
+
+  const fresh2 = await browser.newPage();
+  await passwordSignIn(fresh2, old);
+  await expect(fresh2.locator("#login-error")).toBeVisible();
+  await passwordSignIn(fresh2, next);
+  await expect(fresh2.getByText("Your public page").first()).toBeVisible();
+});
+
+test("a vendor with sales deletes their account and everything under it", async ({
+  page,
+  browser,
+}) => {
+  test.skip(!hasDb, "needs DATABASE_URL");
+  const slug = await openVendor(page);
+  const email = `${slug}@example.test`;
+  // A real sale, so the delete has to get through receipts and the ledger.
+  await reviewSale(page, browser, slug, ["Mew ex"]);
+  await pay(page, "Cash");
+  await confirm(page).click();
+  await expect(page.getByTestId("receipt-no")).toBeVisible();
+
+  await page.goto("/dashboard/settings");
+  const form = page.getByRole("region", { name: "Delete account" });
+  await form.getByLabel(/Type .delete my account./).fill("delete it");
+  await form.getByLabel("Your password").fill(PASSWORD);
+  await form.getByRole("button", { name: "Delete my account" }).click();
+  await expect(form.getByRole("alert")).toHaveText(/to confirm/);
+  await form.getByLabel(/Type .delete my account./).fill("delete my account");
+  await form.getByLabel("Your password").fill(PASSWORD);
+  await form.getByRole("button", { name: "Delete my account" }).click();
+  await expect(page).toHaveURL(/\/login\?deleted=1/);
+  await expect(page.getByText("Your account was deleted.")).toBeVisible();
+
+  expect(await userExists(email)).toBe(false);
+  await noticeSent(email, "account-deleted");
+  expect((await page.request.get(`/${slug}`)).status()).toBe(404);
+  await passwordSignIn(page, email);
+  await expect(page.locator("#login-error")).toBeVisible();
 });

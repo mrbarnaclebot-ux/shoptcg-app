@@ -96,6 +96,55 @@ Review it on the admin page:
 ${url}`,
   );
 
+export const sendEmailChangeLink = (to: string, url: string) =>
+  sendAccountEmail(
+    to,
+    url,
+    "Confirm your new tcgmart email",
+    `Open this link to make this your tcgmart sign-in email:
+
+${url}
+
+It works once and expires in 1 hour. If you didn't ask for this, ignore this email; nothing changes.`,
+  );
+
+// Notices carry no link; e2e records them as "<to> notice:<kind>".
+const notice = (to: string, kind: string, subject: string, text: string) =>
+  sendAccountEmail(to, `notice:${kind}`, subject, text);
+
+export const sendEmailChangedNotice = (to: string, newEmail: string) =>
+  notice(
+    to,
+    "email-changed",
+    "Your tcgmart email was changed",
+    `Your tcgmart account now signs in with ${newEmail}. If you didn't do this, reply to this email straight away.`,
+  );
+
+export const sendAccountDeletedNotice = (to: string) =>
+  notice(
+    to,
+    "account-deleted",
+    "Your tcgmart account was deleted",
+    "Your tcgmart account, store, stock and sales records have been deleted. Buyers can no longer reach your store page. Thanks for selling with us.",
+  );
+
+// No name in these: a stranger could otherwise use the form to mail text to anyone.
+export const sendRequestReceived = (to: string) =>
+  notice(
+    to,
+    "request-received",
+    "We got your tcgmart invite request",
+    `Thanks for asking to sell on tcgmart. We read every request and will email you here once we've looked at yours. There's nothing else you need to do.`,
+  );
+
+export const sendRequestDeclined = (to: string) =>
+  notice(
+    to,
+    "request-declined",
+    "Your tcgmart invite request",
+    `Thanks for your interest in tcgmart. We can't offer you an invite right now, as we're opening up slowly. You're welcome to ask again later.`,
+  );
+
 export type ReceiptMail = {
   to: string;
   receiptNo: string;
