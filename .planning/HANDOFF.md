@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-13. The product is now **tcgmart.app** (PR #33 renames it). Staging runs on `staging.tcgmart.app`; production switches to `tcgmart.app` with this PR's deploy (see `.planning/CUSTOM-DOMAIN.md`)._
+_Last updated: 2026-11-13. The product is **tcgmart.app**. `main` and `production` are level at `dc8dffb` (PR #33). Production serves https://tcgmart.app and staging https://staging.tcgmart.app; both switched, redirected and smoked on 2026-11-13. Email still needs the Resend domain (owner to-do 1)._
 
 ## Where things stand
 
