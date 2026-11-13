@@ -2,14 +2,14 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-13. The product is **tcgmart.app**. `main` and `production` are level at `9ad7700` (PR #35, landing copy for online and show sellers). Production serves https://tcgmart.app and staging https://staging.tcgmart.app; both switched, redirected and smoked on 2026-11-13. Email sends from the verified tcgmart.app Resend domain (`EMAIL_FROM` set 2026-11-13; a real sign-in link was delivered from `receipts@tcgmart.app`)._
+_Last updated: 2026-11-13. The product is **tcgmart.app**. `main` and `production` are level after PR #38 (help page screenshots); #37 shipped onboarding tips and `/help`. Production serves https://tcgmart.app and staging https://staging.tcgmart.app; both switched, redirected and smoked on 2026-11-13. Email sends from the verified tcgmart.app Resend domain (`EMAIL_FROM` set 2026-11-13; a real sign-in link was delivered from `receipts@tcgmart.app`)._
 
 ## Where things stand
 
 - **Live:** production https://tcgmart.app (also `www.tcgmart.app`) and staging https://staging.tcgmart.app. The Railway hosts (`web-production-2d3b0.up.railway.app`, `web-staging-staging-6b4e.up.railway.app`) stay attached forever and 308 to the custom domain, because printed signs point at them. Migrations are up to `0026`.
   - Domains were added with the Railway CLI (`railway domain`). DNS lives at the owner's registrar (CNAME + `_railway-verify` TXT per host). Each service has `BETTER_AUTH_URL` and `CANONICAL_HOST` set to its custom domain.
 - **Shipped:** all eight phases, plus:
-  - onboarding: a "Getting started" checklist on the dashboard (`src/app/dashboard/getting-started.tsx`) whose ticks come from the store's data; "Hide tips" sets `store.tips_dismissed_at` (migration `0026`) so it shows once per store. The public guide is `/help` (`src/app/help/page.tsx`), linked from the checklist, More → Help, the landing footer and the sitemap. Keep `/help` in step when a feature changes.
+  - onboarding: a "Getting started" checklist on the dashboard (`src/app/dashboard/getting-started.tsx`) whose ticks come from the store's data; "Hide tips" sets `store.tips_dismissed_at` (migration `0026`) so it shows once per store. The public guide is `/help` (`src/app/help/page.tsx`), linked from the checklist, More → Help, the landing footer and the sitemap. Its screenshots are `public/help/*.jpg`, made by `SHOTS=help pnpm e2e help-shots --project desktop`; rerun that and keep the copy in step when a feature changes.
   - the CI pipeline
   - the known-gap fixes (PR #11)
   - vendor invites (PR #12)

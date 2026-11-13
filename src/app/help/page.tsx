@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { Wordmark } from "@/components/wordmark";
 
@@ -21,6 +22,73 @@ const SECTIONS = [
   ["alerts", "Alerts"],
   ["faq", "Questions"],
 ] as const;
+
+// Screenshots from e2e/help-shots.spec.ts (rerun it after a UI change).
+const SHOT = {
+  tips: [358, 829, "The Getting started checklist with two steps ticked"],
+  "add-stock": [
+    390,
+    844,
+    "Searching the catalog for Charizard, with market prices",
+  ],
+  pricing: [
+    390,
+    844,
+    "Pricing settings: price rule, rounding and second currency",
+  ],
+  "how-you-sell": [
+    390,
+    844,
+    "How you sell: at a table or online store, with a table number",
+  ],
+  "store-control": [358, 146, "The store switch: open, pause or not vending"],
+  "buyer-store": [390, 844, "A store as a buyer sees it, with live prices"],
+  "buyer-cart": [390, 844, "The buyer's cart with their name and email"],
+  request: [
+    390,
+    844,
+    "A cart arriving on the dashboard with Review sale and Decline",
+  ],
+  "confirm-sale": [
+    390,
+    844,
+    "Reviewing a sale: prices, discount and how they paid",
+  ],
+  "quick-sale": [
+    390,
+    844,
+    "Inventory with Sell buttons and the table sale bar",
+  ],
+  "cash-box": [
+    358,
+    383,
+    "The cash box: float, cash sales, buys and what should be in the box",
+  ],
+  alerts: [390, 844, "Alert settings with sound and locked-phone alerts"],
+} as const;
+
+function Shots({ names }: { names: (keyof typeof SHOT)[] }) {
+  return (
+    <div className="my-2 flex flex-wrap gap-4">
+      {names.map((n) => {
+        const [w, h, alt] = SHOT[n];
+        return (
+          <figure key={n} className="w-[min(100%,15rem)]">
+            <Image
+              src={`/help/${n}.jpg`}
+              width={w}
+              height={h}
+              alt={alt}
+              sizes="15rem"
+              className="h-auto w-full bg-[#090911] shadow-[0_0_0_1.5px_var(--border-strong)]"
+            />
+            <figcaption className="pt-1.5 text-sm">{alt}.</figcaption>
+          </figure>
+        );
+      })}
+    </div>
+  );
+}
 
 const link =
   "font-semibold text-foreground underline decoration-brand decoration-[1.5px] underline-offset-[5px]";
@@ -75,6 +143,8 @@ export default function HelpPage() {
             stays here for later.
           </p>
 
+          <Shots names={["tips"]} />
+
           <h2 id="stock">Adding stock</h2>
           <p>
             Go to <strong>Inventory</strong> and add stock. Search the catalog
@@ -100,6 +170,8 @@ export default function HelpPage() {
             </li>
             <li>Hide an item to keep it in your stock but off your store.</li>
           </ul>
+
+          <Shots names={["add-stock"]} />
 
           <h2 id="pricing">Pricing</h2>
           <p>
@@ -127,6 +199,8 @@ export default function HelpPage() {
             Change these under <strong>More → Pricing</strong>.
           </p>
 
+          <Shots names={["pricing"]} />
+
           <h2 id="selling">Online or at a table</h2>
           <p>
             Under <strong>More → How you sell</strong>, pick one. It changes the
@@ -145,6 +219,8 @@ export default function HelpPage() {
               payments or ship.
             </li>
           </ul>
+
+          <Shots names={["how-you-sell"]} />
 
           <h2 id="open">Opening and pausing</h2>
           <p>The switch at the top of your dashboard sets what buyers get:</p>
@@ -166,6 +242,8 @@ export default function HelpPage() {
             <strong>Preview store</strong> to see your page exactly as buyers
             do.
           </p>
+
+          <Shots names={["store-control"]} />
 
           <h2 id="carts">Carts and sales</h2>
           <ol>
@@ -190,12 +268,20 @@ export default function HelpPage() {
             <strong>Sales</strong> and void it; the stock goes back.
           </p>
 
+          <Shots
+            names={["buyer-store", "buyer-cart", "request", "confirm-sale"]}
+          />
+
           <h2 id="quick">Quick sales at the table</h2>
           <p>
             For walk-up buyers who don&apos;t want to use their phone, go to{" "}
-            <strong>Inventory</strong> and tap <strong>Sell</strong> on the
-            item. No email is needed and stock comes off as usual.
+            <strong>Inventory</strong> and tap <strong>Sell</strong> on each
+            item. A table sale bar adds them up; tap{" "}
+            <strong>Finish sale</strong>, pick how they paid and confirm. No
+            email is needed and stock comes off as usual.
           </p>
+
+          <Shots names={["quick-sale"]} />
 
           <h2 id="buys">Buying cards and trade-ins</h2>
           <p>
@@ -225,6 +311,8 @@ export default function HelpPage() {
             </li>
           </ul>
 
+          <Shots names={["cash-box"]} />
+
           <h2 id="alerts">Alerts</h2>
           <p>
             Under <strong>More → Alerts</strong>, turn on sound and locked-phone
@@ -232,6 +320,8 @@ export default function HelpPage() {
             need tcgmart on your home screen: tap Share, then Add to Home
             Screen, and open it from there.
           </p>
+
+          <Shots names={["alerts"]} />
 
           <h2 id="faq">Questions</h2>
           <p>
