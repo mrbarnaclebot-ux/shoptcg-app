@@ -12,6 +12,8 @@ export function AuthShell(props: {
   title: string;
   intro: ReactNode;
   children: ReactNode;
+  /** Below the form's ticket: /join's "No code yet?" request. */
+  after?: ReactNode;
   foot: ReactNode;
 }) {
   return (
@@ -46,6 +48,7 @@ export function AuthShell(props: {
           <Ticket as="div" className="[--stub:2rem]">
             {props.children}
           </Ticket>
+          {props.after}
           <div className="flex flex-col gap-1 text-sm text-muted-foreground">
             {props.foot}
           </div>

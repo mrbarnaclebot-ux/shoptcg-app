@@ -47,6 +47,7 @@ test("public pages outside the journey pass axe", async ({ page, browser }) => {
     ["/join", undefined],
     ["/terms", "Terms"],
     ["/help", "Help"],
+    ["/login/forgot", "Set a password"],
     ["/no-such-store", "We can't find that store."],
   ] as const) {
     await page.goto(path);

@@ -10,10 +10,12 @@ import {
   inviteStatus,
   listAccounts,
   listInvites,
+  openInviteRequests,
 } from "@/lib/invites";
 import { checkEnv } from "@/lib/env-check";
 import { requireAdmin, sellerTimeZone } from "@/lib/session";
 import { lastPriceDate } from "@/lib/sync-prices";
+import { AnswerRequest } from "./answer-request";
 import { CreateInvite } from "./create-invite";
 import { RevokeInvite } from "./revoke-invite";
 import { VendorControls } from "./vendor-controls";
@@ -41,7 +43,8 @@ export default function AdminPage() {
 async function Admin() {
   await requireAdmin();
   const db = getDb();
-  const [invites, accounts, timeZone, priced] = await Promise.all([
+  const [requests, invites, accounts, timeZone, priced] = await Promise.all([
+    openInviteRequests(db),
     listInvites(db),
     listAccounts(db),
     sellerTimeZone(),
@@ -60,6 +63,39 @@ async function Admin() {
       <Ticket as="div" className="w-full [--stub:2rem]">
         <CreateInvite />
       </Ticket>
+      <section
+        aria-labelledby="requests"
+        className="flex w-full flex-col gap-3"
+      >
+        <h2
+          id="requests"
+          className="font-display text-[2rem] leading-none font-black"
+        >
+          Invite requests
+        </h2>
+        {requests.length === 0 ? (
+          <p className="text-muted-foreground">No one is waiting.</p>
+        ) : (
+          <ul className="divide-y divide-border border-y border-border">
+            {requests.map((r) => (
+              <li key={r.id} className="flex flex-col gap-1 py-3">
+                <p className="font-semibold [overflow-wrap:anywhere]">
+                  {r.name}, {r.email}
+                </p>
+                {r.about && (
+                  <p className="[overflow-wrap:anywhere] whitespace-pre-line">
+                    {r.about}
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Asked {day.format(r.createdAt)}.
+                </p>
+                <AnswerRequest id={r.id} name={r.name} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       <section aria-labelledby="system" className="flex w-full flex-col gap-3">
         <h2
           id="system"

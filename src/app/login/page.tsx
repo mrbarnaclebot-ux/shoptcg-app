@@ -9,7 +9,7 @@ export default function LoginPage() {
   return (
     <AuthShell
       title="Sign in"
-      intro="We'll email you a sign-in link. No password."
+      intro="Used email links before? Tap Forgot password once to set one."
       foot={
         <>
           <p>
@@ -18,7 +18,7 @@ export default function LoginPage() {
               href="/join"
               className={`inline-flex min-h-11 items-center ${authLink}`}
             >
-              Use your invite code.
+              Use an invite code or ask for one.
             </Link>
           </p>
           <p>

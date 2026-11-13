@@ -134,7 +134,10 @@ function importResult(r: ImportSummary): Input {
 
 export const toast = {
   linkExpired: () =>
-    error("Link expired", "Links work once, for 5 minutes. Send a fresh one."),
+    error(
+      "Link expired",
+      "Invite links work once, for 48 hours. Send a fresh one.",
+    ),
   sendFailed: (why: string) => error("Not sent", why),
   rateLimited: () =>
     show(

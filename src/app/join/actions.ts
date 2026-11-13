@@ -1,12 +1,15 @@
 "use server";
 
+import { after } from "next/server";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getDb } from "@/db";
 import { isAdminEmail } from "@/lib/admin";
-import { outboxPath } from "@/lib/email";
+import { appUrl } from "@/lib/deployed";
+import { outboxPath, sendInviteRequestAlert } from "@/lib/email";
 import {
   accountExists,
+  addInviteRequest,
   codeState,
   hashCode,
   reserveInvite,
@@ -14,11 +17,12 @@ import {
 } from "@/lib/invites";
 import {
   allowCodeSend,
+  allowInviteRequest,
   allowJoin,
   allowMagicLink,
   clientIp,
 } from "@/lib/sign-in-limit";
-import { sendSignInLink } from "@/lib/sign-in-link";
+import { sendInviteLink } from "@/lib/sign-in-link";
 
 export type JoinState = {
   sent?: string;
@@ -63,11 +67,66 @@ export async function requestInvite(
       const now = await codeState(db, code);
       return { error: BAD[now === "active" ? "unknown" : now], field: "code" };
     }
-    sendSignInLink(email, h);
+    sendInviteLink(email, h);
   } catch (err) {
     // Only the name: a failed query's message can carry its params.
     console.error("[join] request failed", (err as Error).name);
     return { error: "Something went wrong. Try again in a minute." };
   }
   return { sent: email };
+}
+
+export type AskState = { sent?: true; error?: string; field?: string };
+
+const askSchema = z.object({
+  name: z.string().trim().min(1, "Enter your name").max(80),
+  email: z.email("Enter a valid email address").max(254),
+  about: z.string().trim().max(500).optional(),
+});
+
+/** "No code yet?": queues a request for the admin and emails them about it. */
+export async function askForInvite(
+  _prev: AskState,
+  form: FormData,
+): Promise<AskState> {
+  const parsed = askSchema.safeParse({
+    name: form.get("name"),
+    email: String(form.get("email") ?? "").trim(),
+    about: form.get("about") ?? undefined,
+  });
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { error: issue.message, field: String(issue.path[0]) };
+  }
+  const { name, email, about } = parsed.data;
+  const db = getDb();
+  const h = await headers();
+  const ip = outboxPath(process.env) ? null : clientIp(h);
+  try {
+    if (!(await allowInviteRequest(db, ip))) return { error: LIMITED };
+    const added = await addInviteRequest(db, {
+      email,
+      name,
+      about: about || null,
+    });
+    // A repeat request gets the same answer and no second alert.
+    if (added) {
+      const admins = (process.env.ADMIN_EMAILS ?? "")
+        .split(",")
+        .map((a) => a.trim())
+        .filter(Boolean);
+      const url = new URL("/admin#requests", appUrl()).toString();
+      after(() =>
+        Promise.all(
+          admins.map((to) => sendInviteRequestAlert(to, url, name)),
+        ).catch((err: unknown) =>
+          console.error("[join] request alert failed", (err as Error).name),
+        ),
+      );
+    }
+  } catch (err) {
+    console.error("[join] ask failed", (err as Error).name);
+    return { error: "Something went wrong. Try again in a minute." };
+  }
+  return { sent: true };
 }

@@ -1,9 +1,13 @@
 "use server";
 
+import { APIError } from "better-auth/api";
 import { refresh } from "next/cache";
+import { headers } from "next/headers";
 import type { z } from "zod";
 import { getDb } from "@/db";
+import { getAuth } from "@/lib/auth";
 import { fieldErrors } from "@/lib/listing-input";
+import { newPassword } from "@/lib/password";
 import { requireUser } from "@/lib/session";
 import {
   pricingSchema,
@@ -43,4 +47,34 @@ export async function saveTableAction(_prev: SettingsState, form: FormData) {
 
 export async function saveNameAction(_prev: SettingsState, form: FormData) {
   return save(storeNameSchema, form);
+}
+
+export type PasswordState = { saved?: true; error?: string };
+
+/** Needs the current password; signs out every other device. */
+export async function changePasswordAction(
+  _prev: PasswordState,
+  form: FormData,
+): Promise<PasswordState> {
+  await requireUser();
+  const pw = newPassword(form);
+  if (!pw.password) return { error: pw.error };
+  const current = String(form.get("current") ?? "");
+  if (!current) return { error: "Enter your current password." };
+  try {
+    const h = await headers();
+    await getAuth().api.changePassword({
+      body: { currentPassword: current, newPassword: pw.password },
+      headers: h,
+    });
+    // Not changePassword's revokeOtherSessions: that swaps this device's
+    // session too, and a server action can't hand back the new cookie.
+    await getAuth().api.revokeOtherSessions({ headers: h });
+  } catch (err) {
+    if (err instanceof APIError)
+      return { error: "Your current password isn't right." };
+    console.error("[password] change failed", (err as Error).name);
+    return { error: "Couldn't save it. Try again in a minute." };
+  }
+  return { saved: true };
 }

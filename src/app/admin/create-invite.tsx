@@ -19,6 +19,21 @@ export function CreateInvite() {
           <Label htmlFor="label">Who&apos;s it for? (optional)</Label>
           <Input id="label" name="label" maxLength={80} autoComplete="off" />
         </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="invite-email">Email it to (optional)</Label>
+          <Input
+            id="invite-email"
+            name="email"
+            type="email"
+            inputMode="email"
+            autoComplete="off"
+            aria-describedby="invite-email-hint"
+          />
+          <p id="invite-email-hint" className="text-sm text-muted-foreground">
+            We email them a link to set up their account. Leave it empty to
+            share the code yourself.
+          </p>
+        </div>
         {state.error && (
           <p role="alert" className="text-sm text-danger">
             {state.error}
@@ -33,8 +48,10 @@ export function CreateInvite() {
           role="status"
           className="flex flex-col gap-3 border-t border-dashed border-border pt-4"
         >
-          <p className="font-semibold">
-            Send this now. It won&apos;t be shown again.
+          <p className="font-semibold [overflow-wrap:anywhere]">
+            {state.emailed
+              ? `Emailed to ${state.emailed}. The code below only works for that address.`
+              : "Send this now. It won't be shown again."}
           </p>
           <p
             data-testid="invite-code"

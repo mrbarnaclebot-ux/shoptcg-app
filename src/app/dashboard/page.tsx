@@ -5,6 +5,7 @@ import { TableNumber } from "@/components/table-number";
 import { Ticket } from "@/components/ticket";
 import { getDb } from "@/db";
 import { appUrl } from "@/lib/deployed";
+import { hasPassword } from "@/lib/password";
 import { requireUser, sellerTimeZone } from "@/lib/session";
 import { currentTill } from "@/lib/till";
 import { CashBox } from "./cash-box";
@@ -43,9 +44,29 @@ async function Dashboard({
 }: Pick<PageProps<"/dashboard">, "searchParams">) {
   const user = await requireUser();
   const created = "created" in (await searchParams);
-  const store = await getStoreByOwner(getDb(), user.id);
+  const [store, passworded] = await Promise.all([
+    getStoreByOwner(getDb(), user.id),
+    hasPassword(getDb(), user.id),
+  ]);
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-10 px-4 pt-8 pb-16">
+      {/* Accounts from before passwords: one step and email links are done with. */}
+      {!passworded && (
+        <section
+          aria-label="Set a password"
+          className="flex flex-col gap-2 bg-surface px-5 py-4"
+        >
+          <p className="font-semibold">
+            Set a password so you can sign in without an email link.
+          </p>
+          <Link
+            href="/welcome"
+            className="self-start text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+          >
+            Set password
+          </Link>
+        </section>
+      )}
       {store ? (
         <>
           {created && <StoreCreated slug={store.slug} />}

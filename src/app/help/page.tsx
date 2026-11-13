@@ -127,8 +127,9 @@ export default function HelpPage() {
           <h2 id="start">Getting started</h2>
           <ol>
             <li>
-              Sign in with the email your invite was sent to. We email you a
-              link; it works once, for 5 minutes.
+              Get an invite: enter your code on the Join page, or ask for one
+              there. We email you a link to set up your account and choose a
+              password. After that, sign in with your email and password.
             </li>
             <li>
               Name your store and pick its address (tcgmart.app/your-name). The
@@ -337,8 +338,9 @@ export default function HelpPage() {
             Set a fixed price on the item if you want your own.
           </p>
           <p>
-            <strong>I didn&apos;t get my sign-in email.</strong> Check spam,
-            then request a new link. Each link works once, for 5 minutes.
+            <strong>I forgot my password.</strong> Tap Forgot password on the
+            sign-in page and we email you a link to set a new one. It works
+            once, for an hour. Change it any time under More → Account.
           </p>
           <p>
             Anything else, ask the person who invited you. See also the{" "}

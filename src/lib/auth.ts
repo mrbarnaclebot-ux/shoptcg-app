@@ -7,7 +7,8 @@ import { magicLink } from "better-auth/plugins/magic-link";
 import { getDb } from "@/db";
 import * as schema from "@/db/schema";
 import { isAdminEmail } from "@/lib/admin";
-import { outboxPath, sendMagicLinkEmail } from "@/lib/email";
+import { appUrl } from "@/lib/deployed";
+import { outboxPath, sendInviteEmail, sendResetEmail } from "@/lib/email";
 import { claimInvite, markRedeemed } from "@/lib/invites";
 
 function createAuth() {
@@ -16,8 +17,33 @@ function createAuth() {
     // On in production by default: 5 magic-link hits a minute per IP. e2e signs
     // in far faster than that, and outboxPath refuses to run when deployed.
     rateLimit: { enabled: !outboxPath(process.env) },
-    // Sends go through our own limits in server actions; auth.api still works.
-    disabledPaths: ["/sign-in/magic-link"],
+    // Every sign-in, reset and invite goes through a server action with our own
+    // limits (src/lib/sign-in-limit.ts); auth.api still works, HTTP doesn't.
+    disabledPaths: [
+      "/sign-in/magic-link",
+      "/sign-in/email",
+      "/sign-up/email",
+      "/request-password-reset",
+      "/reset-password",
+      "/change-password",
+    ],
+    // Vendors live on their phones: stay signed in for 30 days of no use,
+    // refreshed at most daily while they keep using it.
+    session: { expiresIn: 30 * 86_400, updateAge: 86_400 },
+    emailAndPassword: {
+      enabled: true,
+      // Accounts are only made by an invite link (magic link + the hook below).
+      disableSignUp: true,
+      minPasswordLength: 8,
+      revokeSessionsOnPasswordReset: true,
+      resetPasswordTokenExpiresIn: 3600,
+      // The email links straight to our page, not Better Auth's redirect route.
+      sendResetPassword: ({ user, token }) => {
+        const url = new URL("/login/reset", appUrl());
+        url.searchParams.set("token", token);
+        return sendResetEmail(user.email, url.toString());
+      },
+    },
     databaseHooks: {
       user: {
         create: {
@@ -43,8 +69,11 @@ function createAuth() {
       },
     },
     plugins: [
+      // Only invites use email links now: one click proves the inbox, makes
+      // the account and lands on /welcome to choose a password.
       magicLink({
-        sendMagicLink: ({ email, url }) => sendMagicLinkEmail(email, url),
+        expiresIn: 48 * 3600,
+        sendMagicLink: ({ email, url }) => sendInviteEmail(email, url),
       }),
       // Must stay last: lets server actions set the session cookie.
       nextCookies(),

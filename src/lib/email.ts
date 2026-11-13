@@ -20,7 +20,16 @@ export function outboxPath(env: Record<string, string | undefined>) {
 
 const OUTBOX = outboxPath(process.env);
 
-export async function sendMagicLinkEmail(to: string, url: string) {
+/**
+ * Account email: invites, password resets and the admin's request alert.
+ * e2e writes "<to> <url>" lines to the outbox instead.
+ */
+async function sendAccountEmail(
+  to: string,
+  url: string,
+  subject: string,
+  text: string,
+) {
   if (OUTBOX) {
     await appendFile(
       OUTBOX,
@@ -31,10 +40,10 @@ export async function sendMagicLinkEmail(to: string, url: string) {
   }
   const key = process.env.RESEND_API_KEY;
   if (!key) {
-    // Logging a live sign-in link is only acceptable on a developer machine.
+    // Logging a live link is only acceptable on a developer machine.
     if (process.env.NODE_ENV === "production")
       throw new Error("RESEND_API_KEY is not set");
-    console.log(`[magic-link] ${to}: ${url}`);
+    console.log(`[account-email] ${to}: ${url}`);
     return;
   }
   // Plain fetch to the Resend REST API; the SDK would add a dependency for one call.
@@ -44,16 +53,48 @@ export async function sendMagicLinkEmail(to: string, url: string) {
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      from: FROM,
-      to,
-      subject: "Your tcgmart sign-in link",
-      text: `Sign in to tcgmart:\n\n${url}\n\nThis link expires in 5 minutes. If you did not ask for it, ignore this email.`,
-    }),
+    body: JSON.stringify({ from: FROM, to, subject, text }),
   });
   if (!res.ok)
     throw new Error(`Resend failed: ${res.status} ${await res.text()}`);
 }
+
+export const sendInviteEmail = (to: string, url: string) =>
+  sendAccountEmail(
+    to,
+    url,
+    "Set up your tcgmart account",
+    `You're invited to sell on tcgmart. Open this link to set up your account and choose a password:
+
+${url}
+
+It works once and expires in 48 hours. If it expires, enter your invite code again at ${new URL("/join", url).origin}/join. If you weren't expecting this, ignore this email.`,
+  );
+
+export const sendResetEmail = (to: string, url: string) =>
+  sendAccountEmail(
+    to,
+    url,
+    "Set your tcgmart password",
+    `Use this link to set a new password for tcgmart:
+
+${url}
+
+It works once and expires in 1 hour. If you didn't ask for it, ignore this email; your password hasn't changed.`,
+  );
+
+/** Tells the admins someone asked for an invite; the request waits on /admin. */
+export const sendInviteRequestAlert = (to: string, url: string, who: string) =>
+  sendAccountEmail(
+    to,
+    url,
+    "New invite request on tcgmart",
+    `${who} asked for an invite.
+
+Review it on the admin page:
+
+${url}`,
+  );
 
 export type ReceiptMail = {
   to: string;

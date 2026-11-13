@@ -11,6 +11,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
@@ -321,4 +322,31 @@ export const invite = pgTable(
       .defaultNow(),
   },
   (t) => [index("invite_reserved_email_idx").on(t.reservedEmail)],
+);
+
+// Someone asking for an invite from /join. The admin invites or dismisses it.
+export const inviteRequest = pgTable(
+  "invite_request",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull(),
+    name: text("name").notNull(),
+    // Where and how they sell, in their words.
+    about: text("about"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    handledAt: timestamp("handled_at", { withTimezone: true }),
+    outcome: text("outcome", { enum: ["invited", "dismissed"] }),
+  },
+  (t) => [
+    // One open request per address: asking twice doesn't queue twice.
+    uniqueIndex("invite_request_open_email_idx")
+      .on(t.email)
+      .where(sql`${t.handledAt} is null`),
+    check(
+      "invite_request_outcome_check",
+      sql`${t.outcome} is null or ${t.outcome} in ('invited', 'dismissed')`,
+    ),
+  ],
 );
