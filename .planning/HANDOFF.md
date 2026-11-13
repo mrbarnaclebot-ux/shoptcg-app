@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-13. The product is **tcgmart.app**. `main` and `production` are level at `dc8dffb` (PR #33). Production serves https://tcgmart.app and staging https://staging.tcgmart.app; both switched, redirected and smoked on 2026-11-13. Email still needs the Resend domain (owner to-do 1)._
+_Last updated: 2026-11-13. The product is **tcgmart.app**. `main` and `production` are level at `9ad7700` (PR #35, landing copy for online and show sellers). Production serves https://tcgmart.app and staging https://staging.tcgmart.app; both switched, redirected and smoked on 2026-11-13. Email sends from the verified tcgmart.app Resend domain (`EMAIL_FROM` set 2026-11-13; a real sign-in link was delivered from `receipts@tcgmart.app`)._
 
 ## Where things stand
 
@@ -113,8 +113,8 @@ Railway notes (more in memory `railway-config-ignored`):
 
 ## Owner to-dos
 
-1. Verify `tcgmart.app` in Resend and set `EMAIL_FROM` (e.g. `tcgmart <receipts@tcgmart.app>`) on `web` and `web-staging`; steps in `.planning/CUSTOM-DOMAIN.md` section 2. Until then, mail only reaches the Resend account owner.
-5. Turn on Railway Postgres backups (daily) and test a restore once. Add a free uptime check on `https://tcgmart.app/api/health`. Decide on error monitoring (errors only reach Railway logs today).
+1. Done 2026-11-13: `tcgmart.app` is verified in Resend (DKIM, SPF on `send`, `rsend` CNAME, DMARC `p=none` in Porkbun). `EMAIL_FROM` is `tcgmart <receipts@tcgmart.app>` on `web` (production env) and `tcgmart staging <staging@tcgmart.app>` on `web-staging` (**staging env**, not production). The production `RESEND_API_KEY` is now full-access; swap it for a send-only key when convenient.
+5. Turn on Railway Postgres backups (daily) and test a restore once. Add a free uptime check on `https://tcgmart.app/api/health` (UptimeRobot; needs the owner's API key, or create it in their dashboard). Decide on error monitoring (errors only reach Railway logs today).
 6. Reprint table signs at leisure: new ones say tcgmart.app; old ones keep working through the redirect.
 2. Test push and the chime on a real phone. Scan a printed sign from 1 m. Open both CSV exports in Excel and Sheets.
 3. Check the Railway cron history for `price-sync` the morning after the first vendor adds stock.
