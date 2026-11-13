@@ -283,7 +283,7 @@ test("Terms name buyer requests; the app installs", async ({
     const res = await request.get(icon.src);
     expect(res.headers()["content-type"]).toBe("image/png");
   }
-  expect((await request.get("/apple-icon")).ok()).toBe(true);
+  expect((await request.get("/apple-icon.png")).ok()).toBe(true);
   expect((await request.get("/sw.js")).ok()).toBe(true);
 });
 
