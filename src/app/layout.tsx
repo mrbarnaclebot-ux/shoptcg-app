@@ -28,7 +28,7 @@ const body = Schibsted_Grotesk({
 export const metadata: Metadata = {
   title: "tcgmart",
   description:
-    "Your card show table, priced live. Buyers scan your QR, pick and ping you.",
+    "Run your Pokemon card business online and at shows: one live-priced store, carts that ping your phone, and a ledger that keeps the books.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -17,7 +17,7 @@ export function StoreCreated({ slug }: { slug: string }) {
     history.replaceState(null, "", url);
   }, []);
   return (
-    <ShowMoment stamp="Set up" headline="Your table is set" no="0001">
+    <ShowMoment stamp="Set up" headline="Your store is set" no="0001">
       <p className="text-muted-foreground">
         tcgmart.app/{slug} is live with <span className="num">0</span> items.
         Stock the table, then open it below when doors open.

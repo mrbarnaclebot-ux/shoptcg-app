@@ -9,12 +9,12 @@ const STEPS = [
     body: "Search by name or number, or import a CSV. Raw, graded and sealed, priced from last night's market.",
   },
   {
-    title: "Print your table sign.",
-    body: "One QR, A5, any printer. Tape it to the case.",
+    title: "Share your store.",
+    body: "Your own link for socials, groups and DMs, and a QR sign for the show table. One store, wherever you sell.",
   },
   {
-    title: "Sell at the table.",
-    body: "Requests ping your phone; confirm and the receipt emails itself.",
+    title: "Take orders anywhere.",
+    body: "Carts ping your phone. Confirm the sale, the receipt emails itself, and your ledger tracks stock, takings and profit.",
   },
 ];
 
@@ -99,7 +99,8 @@ export function HowItWorks() {
           <p className="font-display text-[2.125rem] leading-[1.02] font-extrabold md:text-[2.875rem]">
             Nightly price sync. Raw, graded{" "}
             <span className="text-brand-text">and</span> sealed. EN, JP{" "}
-            <span className="text-brand-text">and</span> CN. Your own FX rate.
+            <span className="text-brand-text">and</span> CN. Online{" "}
+            <span className="text-brand-text">and</span> at the table.
           </p>
         </div>
         <footer className="flex flex-wrap gap-x-7 gap-y-1 border-t border-border pt-5 text-[0.84rem] text-muted-foreground md:col-span-12 md:mt-18">
