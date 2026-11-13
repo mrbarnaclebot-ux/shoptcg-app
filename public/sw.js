@@ -5,7 +5,7 @@ self.addEventListener("push", (e) => {
     self.registration.showNotification(m.title ?? "New request", {
       body: m.body,
       tag: m.tag,
-      icon: "/icon/192",
+      icon: "/icon-192.png",
       data: { url: m.url ?? "/dashboard" },
     }),
   );

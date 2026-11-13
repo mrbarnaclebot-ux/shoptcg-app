@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-13. The product is **tcgmart.app**. `main` and `production` are level after PR #38 (help page screenshots); #37 shipped onboarding tips and `/help`. Production serves https://tcgmart.app and staging https://staging.tcgmart.app; both switched, redirected and smoked on 2026-11-13. Email sends from the verified tcgmart.app Resend domain (`EMAIL_FROM` set 2026-11-13; a real sign-in link was delivered from `receipts@tcgmart.app`)._
+_Last updated: 2026-11-13. The product is **tcgmart.app**. `main` and `production` are level after PR #39 (app icon); #38 added help screenshots, #37 onboarding tips and `/help`. The app icon is static PNGs (`public/icon-192.png`, `public/icon-512.png`, `src/app/apple-icon.png`, `src/app/icon.png`, `src/app/favicon.ico`) cut from an OpenRouter (Gemini image) render the owner picked. Production serves https://tcgmart.app and staging https://staging.tcgmart.app; both switched, redirected and smoked on 2026-11-13. Email sends from the verified tcgmart.app Resend domain (`EMAIL_FROM` set 2026-11-13; a real sign-in link was delivered from `receipts@tcgmart.app`)._
 
 ## Where things stand
 
