@@ -58,6 +58,11 @@ const ADMIN: Row = {
   label: "Admin",
   hint: "Invites, vendors and system checks",
 };
+const HELP: Row = {
+  href: "/help",
+  label: "Help",
+  hint: "How everything works",
+};
 // On a phone the account block sits under the menu, so the row is desktop only.
 const ACCOUNT: Row = {
   href: HOME,
@@ -80,7 +85,7 @@ export function SettingsMenu(props: { hasStore: boolean; admin: boolean }) {
           { title: "Records", rows: RECORDS },
         ]
       : []),
-    { title: "You", rows: [...(props.admin ? [ADMIN] : []), ACCOUNT] },
+    { title: "You", rows: [HELP, ...(props.admin ? [ADMIN] : []), ACCOUNT] },
   ];
   return (
     <nav aria-label="Settings" className="lg:sticky lg:top-8 lg:self-start">

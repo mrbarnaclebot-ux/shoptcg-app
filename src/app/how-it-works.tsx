@@ -105,6 +105,12 @@ export function HowItWorks() {
         </div>
         <footer className="flex flex-wrap gap-x-7 gap-y-1 border-t border-border pt-5 text-[0.84rem] text-muted-foreground md:col-span-12 md:mt-18">
           <Link
+            href="/help"
+            className="inline-flex min-h-11 items-center underline-offset-4 hover:underline"
+          >
+            Help
+          </Link>
+          <Link
             href="/terms"
             className="inline-flex min-h-11 items-center underline-offset-4 hover:underline"
           >

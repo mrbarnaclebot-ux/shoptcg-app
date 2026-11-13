@@ -13,6 +13,7 @@ import { getStoreByOwner } from "@/lib/stores";
 import { RefreshAt } from "@/components/refresh-at";
 import { CreateStoreForm } from "./create-store-form";
 import { CopyLink } from "./copy-link";
+import { GettingStarted } from "./getting-started";
 import { StoreControl } from "./store-control";
 import { Floor } from "./requests/floor";
 import { RequestQueue } from "./requests/queue";
@@ -52,6 +53,7 @@ async function Dashboard({
             store={store}
             waiting={await waitingCount(getDb(), store.id)}
           />
+          {!store.tipsDismissedAt && <GettingStarted store={store} />}
           <Till storeId={store.id} closing={store.live === "off"} />
           <RequestQueue storeId={store.id} mode={store.sellingMode} />
           <Floor slug={store.slug} />
@@ -101,7 +103,8 @@ function NewStore() {
           Name your store
         </h1>
         <p className="text-muted-foreground">
-          The link is what buyers reach from your table QR code.
+          Your store&apos;s address: the link you share online and the QR on
+          your table sign.
         </p>
       </div>
       <Ticket as="div" className="[--stub:2rem]">

@@ -11,6 +11,7 @@ import { removePush } from "@/lib/push";
 import { getCurrentUser, requireStore, requireUser } from "@/lib/session";
 import {
   createStore,
+  dismissTips,
   getStoreByOwner,
   setStoreState,
   SLUG_TAKEN,
@@ -37,6 +38,13 @@ export async function createStoreAction(
   }
   // The dashboard plays the store-created moment once, then drops the flag.
   redirect("/dashboard?created=1");
+}
+
+/** The getting-started tips' "Hide tips": they never come back. */
+export async function dismissTipsAction() {
+  const user = await requireUser();
+  await dismissTips(getDb(), user.id);
+  refresh();
 }
 
 export async function signOutAction(form: FormData) {
