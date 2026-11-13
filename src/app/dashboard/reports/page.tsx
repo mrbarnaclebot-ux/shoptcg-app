@@ -275,7 +275,7 @@ async function Report({ searchParams }: Search) {
               No sales in this range.
             </p>
             <p className="mt-2 text-muted-foreground">
-              Sales you confirm at the table show up here.
+              Sales you confirm show up here.
             </p>
           </div>
         ) : (

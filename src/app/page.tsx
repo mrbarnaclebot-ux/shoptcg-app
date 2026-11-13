@@ -45,7 +45,7 @@ function Hero() {
           href="/login"
           className="inline-flex min-h-11 items-center text-[0.9375rem] font-medium underline decoration-[oklch(1_0_0/0.35)] decoration-[1.5px] underline-offset-[6px] hover:decoration-brand"
         >
-          Vendor sign in
+          Seller sign in
         </Link>
       </header>
       <div
@@ -69,13 +69,14 @@ function HeroCopy() {
         id="hero-h"
         className="font-display -ml-1.5 text-[clamp(4.5rem,23vw,9rem)] leading-[0.8] font-black tracking-[-0.012em] whitespace-nowrap md:order-last md:-mb-1.5 md:-ml-3.5 md:text-[clamp(7rem,16.4vw,14.75rem)]"
       >
-        <span className="block">Your table,</span>
+        <span className="block">Your shop,</span>
         <span className="block text-brand">priced live.</span>
       </h1>
       <p className="mt-8 max-w-[44ch] text-[1.0625rem] leading-normal md:mt-0 md:text-[1.1875rem]">
-        List your Pokemon cards, slabs and sealed with market prices. Buyers
-        scan your QR, pick what they want and ping you.{" "}
-        <span className="text-brand">You confirm at the table.</span>
+        Run your Pokemon card business from one live-priced store: cards, slabs
+        and sealed at market prices. Share your link online or put the QR on
+        your show table. Buyers fill a cart and send it to you.{" "}
+        <span className="text-brand">You confirm the sale.</span>
       </p>
       <div className="mt-6 mb-2 flex flex-col items-stretch gap-1 md:mt-7 md:mb-9 md:flex-row md:items-center md:gap-7">
         <TicketButton href="/join">Have an invite code?</TicketButton>

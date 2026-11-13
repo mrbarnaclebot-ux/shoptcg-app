@@ -69,7 +69,7 @@ test("store settings keep their choices after saving", async ({ page }) => {
 test("a new store starts paused and one tap opens it", async ({ page }) => {
   await newVendor(page);
   await expect(
-    page.getByRole("heading", { name: "Your table is set" }),
+    page.getByRole("heading", { name: "Your store is set" }),
   ).toBeVisible();
   const control = page.getByRole("region", { name: "Your store" });
   await expect(control).toHaveAttribute("data-state", "paused");

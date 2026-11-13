@@ -4,11 +4,11 @@ test("home loads", async ({ page }) => {
   await page.goto("/");
   await expect(
     page.getByRole("heading", {
-      name: "Your table, priced live.",
+      name: "Your shop, priced live.",
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Vendor sign in" }),
+    page.getByRole("link", { name: "Seller sign in" }),
   ).toBeVisible();
 });
 
