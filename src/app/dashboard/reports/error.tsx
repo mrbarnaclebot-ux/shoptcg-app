@@ -1,8 +1,16 @@
 "use client";
 
+import { useReportError } from "@/lib/use-report-error";
 import { lineButton } from "@/components/ticket-button";
 
-export default function ReportError({ retry }: { retry: () => void }) {
+export default function ReportError({
+  error,
+  retry,
+}: {
+  error: unknown;
+  retry: () => void;
+}) {
+  useReportError(error);
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-start gap-5 px-4 pt-8">
       <h1 className="font-display text-[2.5rem] leading-[0.9] font-black">

@@ -6,7 +6,11 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { isAdminEmail } from "@/lib/admin";
 import { appUrl } from "@/lib/deployed";
-import { outboxPath, sendInviteRequestAlert } from "@/lib/email";
+import {
+  outboxPath,
+  sendInviteRequestAlert,
+  sendRequestReceived,
+} from "@/lib/email";
 import {
   accountExists,
   addInviteRequest,
@@ -117,9 +121,10 @@ export async function askForInvite(
         .filter(Boolean);
       const url = new URL("/admin#requests", appUrl()).toString();
       after(() =>
-        Promise.all(
-          admins.map((to) => sendInviteRequestAlert(to, url, name)),
-        ).catch((err: unknown) =>
+        Promise.all([
+          sendRequestReceived(email.toLowerCase()),
+          ...admins.map((to) => sendInviteRequestAlert(to, url, name)),
+        ]).catch((err: unknown) =>
           console.error("[join] request alert failed", (err as Error).name),
         ),
       );

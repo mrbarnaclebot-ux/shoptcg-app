@@ -15,7 +15,8 @@ export function AskForm() {
   if (state.sent)
     return (
       <p role="status" className="font-semibold">
-        Thanks. We&apos;ll email you an invite once it&apos;s approved.
+        Thanks. We&apos;ve emailed you to confirm, and we&apos;ll email your
+        invite once it&apos;s approved.
       </p>
     );
   const bad = (f: string) => state.field === f || undefined;

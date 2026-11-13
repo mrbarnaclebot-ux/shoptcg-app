@@ -1,7 +1,15 @@
 "use client";
 
+import { useReportError } from "@/lib/use-report-error";
 // Replaces the root layout when it fails, so no app styles or fonts: inline only.
-export default function GlobalError({ retry }: { retry: () => void }) {
+export default function GlobalError({
+  error,
+  retry,
+}: {
+  error: unknown;
+  retry: () => void;
+}) {
+  useReportError(error);
   return (
     <html lang="en">
       <body

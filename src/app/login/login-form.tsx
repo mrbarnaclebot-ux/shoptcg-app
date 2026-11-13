@@ -8,23 +8,27 @@ import { Label } from "@/components/ui/label";
 import { signInAction, type LoginState } from "./actions";
 import { authLink } from "./auth-shell";
 
-// /login?reset=1 after a reset that couldn't sign in by itself. Read on the
-// client so the page stays static.
+// /login?reset=1 after a reset that couldn't sign in by itself, ?deleted=1
+// after deleting the account. Read on the client so the page stays static.
 const subscribe = () => () => {};
-const resetDone = () => new URLSearchParams(location.search).has("reset");
+const arrived = () => {
+  const q = new URLSearchParams(location.search);
+  if (q.has("deleted")) return "Your account was deleted.";
+  return q.has("reset") ? "Password saved. Sign in with it." : "";
+};
 
 export function LoginForm() {
   const [state, action, pending] = useActionState<LoginState, FormData>(
     signInAction,
     {},
   );
-  const reset = useSyncExternalStore(subscribe, resetDone, () => false);
+  const note = useSyncExternalStore(subscribe, arrived, () => "");
   const error = state.error;
   return (
     <form action={action} className="flex flex-col gap-4">
-      {reset && !error && (
+      {note && !error && (
         <p role="status" className="font-semibold">
-          Password saved. Sign in with it.
+          {note}
         </p>
       )}
       <div className="flex flex-col gap-2">

@@ -343,6 +343,16 @@ export default function HelpPage() {
             once, for an hour. Change it any time under More → Account.
           </p>
           <p>
+            <strong>I have a new email.</strong> Under More → Account, enter the
+            new address and your password. We email it a link; your sign-in
+            email changes when you confirm it, and the old address is told.
+          </p>
+          <p>
+            <strong>I want to close my account.</strong> Delete account under
+            More → Account removes your store page, stock, sales and customer
+            records for good. Export your Sales and Ledger first.
+          </p>
+          <p>
             Anything else, ask the person who invited you. See also the{" "}
             <Link href="/terms" className={link}>
               terms

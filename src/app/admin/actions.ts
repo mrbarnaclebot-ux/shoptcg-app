@@ -1,6 +1,7 @@
 "use server";
 
 import { refresh } from "next/cache";
+import { after } from "next/server";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { getDb } from "@/db";
@@ -12,6 +13,7 @@ import {
   createInviteFor,
   revokeInvite,
 } from "@/lib/invites";
+import { sendRequestDeclined } from "@/lib/email";
 import { sendInviteLink } from "@/lib/sign-in-link";
 import { dropImage } from "@/lib/image-store";
 import { requireAdmin } from "@/lib/session";
@@ -100,6 +102,12 @@ export async function answerRequestAction(id: string, invite: boolean) {
     await createInviteFor(db, req.email, `Request: ${req.name}`.slice(0, 80));
     sendInviteLink(req.email, await headers());
   }
+  if (!invite)
+    after(() =>
+      sendRequestDeclined(req.email).catch((err: unknown) =>
+        console.error("[admin] decline email failed", (err as Error).name),
+      ),
+    );
   refresh();
   return true;
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { lineButton } from "@/components/ticket-button";
 import { requireUser } from "@/lib/session";
+import { ChangeEmail, DeleteAccount } from "./account-forms";
 import { ChangePassword } from "./change-password";
 import { SignOut } from "./sign-out";
 
@@ -19,6 +20,8 @@ export default function AccountPage() {
       </Suspense>
       <SignOut className={lineButton} />
       <ChangePassword />
+      <ChangeEmail />
+      <DeleteAccount />
     </main>
   );
 }
