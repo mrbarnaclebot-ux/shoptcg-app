@@ -23,7 +23,10 @@ export default function TermsPage() {
           </p>
           <h2>What we collect</h2>
           <ul className="list-disc pl-6">
-            <li>Vendors: your email address, used to sign you in.</li>
+            <li>
+              Vendors: your email address and password, used to sign you in.
+              Passwords are stored only as a one-way hash.
+            </li>
             <li>
               Buyers: your name and email, only when you send a request to a
               vendor, so they can confirm the sale and email your receipt.

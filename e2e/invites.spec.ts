@@ -6,6 +6,7 @@ import {
   mintInvite,
   newVendor,
   outboxLines,
+  passwordSignIn,
   signIn,
 } from "./auth";
 import {
@@ -29,11 +30,15 @@ test("a stranger at the login page gets the same answer and nothing else", async
 }) => {
   test.skip(!hasDb, "needs DATABASE_URL");
   const email = fresh();
-  await page.goto("/login");
+  await passwordSignIn(page, email, "not-a-password");
+  await expect(page.locator("#login-error")).toHaveText(
+    /^Wrong email or password\./,
+  );
+  await page.goto("/login/forgot");
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Email me a link" }).click();
   await expect(
-    page.getByText("If this address has a vendor account, we sent a link."),
+    page.getByText(/^If this address has a vendor account, we sent a link/),
   ).toBeVisible();
   await settle(page);
   expect(await outboxLines(email)).toBe(0);
@@ -48,6 +53,20 @@ test("the public send route is closed, so nobody can email links past our limits
     data: { email, callbackURL: "/dashboard" },
   });
   expect(res.status()).toBe(404);
+  // Password sign-in, sign-up and resets only run through our limited actions.
+  for (const path of [
+    "sign-in/email",
+    "sign-up/email",
+    "request-password-reset",
+    "reset-password",
+  ])
+    expect(
+      (
+        await page.request.post(`/api/auth/${path}`, {
+          data: { email, password: "whatever-123", name: "x" },
+        })
+      ).status(),
+    ).toBe(404);
   await settle(page);
   expect(await outboxLines(email)).toBe(0);
 });
@@ -65,23 +84,24 @@ test("a mangled link is a join page or a 404, never an error", async ({
   );
 });
 
-test("a returning vendor signs in with no code; email case doesn't matter", async ({
+test("a returning vendor signs in with their password; email case doesn't matter", async ({
   page,
   browser,
 }) => {
   const id = await newVendor(page);
   const other = await browser.newPage();
-  await signIn(other, `E2E-${id}@Example.TEST`.toLowerCase());
+  await passwordSignIn(other, `e2e-${id}@example.test`);
   await expect(other.getByText("Your public page").first()).toBeVisible();
   // Typed in capitals, the same account.
   const third = await browser.newPage();
-  const link = await newLink(`e2e-${id}@example.test`, async () => {
-    await third.goto("/login");
-    await third.getByLabel("Email").fill(`E2E-${id}@EXAMPLE.TEST`);
-    await third.getByRole("button", { name: "Email me a link" }).click();
-  });
-  await third.goto(link);
+  await passwordSignIn(third, `E2E-${id}@EXAMPLE.TEST`);
   await expect(third.getByText("Your public page").first()).toBeVisible();
+  // A wrong password says so, without saying whether the account exists.
+  const fourth = await browser.newPage();
+  await passwordSignIn(fourth, `e2e-${id}@example.test`, "wrong-password");
+  await expect(fourth.locator("#login-error")).toHaveText(
+    /^Wrong email or password\./,
+  );
 });
 
 test("a used code, an expired code and a wrong code each say so", async ({
@@ -91,7 +111,7 @@ test("a used code, an expired code and a wrong code each say so", async ({
   const first = await mintInvite(page);
   const email = fresh();
   await page.goto(await join(page, first.code, email));
-  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(page).toHaveURL(/\/welcome/);
 
   const ctx = await page.context().browser()!.newContext();
   const other = await ctx.newPage();
@@ -109,7 +129,8 @@ test("a used code, an expired code and a wrong code each say so", async ({
 
   await other.goto("/join");
   await other.getByLabel("Invite code").fill("AAAA-BBBB-CCCC-DDDD");
-  await other.getByLabel("Email").fill(fresh());
+  // /join also has the "No code yet?" form; the first Email is the code's.
+  await other.getByLabel("Email").first().fill(fresh());
   await other.getByRole("button", { name: "Email me a link" }).click();
   await expect(other.locator("#join-error")).toHaveText(/isn't right/);
   await ctx.close();
@@ -133,12 +154,12 @@ test("a mistyped email can be corrected; the old link then makes nothing", async
 
   const stale = await browser.newPage();
   await stale.goto(typoLink);
-  await expect(stale).toHaveURL(/\/login/);
+  await expect(stale).toHaveURL(/\/join$/);
   await expect(stale.getByText(NO_INVITE)).toBeVisible();
   expect(await userExists(typo)).toBe(false);
 
   await page.goto(rightLink);
-  await expect(page).toHaveURL(/\/dashboard/);
+  await expect(page).toHaveURL(/\/welcome/);
   expect((await inviteRow(id)).redeemed_by).toBeTruthy();
 });
 
@@ -181,7 +202,7 @@ test("the admin invites someone, sees it used, and can revoke one in flight", as
   await page.reload();
   await expect(page.getByText(`Reserved for ${email}`)).toBeVisible();
   await sam.goto(samLink);
-  await expect(sam).toHaveURL(/\/dashboard/);
+  await expect(sam).toHaveURL(/\/welcome/);
   await page.reload();
   await expect(page.getByText(`Used by ${email}`)).toBeVisible();
   await expect(page.getByText(`Invited: ${label}.`)).toBeVisible();
@@ -208,7 +229,7 @@ test("the admin invites someone, sees it used, and can revoke one in flight", as
   await row.getByRole("button", { name: "Revoke invite" }).click();
   await expect(row).toContainText("Revoked");
   await late.goto(lateLink);
-  await expect(late).toHaveURL(/\/login/);
+  await expect(late).toHaveURL(/\/join$/);
   await expect(late.getByText(NO_INVITE)).toBeVisible();
   expect(await userExists(lateEmail)).toBe(false);
 });

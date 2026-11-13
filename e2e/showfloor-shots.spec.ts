@@ -34,7 +34,7 @@ for (const width of [390, 1280]) {
     await page.waitForLoadState("networkidle");
     await shot(page, "landing", width, 600);
 
-    await page.goto("/login");
+    await page.goto("/login/forgot");
     await page
       .getByLabel("Email")
       .fill(`shots-${width}-${Date.now()}@example.test`);

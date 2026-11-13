@@ -1,7 +1,7 @@
 import { createHash, randomInt } from "node:crypto";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
-import { invite, store, user } from "@/db/schema";
+import { invite, inviteRequest, store, user } from "@/db/schema";
 import { storeState } from "@/lib/store-state";
 
 const VALID_MS = 14 * 86_400_000;
@@ -160,4 +160,51 @@ export async function accountExists(db: Db, email: string) {
     .from(user)
     .where(eq(user.email, email.toLowerCase()));
   return rows.length > 0;
+}
+
+/** An invite made for one address: reserved, so only their link can use it. */
+export async function createInviteFor(
+  db: Db,
+  email: string,
+  label: string | null,
+) {
+  const code = await createInvite(db, label);
+  await reserveInvite(db, code, email);
+  return code;
+}
+
+/** Queues a request; false when this address already has one open. */
+export async function addInviteRequest(
+  db: Db,
+  r: { email: string; name: string; about: string | null },
+) {
+  const rows = await db
+    .insert(inviteRequest)
+    .values({ ...r, email: r.email.toLowerCase() })
+    .onConflictDoNothing()
+    .returning({ id: inviteRequest.id });
+  return rows.length > 0;
+}
+
+export function openInviteRequests(db: Db) {
+  return db
+    .select()
+    .from(inviteRequest)
+    .where(isNull(inviteRequest.handledAt))
+    .orderBy(desc(inviteRequest.createdAt))
+    .limit(SHOWN);
+}
+
+/** Closes an open request; returns it, or null when it was already handled. */
+export async function closeInviteRequest(
+  db: Db,
+  id: string,
+  outcome: "invited" | "dismissed",
+) {
+  const rows = await db
+    .update(inviteRequest)
+    .set({ handledAt: new Date(), outcome })
+    .where(and(eq(inviteRequest.id, id), isNull(inviteRequest.handledAt)))
+    .returning();
+  return rows[0] ?? null;
 }

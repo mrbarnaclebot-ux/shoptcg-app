@@ -13,6 +13,11 @@ export const LIMITS = {
   join: { max: 10, windowMs: 60 * 60_000 },
   // Sign-in emails one code can trigger, so a leaked code can't spam addresses.
   code: { max: 5, windowMs: 24 * 60 * 60_000 },
+  // Password tries: per email and address, and per address across emails.
+  password: { max: 10, windowMs: 15 * 60_000 },
+  passwordIp: { max: 50, windowMs: 60 * 60_000 },
+  // Invite requests from one address, against a flooded admin inbox.
+  request: { max: 5, windowMs: 24 * 60 * 60_000 },
 } as const;
 
 async function under(db: Db, key: string, max: number, windowMs: number) {
@@ -64,6 +69,32 @@ export async function allowJoin(db: Db, ip: string | null) {
   if (!ip) return true;
   const key = `join:${ip}`;
   if (!(await under(db, key, LIMITS.join.max, LIMITS.join.windowMs)))
+    return false;
+  await db.insert(signInSend).values({ key });
+  return true;
+}
+
+/** True and records it when this email and address may try another password. */
+export async function allowPasswordTry(
+  db: Db,
+  email: string,
+  ip: string | null,
+) {
+  const checks: [string, { max: number; windowMs: number }][] = [
+    [`pw:${email.toLowerCase()}:${ip ?? "-"}`, LIMITS.password],
+  ];
+  if (ip) checks.push([`pw-ip:${ip}`, LIMITS.passwordIp]);
+  for (const [key, l] of checks)
+    if (!(await under(db, key, l.max, l.windowMs))) return false;
+  await db.insert(signInSend).values(checks.map(([key]) => ({ key })));
+  return true;
+}
+
+/** True and records it when this address may send another invite request. */
+export async function allowInviteRequest(db: Db, ip: string | null) {
+  if (!ip) return true;
+  const key = `req:${ip}`;
+  if (!(await under(db, key, LIMITS.request.max, LIMITS.request.windowMs)))
     return false;
   await db.insert(signInSend).values({ key });
   return true;

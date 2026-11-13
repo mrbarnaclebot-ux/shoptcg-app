@@ -80,6 +80,12 @@ function HeroCopy() {
       </p>
       <div className="mt-6 mb-2 flex flex-col items-stretch gap-1 md:mt-7 md:mb-9 md:flex-row md:items-center md:gap-7">
         <TicketButton href="/join">Have an invite code?</TicketButton>
+        <Link
+          href="/join#ask-h"
+          className="inline-flex min-h-11 items-center self-start underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+        >
+          Ask for an invite
+        </Link>
         <a
           href="#how-it-works"
           className="inline-flex min-h-11 items-center self-start underline decoration-brand decoration-[1.5px] underline-offset-[5px]"

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { lineButton } from "@/components/ticket-button";
 import { requireUser } from "@/lib/session";
+import { ChangePassword } from "./change-password";
 import { SignOut } from "./sign-out";
 
 export const metadata: Metadata = { title: "More - tcgmart" };
@@ -17,6 +18,7 @@ export default function AccountPage() {
         <SignedInAs />
       </Suspense>
       <SignOut className={lineButton} />
+      <ChangePassword />
     </main>
   );
 }

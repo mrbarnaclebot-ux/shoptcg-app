@@ -27,6 +27,7 @@ export const RESERVED_SLUGS = new Set([
   "stores",
   "support",
   "terms",
+  "welcome",
   "www",
 ]);
 
