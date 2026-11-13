@@ -6,9 +6,10 @@ _Last updated: 2026-11-13. The product is **tcgmart.app**. `main` and `productio
 
 ## Where things stand
 
-- **Live:** production https://tcgmart.app (also `www.tcgmart.app`) and staging https://staging.tcgmart.app. The Railway hosts (`web-production-2d3b0.up.railway.app`, `web-staging-staging-6b4e.up.railway.app`) stay attached forever and 308 to the custom domain, because printed signs point at them. Migrations are up to `0025`.
+- **Live:** production https://tcgmart.app (also `www.tcgmart.app`) and staging https://staging.tcgmart.app. The Railway hosts (`web-production-2d3b0.up.railway.app`, `web-staging-staging-6b4e.up.railway.app`) stay attached forever and 308 to the custom domain, because printed signs point at them. Migrations are up to `0026`.
   - Domains were added with the Railway CLI (`railway domain`). DNS lives at the owner's registrar (CNAME + `_railway-verify` TXT per host). Each service has `BETTER_AUTH_URL` and `CANONICAL_HOST` set to its custom domain.
 - **Shipped:** all eight phases, plus:
+  - onboarding: a "Getting started" checklist on the dashboard (`src/app/dashboard/getting-started.tsx`) whose ticks come from the store's data; "Hide tips" sets `store.tips_dismissed_at` (migration `0026`) so it shows once per store. The public guide is `/help` (`src/app/help/page.tsx`), linked from the checklist, More → Help, the landing footer and the sitemap. Keep `/help` in step when a feature changes.
   - the CI pipeline
   - the known-gap fixes (PR #11)
   - vendor invites (PR #12)
@@ -114,7 +115,7 @@ Railway notes (more in memory `railway-config-ignored`):
 ## Owner to-dos
 
 1. Done 2026-11-13: `tcgmart.app` is verified in Resend (DKIM, SPF on `send`, `rsend` CNAME, DMARC `p=none` in Porkbun). `EMAIL_FROM` is `tcgmart <receipts@tcgmart.app>` on `web` (production env) and `tcgmart staging <staging@tcgmart.app>` on `web-staging` (**staging env**, not production). The production `RESEND_API_KEY` is now full-access; swap it for a send-only key when convenient.
-5. Turn on Railway Postgres backups (daily) and test a restore once. Add a free uptime check on `https://tcgmart.app/api/health` (UptimeRobot; needs the owner's API key, or create it in their dashboard). Decide on error monitoring (errors only reach Railway logs today).
+5. Turn on Railway Postgres backups (daily) and test a restore once. Uptime: done 2026-11-13 in UptimeRobot (5-minute checks on `https://tcgmart.app/`, `/api/health` and `https://staging.tcgmart.app/api/health`, alerting the owner's email; the API key is `UPTIMEROBOT_API_KEY` in the local `.env`). Decide on error monitoring (errors only reach Railway logs today).
 6. Reprint table signs at leisure: new ones say tcgmart.app; old ones keep working through the redirect.
 2. Test push and the chime on a real phone. Scan a printed sign from 1 m. Open both CSV exports in Excel and Sheets.
 3. Check the Railway cron history for `price-sync` the morning after the first vendor adds stock.

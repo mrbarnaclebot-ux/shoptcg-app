@@ -4,7 +4,8 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "tcgmart",
     short_name: "tcgmart",
-    description: "Your card show table: buyer requests on your phone.",
+    description:
+      "Your card store, online and at shows: carts and sales on your phone.",
     start_url: "/dashboard",
     display: "standalone",
     background_color: "#090911",

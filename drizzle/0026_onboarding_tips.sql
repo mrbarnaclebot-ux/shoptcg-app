@@ -1,0 +1,1 @@
+ALTER TABLE "store" ADD COLUMN "tips_dismissed_at" timestamp with time zone;

@@ -16,6 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .where(ne(storeState, "off"));
   return [
     { url: new URL("/", base).href },
+    { url: new URL("/help", base).href },
     { url: new URL("/terms", base).href },
     ...stores.map((s) => ({ url: new URL(`/${s.slug}`, base).href })),
   ];

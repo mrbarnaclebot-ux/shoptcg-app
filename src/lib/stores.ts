@@ -238,3 +238,11 @@ export async function setSuspended(db: Db, storeId: string, on: boolean) {
     .returning({ id: store.id });
   return rows.length > 0;
 }
+
+/** Hides the getting-started tips for good. */
+export async function dismissTips(db: Db, ownerUserId: string) {
+  await db
+    .update(store)
+    .set({ tipsDismissedAt: sql`now()` })
+    .where(eq(store.ownerUserId, ownerUserId));
+}

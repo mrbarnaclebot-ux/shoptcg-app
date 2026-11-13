@@ -45,6 +45,8 @@ export const store = pgTable(
     sellingMode: text("selling_mode", { enum: ["table", "online"] })
       .notNull()
       .default("table"),
+    // Set when the vendor hides the getting-started tips, so they show once.
+    tipsDismissedAt: timestamp("tips_dismissed_at", { withTimezone: true }),
     // A timed pause resumes by itself once now() passes this.
     pausedUntil: timestamp("paused_until", { withTimezone: true }),
     // An open store pauses itself 14 hours after this, so nobody pings a vendor who went home.
