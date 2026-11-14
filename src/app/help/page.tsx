@@ -177,12 +177,19 @@ export default function HelpPage() {
           <h2 id="pricing">Pricing</h2>
           <p>
             Cards are priced from the market as you add them and re-priced every
-            night. Buyers see the price and 90 days of price history.
+            night. Buyers see the price, 90 days of price history and recent
+            market sales: how many copies sold each day, and for how much.
           </p>
           <ul>
             <li>
               <strong>Price rule:</strong> sell at a percentage of market, for
               example 90%.
+            </li>
+            <li>
+              <strong>Played cards:</strong> market prices are for Near Mint. A
+              Lightly Played, Moderately Played, Heavily Played or Damaged
+              single is priced at a share of it: 85%, 70%, 55% and 40% to start.
+              Change the shares under <strong>Pricing</strong>.
             </li>
             <li>
               <strong>Rounding:</strong> round prices to a tidy step.

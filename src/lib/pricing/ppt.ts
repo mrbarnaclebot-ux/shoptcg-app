@@ -3,6 +3,7 @@ import {
   cardHit,
   history,
   quote,
+  RECENT_DAYS,
   sealedHit,
   type PptCard,
   type PptSealed,
@@ -156,7 +157,9 @@ async function getPrices<T extends PriceRef>(c: Client, refs: T[]) {
     const key = `${ref.kind}:${ref.providerId}:${ref.language}`;
     if (!fetched.has(key)) {
       try {
-        fetched.set(key, await fetchOne(c, ref));
+        const extra: Params =
+          ref.kind === "raw" ? { includeHistory: true, days: RECENT_DAYS } : {};
+        fetched.set(key, await fetchOne(c, ref, extra));
         inRow = 0;
       } catch (err) {
         [cause, inRow] = [err, inRow + 1];

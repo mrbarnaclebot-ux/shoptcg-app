@@ -22,6 +22,10 @@ async function Pricing() {
         rounding: String(Number(store.rounding)),
         secondCurrency: store.secondCurrency ?? "",
         fxRate: store.fxRate === null ? "" : String(Number(store.fxRate)),
+        condLpPct: store.condLpPct,
+        condMpPct: store.condMpPct,
+        condHpPct: store.condHpPct,
+        condDmgPct: store.condDmgPct,
       }}
     />
   );

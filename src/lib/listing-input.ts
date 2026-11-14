@@ -1,9 +1,10 @@
 import { z } from "zod";
 
-export const CONDITIONS = ["NM", "LP", "MP", "HP", "DMG"] as const;
+import { CONDITIONS, GRADERS, GRADES, type Condition } from "@/lib/condition";
+
+export { CONDITIONS, type Condition };
 export const KINDS = ["raw", "graded", "sealed"] as const;
 export const LANGUAGES = ["en", "ja", "zh"] as const;
-export type Condition = (typeof CONDITIONS)[number];
 
 // Blank form fields arrive as "" and mean "not set".
 const blank = (v: unknown) =>
@@ -57,9 +58,7 @@ const stock = {
   cost: priceSchema.default(null),
 };
 
-export const GRADERS = ["PSA", "BGS", "CGC", "SGC"] as const;
-// 10, 9.5, 9 ... 1, as the catalog_item_grade check allows.
-export const GRADES = Array.from({ length: 19 }, (_, i) => String(10 - i / 2));
+export { GRADERS, GRADES };
 
 export const catalogListingSchema = z.object({
   catalogItemId: z.uuid(),

@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { listing, pricePoint, type NewListing } from "@/db/schema";
 import { upsertHits } from "@/lib/catalog";
@@ -69,7 +70,13 @@ function card(
 }
 
 /** A gentle daily wobble ending on today's market, so charts have a shape. */
-function history(itemId: string, market: number, days: number, today: Date) {
+function history(
+  itemId: string,
+  market: number,
+  days: number,
+  today: Date,
+  sold: boolean,
+) {
   return Array.from({ length: days }, (_, i) => {
     const back = days - 1 - i;
     const date = new Date(+today - back * 86_400_000)
@@ -80,6 +87,8 @@ function history(itemId: string, market: number, days: number, today: Date) {
       catalogItemId: itemId,
       date,
       marketUsd: (market * drift).toFixed(2),
+      // The last week sold a few copies a day (none every fourth), like PPT reports.
+      sales: sold && back < 7 ? back % 4 : null,
       source: "e2e",
     };
   });
@@ -93,10 +102,20 @@ export async function seedDemoStock(db: Db, storeId: string) {
     .insert(pricePoint)
     .values(
       HITS.flatMap((h) =>
-        history(by.get(h.providerId)!.id, h.market, h.days, today),
+        history(
+          by.get(h.providerId)!.id,
+          h.market,
+          h.days,
+          today,
+          h.kind !== "sealed",
+        ),
       ),
     )
-    .onConflictDoNothing();
+    // Catalog items are shared across seeded stores: refresh counts, keep prices.
+    .onConflictDoUpdate({
+      target: [pricePoint.catalogItemId, pricePoint.date, pricePoint.source],
+      set: { sales: sql`excluded.sales` },
+    });
   const item = (id: string, over: Partial<NewListing> = {}): NewListing => {
     const c = by.get(id)!;
     return {

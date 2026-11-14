@@ -63,6 +63,12 @@ export const store = pgTable(
     // An open store pauses itself 14 hours after this, so nobody pings a vendor who went home.
     openedAt: timestamp("opened_at", { withTimezone: true }),
     priceRulePct: integer("price_rule_pct").notNull().default(0),
+    // A played raw card's market, as a percent of the Near Mint market
+    // (src/lib/condition.ts). NM is always 100.
+    condLpPct: integer("cond_lp_pct").notNull().default(85),
+    condMpPct: integer("cond_mp_pct").notNull().default(70),
+    condHpPct: integer("cond_hp_pct").notNull().default(55),
+    condDmgPct: integer("cond_dmg_pct").notNull().default(40),
     rounding: numeric("rounding").notNull().default("0"),
     secondCurrency: text("second_currency"),
     fxRate: numeric("fx_rate"),
@@ -83,6 +89,10 @@ export const store = pgTable(
     ),
     check("store_name_length", sql`char_length(${t.name}) between 1 and 80`),
     check("store_rounding_step", sql`${t.rounding} in (0, 0.5, 1)`),
+    check(
+      "store_condition_pcts",
+      sql`${t.condLpPct} between 1 and 100 and ${t.condMpPct} between 1 and 100 and ${t.condHpPct} between 1 and 100 and ${t.condDmgPct} between 1 and 100`,
+    ),
     check(
       "store_bank_details_length",
       sql`char_length(${t.bankDetails}) <= 500`,
@@ -175,6 +185,9 @@ export const pricePoint = pgTable(
     lowUsd: numeric("low_usd", { precision: 12, scale: 2 }),
     highUsd: numeric("high_usd", { precision: 12, scale: 2 }),
     sampleSize: integer("sample_size"),
+    // Copies sold that day (raw: TCGplayer Near Mint; graded: eBay and
+    // Fanatics at that grade). Null when the provider doesn't say.
+    sales: integer("sales"),
     source: text("source").notNull(),
   },
   (t) => [
@@ -186,6 +199,7 @@ export const pricePoint = pgTable(
     check("price_point_low_nonneg", sql`${t.lowUsd} >= 0`),
     check("price_point_high_nonneg", sql`${t.highUsd} >= 0`),
     check("price_point_sample_nonneg", sql`${t.sampleSize} >= 0`),
+    check("price_point_sales_nonneg", sql`${t.sales} >= 0`),
   ],
 );
 

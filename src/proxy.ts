@@ -5,7 +5,7 @@ import { BUYER_COOKIE } from "@/lib/buyer-session";
 import { canonicalRedirect } from "@/lib/canonical-host";
 import { buyerRequest } from "@/lib/request-reads";
 import { RESERVED_SLUGS, slugSchema } from "@/lib/slug";
-import { getPublicItem, getPublicStore, UUID } from "@/lib/storefront";
+import { getPublicStore, publicItemExists, UUID } from "@/lib/storefront";
 
 // A page streams its first byte before notFound() can run, which locks in a
 // 200 in production, so a real 404 has to be decided here.
@@ -14,7 +14,8 @@ async function missing(req: NextRequest, slug: string, page?: string, id = "") {
   const db = getDb();
   const store = await getPublicStore(db, slug);
   if (!store) return true;
-  if (page === "item") return !(await getPublicItem(db, store, id));
+  // Link prefetches land here too, so this stays a single-row lookup.
+  if (page === "item") return !(await publicItemExists(db, store.id, id));
   if (page !== "request") return false;
   // The waiting screen exists only for the phone that sent the request.
   const sid = req.cookies.get(BUYER_COOKIE)?.value;

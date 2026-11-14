@@ -20,8 +20,9 @@ import { parseRange } from "../../params";
 import { NotVending } from "../../store-header";
 import { storeOr404 } from "../../store-lookup";
 import { Art, HTML_LANG, metaLine, stockLine } from "../../tile";
+import { CONDITION_NAME } from "@/lib/condition";
 import { PriceChart } from "./price-chart";
-import { priceHistory } from "./price-history";
+import { priceHistory, salesHistory } from "./price-history";
 
 // Lookups run before any Suspense boundary so a hidden or unknown item is a real 404.
 export const instant = false;
@@ -107,7 +108,12 @@ export default async function ItemPage({
             <Suspense
               fallback={<div className="h-56 animate-pulse bg-surface" />}
             >
-              <Chart id={item.catalogItemId} days={days} price={item.price} />
+              <Chart
+                id={item.catalogItemId}
+                days={days}
+                price={item.price}
+                pct={item.conditionPct}
+              />
             </Suspense>
           ) : (
             <p className="text-muted-foreground">
@@ -115,7 +121,18 @@ export default async function ItemPage({
               history.
             </p>
           )}
+          {item.kind === "raw" && item.conditionPct !== 100 && (
+            <p className="text-sm text-muted-foreground">
+              {CONDITION_NAME[item.condition ?? ""] ?? "This condition"} is
+              priced at {item.conditionPct}% of the Near Mint market.
+            </p>
+          )}
         </section>
+        {item.catalogItemId && item.kind !== "sealed" && (
+          <Suspense fallback={null}>
+            <Sales id={item.catalogItemId} item={item} />
+          </Suspense>
+        )}
       </div>
       <Action store={store} item={item} />
     </main>
@@ -178,13 +195,6 @@ function Details({ item, store }: { item: PublicItem; store: PublicStore }) {
   );
 }
 
-const CONDITION = {
-  NM: "Near Mint",
-  LP: "Lightly Played",
-  MP: "Moderately Played",
-  HP: "Heavily Played",
-  DMG: "Damaged",
-} as Record<string, string>;
 const KIND = { raw: "Single card", graded: "Graded slab", sealed: "Sealed" };
 const LANGUAGE = { en: "English", ja: "Japanese", zh: "Chinese" };
 
@@ -196,7 +206,7 @@ function facts(it: PublicItem): [string, string][] {
     [
       "Condition",
       it.kind === "raw" && it.condition
-        ? `${CONDITION[it.condition] ?? it.condition} (${it.condition})`
+        ? `${CONDITION_NAME[it.condition] ?? it.condition} (${it.condition})`
         : null,
     ],
     ["Set", it.setName],
@@ -229,11 +239,71 @@ async function Chart(props: {
   id: string;
   days: number;
   price: number | null;
+  pct: number;
 }) {
   const today = new Date().toISOString().slice(0, 10);
-  const points = await priceHistory(props.id, props.days, today);
+  const nm = await priceHistory(props.id, props.days, today);
+  // A played card's market follows Near Mint at the store's share.
+  const points =
+    props.pct === 100
+      ? nm
+      : nm.map((p) => ({
+          ...p,
+          market: Math.round(p.market * props.pct) / 100,
+        }));
   return <PriceChart points={points} days={props.days} price={props.price} />;
 }
+
+/** Recent market sales: what copies of this card actually sold for. */
+async function Sales({ id, item }: { id: string; item: PublicItem }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const days = await salesHistory(id, today);
+  if (!days.length) return null;
+  const what =
+    item.kind === "graded"
+      ? `${gradeLabel(item)} copies on eBay and Fanatics. Price is the day's average sale.`
+      : "Near Mint copies on TCGplayer. Price is the day's market price.";
+  return (
+    <section aria-labelledby="sales" className="flex flex-col gap-3">
+      <h2 id="sales" className="text-lg font-semibold">
+        Recent sales
+      </h2>
+      <p className="text-sm text-muted-foreground">{what}</p>
+      <table className="num w-full max-w-md text-left">
+        <thead className="text-sm text-muted-foreground">
+          <tr>
+            <th scope="col" className="py-1 font-semibold">
+              Date
+            </th>
+            <th scope="col" className="py-1 text-right font-semibold">
+              Sold
+            </th>
+            <th scope="col" className="py-1 text-right font-semibold">
+              Price
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {days.map((d) => (
+            <tr key={d.date} className="border-t border-border">
+              <td className="py-2">{saleDate(d.date)}</td>
+              <td className="py-2 text-right">{d.sales}</td>
+              <td className="py-2 text-right">{usd(d.market)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+// A calendar day, not a moment: formatted in UTC so it never shifts a day.
+const saleDate = (date: string) =>
+  new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 
 /** Sticky bottom action, or the reason there isn't one. */
 function Action({ store, item }: { store: PublicStore; item: PublicItem }) {

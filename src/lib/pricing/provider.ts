@@ -41,11 +41,15 @@ export interface Quote<T extends PriceRef = PriceRef> {
   lowUsd: number | null;
   highUsd: number | null;
   sampleSize: number | null;
+  /** Recent days the provider reported sales for, when it does. */
+  recent?: HistoryPoint[];
 }
 
 export interface HistoryPoint {
   date: string;
   marketUsd: number;
+  /** Copies sold that day; absent when the provider doesn't say. */
+  sales?: number | null;
 }
 
 export interface PriceProvider {

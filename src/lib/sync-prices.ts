@@ -42,6 +42,8 @@ export interface SyncResult {
   failed: number;
   /** Provider history calls made for items with too few points to chart. */
   backfilled: number;
+  /** Credits the nightly prices cost (priceCost), before backfills. */
+  credits: number;
 }
 
 function money(v: number | null) {
@@ -76,6 +78,37 @@ async function writeQuotes(
         highUsd: sql`excluded.high_usd`,
         sampleSize: sql`excluded.sample_size`,
       },
+    });
+  await writeSales(db, source, quotes);
+}
+
+/**
+ * The sales counts a quote reported for recent days. A day we already priced
+ * keeps our own market and only gains its count; a missing day is added.
+ */
+async function writeSales(
+  db: Db,
+  source: string,
+  quotes: Quote<CatalogItem>[],
+) {
+  const rows = quotes.flatMap((q) =>
+    (q.recent ?? [])
+      .filter((p) => p.sales != null)
+      .map((p) => ({
+        catalogItemId: q.ref.id,
+        date: p.date,
+        marketUsd: p.marketUsd.toFixed(2),
+        sales: p.sales,
+        source,
+      })),
+  );
+  if (!rows.length) return;
+  await db
+    .insert(pricePoint)
+    .values(rows)
+    .onConflictDoUpdate({
+      target: [pricePoint.catalogItemId, pricePoint.date, pricePoint.source],
+      set: { sales: sql`excluded.sales` },
     });
 }
 
@@ -124,6 +157,13 @@ const BACKFILL_DAYS = 90;
 // PPT bills 1 credit per card plus 1 for history (or for eBay on graded).
 const HISTORY_COST = 2;
 
+/**
+ * Credits one nightly price costs: PPT singles ask for a week of history (the
+ * sales counts) and slabs for eBay, so both cost 2; sealed and free sources 1.
+ */
+export const priceCost = (it: Pick<CatalogItem, "provider" | "kind">) =>
+  it.provider === "ppt" && it.kind !== "sealed" ? 2 : 1;
+
 /** Items among these with fewer than MIN_POINTS rows of history. */
 async function thinItems(db: Db, items: CatalogItem[]) {
   if (!items.length) return [];
@@ -169,10 +209,21 @@ async function backfillHistory(
             catalogItemId: item.id,
             date: p.date,
             marketUsd: p.marketUsd.toFixed(2),
+            sales: p.sales ?? null,
             source: provider.name,
           })),
         )
-        .onConflictDoNothing();
+        // Our own rows keep their market; a count fills a gap.
+        .onConflictDoUpdate({
+          target: [
+            pricePoint.catalogItemId,
+            pricePoint.date,
+            pricePoint.source,
+          ],
+          set: {
+            sales: sql`coalesce(${pricePoint.sales}, excluded.sales)`,
+          },
+        });
     } catch (err) {
       // A chart can wait a night; prices already written stay written.
       console.error(
@@ -186,7 +237,7 @@ async function backfillHistory(
 
 /** History calls still affordable: under maxBackfill and the credit budget. */
 function backfillBudget(limits: SyncLimits, result: SyncResult) {
-  const spent = result.items + result.backfilled * HISTORY_COST;
+  const spent = result.credits + result.backfilled * HISTORY_COST;
   return Math.min(
     limits.maxBackfill - result.backfilled,
     Math.floor((limits.maxCalls - spent) / HISTORY_COST),
@@ -231,7 +282,11 @@ export async function syncPrices(
   limits: SyncLimits = envLimits(),
   only?: string[],
 ): Promise<SyncResult> {
-  const items = await listedItems(db, limits.maxCalls, date, only);
+  // The oldest-priced first, as many as the credit budget covers.
+  let credits = 0;
+  const items = (await listedItems(db, limits.maxCalls, date, only)).filter(
+    (it) => (credits += priceCost(it)) <= limits.maxCalls,
+  );
   const result: SyncResult = {
     items: items.length,
     written: 0,
@@ -239,6 +294,7 @@ export async function syncPrices(
     skipped: 0,
     failed: 0,
     backfilled: 0,
+    credits: items.reduce((n, it) => n + priceCost(it), 0),
   };
   const byProvider = Map.groupBy(items, (it) => it.provider);
   for (const [name, group] of byProvider) {

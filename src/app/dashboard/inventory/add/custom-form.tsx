@@ -5,7 +5,7 @@ import { Segmented } from "@/components/segmented";
 import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CONDITIONS } from "@/lib/listing-input";
+import { CONDITIONS } from "@/lib/condition";
 import { toast } from "@/lib/toast";
 import { addCustomAction, type CustomState } from "../actions";
 import { Added, StockFields } from "./add-panel";

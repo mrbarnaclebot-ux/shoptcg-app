@@ -3,7 +3,8 @@ import sharp from "sharp";
 /** The two images a store can show, and the exact size each is stored at. */
 export const IMAGE_SIZE = {
   banner: { width: 1500, height: 500 },
-  avatar: { width: 1000, height: 1000 },
+  // Shown at 112 px at most, so 400 covers a 3x screen.
+  avatar: { width: 400, height: 400 },
 } as const;
 export type ImageKind = keyof typeof IMAGE_SIZE;
 export const isImageKind = (v: unknown): v is ImageKind =>

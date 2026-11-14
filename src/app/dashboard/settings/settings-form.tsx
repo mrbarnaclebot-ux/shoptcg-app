@@ -14,6 +14,11 @@ import { TicketButton } from "@/components/ticket-button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usd } from "@/lib/format";
+import {
+  CONDITION_FIELDS,
+  CONDITION_NAME,
+  type ConditionPcts,
+} from "@/lib/condition";
 import { MODE_COPY, SELLING_MODES, type SellingMode } from "@/lib/selling-mode";
 import { toast } from "@/lib/toast";
 import { vendorPrice } from "@/lib/vendor-price";
@@ -29,7 +34,7 @@ type PricingValues = {
   rounding: string;
   secondCurrency: string;
   fxRate: string;
-};
+} & ConditionPcts;
 
 const ROUNDING = [
   ["0", "Exact cents"],
@@ -92,6 +97,7 @@ export function PricingForm({ values }: { values: PricingValues }) {
       {(e) => (
         <>
           <PricingFields values={values} errors={e} />
+          <ConditionFields values={values} errors={e} />
           <CurrencyFields values={values} errors={e} />
         </>
       )}
@@ -363,10 +369,42 @@ function PricingFields({ values, errors: e }: FieldsProps) {
   );
 }
 
-function CurrencyFields({ values, errors: e }: FieldsProps) {
+function ConditionFields({ values, errors: e }: FieldsProps) {
   return (
     <fieldset className="flex flex-col gap-4">
       <SectionMark n={2} level="legend" className="mb-4">
+        Played cards
+      </SectionMark>
+      <p className="text-sm text-muted-foreground">
+        Market prices are for Near Mint. A played single is priced at this share
+        of it, then your price rule and rounding apply.
+      </p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {CONDITION_FIELDS.map(([code, field]) => (
+          <div key={field} className="flex flex-col gap-2">
+            <Label htmlFor={field}>
+              {CONDITION_NAME[code]} ({code}), %
+            </Label>
+            <Input
+              id={field}
+              name={field}
+              inputMode="numeric"
+              defaultValue={values[field]}
+              aria-invalid={e[field] ? true : undefined}
+              aria-describedby={`${field}-error`}
+            />
+            <Err id={`${field}-error`} msg={e[field]} />
+          </div>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+function CurrencyFields({ values, errors: e }: FieldsProps) {
+  return (
+    <fieldset className="flex flex-col gap-4">
+      <SectionMark n={3} level="legend" className="mb-4">
         Second currency
       </SectionMark>
       <p className="text-sm text-muted-foreground">

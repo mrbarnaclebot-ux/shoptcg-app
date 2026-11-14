@@ -20,7 +20,8 @@ const poster = Big_Shoulders({
 
 // Newsprint grotesk for everything read up close.
 const body = Schibsted_Grotesk({
-  subsets: ["latin", "latin-ext"],
+  // subsets picks what is preloaded; accented names still render (on demand).
+  subsets: ["latin"],
   variable: "--font-body",
   display: "swap",
 });

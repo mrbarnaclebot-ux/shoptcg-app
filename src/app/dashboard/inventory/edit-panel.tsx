@@ -5,7 +5,7 @@ import { Ticket } from "@/components/ticket";
 import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CONDITIONS } from "@/lib/listing-input";
+import { CONDITIONS } from "@/lib/condition";
 import type { StockRow } from "@/lib/listings";
 import { toast } from "@/lib/toast";
 import { updateListingAction } from "./actions";

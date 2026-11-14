@@ -10,7 +10,7 @@ import {
   type Column,
 } from "drizzle-orm";
 import type { Db } from "@/db/open";
-import { catalogItem, listing, pricePoint } from "@/db/schema";
+import { catalogItem, listing, pricePoint, store } from "@/db/schema";
 import { gradedItem } from "@/lib/catalog";
 import type {
   CatalogListingInput,
@@ -77,6 +77,18 @@ function filterConds(storeId: string, f: StockFilter) {
   return { name, where: and(...conds) };
 }
 
+/** This listing's share of the NM market in percent (src/lib/condition.ts): 100 for NM, sealed and slabs. */
+const conditionPct = sql<number>`(case ${listing.condition}
+  when 'LP' then ${store.condLpPct}
+  when 'MP' then ${store.condMpPct}
+  when 'HP' then ${store.condHpPct}
+  when 'DMG' then ${store.condDmgPct}
+  else 100 end)`.mapWith(Number);
+
+/** A NM market moved to this listing's condition, to the cent. */
+const conditionMarket = (nm: unknown) =>
+  sql<string | null>`round(${nm} * ${conditionPct} / 100.0, 2)`;
+
 // Custom fields win over the catalog row, so a vendor can relabel an item.
 const pick = <T>(own: Column, cat: Column) => sql<T>`coalesce(${own}, ${cat})`;
 
@@ -97,7 +109,10 @@ function columns(latest: ReturnType<typeof latestPrices>) {
     cost: listing.cost,
     active: listing.active,
     createdAt: listing.createdAt,
-    market: latest.market,
+    // At this listing's condition; nmMarket is the provider's Near Mint price.
+    market: conditionMarket(latest.market),
+    nmMarket: latest.market,
+    conditionPct,
     asOf: latest.asOf,
   };
 }
@@ -109,6 +124,7 @@ export async function listStock(db: Db, storeId: string, f: StockFilter = {}) {
   const rows = await db
     .select({ ...columns(latest), name })
     .from(listing)
+    .innerJoin(store, eq(store.id, listing.storeId))
     .leftJoin(catalogItem, eq(catalogItem.id, listing.catalogItemId))
     .leftJoin(latest, eq(latest.catalogItemId, listing.catalogItemId))
     .where(where)
@@ -120,6 +136,7 @@ export async function listStock(db: Db, storeId: string, f: StockFilter = {}) {
     overridePrice: num(r.overridePrice),
     cost: num(r.cost),
     market: num(r.market),
+    nmMarket: num(r.nmMarket),
   }));
 }
 
