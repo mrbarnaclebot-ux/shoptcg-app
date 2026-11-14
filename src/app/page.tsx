@@ -41,8 +41,10 @@ function Hero() {
       </div>
       <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-2 md:px-14 md:py-6">
         <Wordmark />
+        {/* Signed in, this opens the dashboard; signed out, the proxy sends it
+            to /login. The page stays static for every visitor. */}
         <Link
-          href="/login"
+          href="/dashboard"
           className="inline-flex min-h-11 items-center text-[0.9375rem] font-medium underline decoration-[oklch(1_0_0/0.35)] decoration-[1.5px] underline-offset-[6px] hover:decoration-brand"
         >
           Seller sign in
