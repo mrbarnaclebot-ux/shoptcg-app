@@ -109,7 +109,7 @@ export function CashBox(props: { till: OpenTill | null; closing: boolean }) {
     <section
       aria-labelledby="cash-h"
       aria-busy={pending}
-      className="flex flex-col gap-3 border-t border-border pt-4"
+      className="flex flex-col gap-3 border-t border-border pt-4 lg:border-t-0 lg:pt-0"
     >
       <h2
         id="cash-h"

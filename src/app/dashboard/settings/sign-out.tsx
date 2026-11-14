@@ -23,7 +23,7 @@ export function SignOut({ className }: { className: string }) {
       action={signOutAction}
       // Not awaited: signing out must work on bad WiFi, push or no push.
       onSubmit={() => void sub.current?.unsubscribe().catch(() => {})}
-      className="border-t border-border pt-6"
+      className="border-t border-border pt-6 lg:border-t-0 lg:pt-0"
     >
       <input ref={endpoint} type="hidden" name="endpoint" defaultValue="" />
       <button type="submit" className={className}>

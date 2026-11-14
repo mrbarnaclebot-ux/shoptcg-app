@@ -10,6 +10,7 @@ import {
 import { Segmented } from "@/components/segmented";
 import { HangTag } from "@/components/hang-tag";
 import { SectionMark } from "@/components/section-mark";
+import { bento } from "@/components/bento";
 import { TicketButton } from "@/components/ticket-button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,11 +96,18 @@ export function PricingForm({ values }: { values: PricingValues }) {
   return (
     <SettingsShell action={savePricingAction}>
       {(e) => (
-        <>
-          <PricingFields values={values} errors={e} />
-          <ConditionFields values={values} errors={e} />
-          <CurrencyFields values={values} errors={e} />
-        </>
+        // Fieldsets sit in plain tiles: a legend rides the fieldset's own edge.
+        <div className={bento}>
+          <div>
+            <PricingFields values={values} errors={e} />
+          </div>
+          <div>
+            <ConditionFields values={values} errors={e} />
+          </div>
+          <div>
+            <CurrencyFields values={values} errors={e} />
+          </div>
+        </div>
       )}
     </SettingsShell>
   );
@@ -124,52 +132,58 @@ export function TableForm(props: {
   return (
     <SettingsShell action={saveTableAction}>
       {(e) => (
-        <div className="flex flex-col gap-2">
-          <div className="mb-4 flex flex-col gap-2">
-            <Segmented
-              name="sellingMode"
-              label="Where you sell"
-              value={mode}
-              options={SELLING_MODES.map(
-                (m) => [m, MODE_COPY[m].label] as const,
-              )}
-              onChange={setMode}
+        <div className={bento}>
+          <div
+            className={`flex flex-col gap-2 ${mode === "online" ? "" : "lg:col-span-2"}`}
+          >
+            <div className="mb-4 flex flex-col gap-2">
+              <Segmented
+                name="sellingMode"
+                label="Where you sell"
+                value={mode}
+                options={SELLING_MODES.map(
+                  (m) => [m, MODE_COPY[m].label] as const,
+                )}
+                onChange={setMode}
+              />
+              <p className="text-sm text-muted-foreground" aria-live="polite">
+                {MODE_COPY[mode].hint}
+              </p>
+            </div>
+            <div className="mb-2 flex flex-col gap-2">
+              <Label htmlFor="tableLabel">Table number</Label>
+              <Input
+                id="tableLabel"
+                name="tableLabel"
+                defaultValue={props.tableLabel}
+                maxLength={8}
+                placeholder="B14"
+                autoCapitalize="characters"
+                aria-invalid={e.tableLabel ? true : undefined}
+                aria-describedby="table-hint table-error"
+                className="max-w-32"
+              />
+              <p id="table-hint" className="text-sm text-muted-foreground">
+                The number the organiser gave your table. Shown on your sign and
+                store page.
+              </p>
+              <Err id="table-error" msg={e.tableLabel} />
+            </div>
+            <Toggle
+              name="nfcEnabled"
+              checked={props.nfcEnabled}
+              label="I have an NFC tag on my table"
+              hint={`Adds "Or tap your phone here" to your printed table sign.`}
             />
-            <p className="text-sm text-muted-foreground" aria-live="polite">
-              {MODE_COPY[mode].hint}
-            </p>
           </div>
-          <div className="mb-2 flex flex-col gap-2">
-            <Label htmlFor="tableLabel">Table number</Label>
-            <Input
-              id="tableLabel"
-              name="tableLabel"
-              defaultValue={props.tableLabel}
-              maxLength={8}
-              placeholder="B14"
-              autoCapitalize="characters"
-              aria-invalid={e.tableLabel ? true : undefined}
-              aria-describedby="table-hint table-error"
-              className="max-w-32"
-            />
-            <p id="table-hint" className="text-sm text-muted-foreground">
-              The number the organiser gave your table. Shown on your sign and
-              store page.
-            </p>
-            <Err id="table-error" msg={e.tableLabel} />
-          </div>
-          <Toggle
-            name="nfcEnabled"
-            checked={props.nfcEnabled}
-            label="I have an NFC tag on my table"
-            hint={`Adds "Or tap your phone here" to your printed table sign.`}
-          />
           {/* Hidden, not unmounted, at a table: a save keeps these as they are. */}
-          <CheckoutFields
-            values={props.checkout}
-            errors={e}
-            hidden={mode !== "online"}
-          />
+          <div hidden={mode !== "online"}>
+            <CheckoutFields
+              values={props.checkout}
+              errors={e}
+              hidden={mode !== "online"}
+            />
+          </div>
         </div>
       )}
     </SettingsShell>
@@ -186,7 +200,7 @@ function CheckoutFields(props: {
   return (
     <fieldset
       hidden={props.hidden}
-      className="mt-6 flex flex-col gap-2 border-t border-border pt-6"
+      className="mt-6 flex flex-col gap-2 border-t border-border pt-6 lg:mt-0 lg:border-t-0 lg:pt-0"
     >
       <legend className="font-semibold">Online orders</legend>
       <p className="mb-2 text-sm text-muted-foreground">
@@ -379,7 +393,7 @@ function ConditionFields({ values, errors: e }: FieldsProps) {
         Market prices are for Near Mint. A played single is priced at this share
         of it, then your price rule and rounding apply.
       </p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
         {CONDITION_FIELDS.map(([code, field]) => (
           <div key={field} className="flex flex-col gap-2">
             <Label htmlFor={field}>
@@ -411,7 +425,7 @@ function CurrencyFields({ values, errors: e }: FieldsProps) {
         Buyers see an approximate price in your currency next to USD. Leave
         blank to show USD only.
       </p>
-      <div className="grid grid-cols-[7rem_1fr] gap-3">
+      <div className="grid max-w-md grid-cols-[7rem_1fr] gap-3">
         <div className="flex flex-col gap-2">
           <Label htmlFor="secondCurrency">Code</Label>
           <Input

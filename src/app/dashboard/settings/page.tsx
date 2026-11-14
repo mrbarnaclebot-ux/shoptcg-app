@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { bento } from "@/components/bento";
 import { lineButton } from "@/components/ticket-button";
 import { requireUser } from "@/lib/session";
 import { ChangeEmail, DeleteAccount } from "./account-forms";
@@ -15,13 +16,17 @@ export default function AccountPage() {
       <h1 className="lg:font-display text-lg font-semibold lg:text-[3.5rem] lg:leading-[0.82] lg:font-black">
         Account
       </h1>
-      <Suspense fallback={<div className="h-6 animate-pulse bg-surface" />}>
-        <SignedInAs />
-      </Suspense>
-      <SignOut className={lineButton} />
-      <ChangePassword />
-      <ChangeEmail />
-      <DeleteAccount />
+      <div className={bento}>
+        <div className="flex flex-col gap-4">
+          <Suspense fallback={<div className="h-6 animate-pulse bg-surface" />}>
+            <SignedInAs />
+          </Suspense>
+          <SignOut className={lineButton} />
+        </div>
+        <ChangePassword />
+        <ChangeEmail />
+        <DeleteAccount />
+      </div>
     </main>
   );
 }

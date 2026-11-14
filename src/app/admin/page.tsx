@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import {
+  bentoColumn,
+  bentoLeft,
+  bentoPage,
+  bentoRight,
+} from "@/components/bento";
 import { Ticket, TicketLoading } from "@/components/ticket";
 import { lineButton } from "@/components/ticket-button";
 import { getDb } from "@/db";
@@ -29,8 +35,11 @@ export const metadata: Metadata = {
 
 export default function AdminPage() {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 pt-8 pb-16">
-      <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
+    // Desktop: invites and system on the left, the long accounts list beside.
+    <main
+      className={`mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 pt-8 pb-16 lg:max-w-[1280px] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:px-8 ${bentoPage}`}
+    >
+      <h1 className="font-display text-[3.5rem] leading-[0.82] font-black lg:col-span-2 lg:mb-8">
         Admin
       </h1>
       <Suspense fallback={<TicketLoading>Checking who you are</TicketLoading>}>
@@ -60,154 +69,170 @@ async function Admin() {
   const now = new Date();
   return (
     <>
-      <Ticket as="div" className="w-full [--stub:2rem]">
-        <CreateInvite />
-      </Ticket>
-      <section
-        aria-labelledby="requests"
-        className="flex w-full flex-col gap-3"
-      >
-        <h2
-          id="requests"
-          className="font-display text-[2rem] leading-none font-black"
+      <div className={`${bentoColumn} ${bentoLeft}`}>
+        <div>
+          <Ticket as="div" className="w-full [--stub:2rem]">
+            <CreateInvite />
+          </Ticket>
+        </div>
+        <section
+          aria-labelledby="requests"
+          className="flex w-full flex-col gap-3"
         >
-          Invite requests
-        </h2>
-        {requests.length === 0 ? (
-          <p className="text-muted-foreground">No one is waiting.</p>
-        ) : (
-          <ul className="divide-y divide-border border-y border-border">
-            {requests.map((r) => (
-              <li key={r.id} className="flex flex-col gap-1 py-3">
-                <p className="font-semibold [overflow-wrap:anywhere]">
-                  {r.name}, {r.email}
-                </p>
-                {r.about && (
-                  <p className="[overflow-wrap:anywhere] whitespace-pre-line">
-                    {r.about}
+          <h2
+            id="requests"
+            className="font-display text-[2rem] leading-none font-black"
+          >
+            Invite requests
+          </h2>
+          {requests.length === 0 ? (
+            <p className="text-muted-foreground">No one is waiting.</p>
+          ) : (
+            <ul className="divide-y divide-border border-y border-border">
+              {requests.map((r) => (
+                <li key={r.id} className="flex flex-col gap-1 py-3">
+                  <p className="font-semibold [overflow-wrap:anywhere]">
+                    {r.name}, {r.email}
                   </p>
-                )}
-                <p className="text-sm text-muted-foreground">
-                  Asked {day.format(r.createdAt)}.
-                </p>
-                <AnswerRequest id={r.id} name={r.name} />
+                  {r.about && (
+                    <p className="[overflow-wrap:anywhere] whitespace-pre-line">
+                      {r.about}
+                    </p>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Asked {day.format(r.createdAt)}.
+                  </p>
+                  <AnswerRequest id={r.id} name={r.name} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section
+          aria-labelledby="system"
+          className="flex w-full flex-col gap-3"
+        >
+          <h2
+            id="system"
+            className="font-display text-[2rem] leading-none font-black"
+          >
+            System
+          </h2>
+          <ul className="divide-y divide-border border-y border-border">
+            <li className="py-3">
+              {priced
+                ? `Card prices last updated ${priced}.`
+                : "No card prices stored yet."}
+            </li>
+            {warnings.map((w) => (
+              <li key={w} className="py-3 [overflow-wrap:anywhere]">
+                {w}.
               </li>
             ))}
+            {warnings.length === 0 && (
+              <li className="py-3">
+                Mail, push alerts, image uploads and paid prices are all set up.
+              </li>
+            )}
           </ul>
-        )}
-      </section>
-      <section aria-labelledby="system" className="flex w-full flex-col gap-3">
-        <h2
-          id="system"
-          className="font-display text-[2rem] leading-none font-black"
+        </section>
+        <section
+          aria-labelledby="invites"
+          className="flex w-full flex-col gap-3"
         >
-          System
-        </h2>
-        <ul className="divide-y divide-border border-y border-border">
-          <li className="py-3">
-            {priced
-              ? `Card prices last updated ${priced}.`
-              : "No card prices stored yet."}
-          </li>
-          {warnings.map((w) => (
-            <li key={w} className="py-3 [overflow-wrap:anywhere]">
-              {w}.
-            </li>
-          ))}
-          {warnings.length === 0 && (
-            <li className="py-3">
-              Mail, push alerts, image uploads and paid prices are all set up.
-            </li>
+          <h2
+            id="invites"
+            className="font-display text-[2rem] leading-none font-black"
+          >
+            Invites sent
+          </h2>
+          {invites.length === 0 ? (
+            <p className="text-muted-foreground">No invites yet.</p>
+          ) : (
+            <ul className="divide-y divide-border border-y border-border">
+              {invites.map((i) => (
+                <li
+                  key={i.id}
+                  data-invite={i.id}
+                  className="flex flex-col gap-1 py-3"
+                >
+                  <p className="font-semibold [overflow-wrap:anywhere]">
+                    {inviteStatus(i, now)}
+                  </p>
+                  <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
+                    {i.label ? `${i.label}. ` : ""}Created{" "}
+                    {day.format(i.createdAt)}. Expires {day.format(i.expiresAt)}
+                    .
+                  </p>
+                  {canRevoke(i, now) && <RevokeInvite id={i.id} />}
+                </li>
+              ))}
+            </ul>
           )}
-        </ul>
-      </section>
-      <section aria-labelledby="invites" className="flex w-full flex-col gap-3">
-        <h2
-          id="invites"
-          className="font-display text-[2rem] leading-none font-black"
+          {invites.length === SHOWN && <Capped />}
+        </section>
+      </div>
+      <div className={`${bentoColumn} ${bentoRight}`}>
+        <section
+          aria-labelledby="accounts"
+          className="flex w-full flex-col gap-3"
         >
-          Invites sent
-        </h2>
-        {invites.length === 0 ? (
-          <p className="text-muted-foreground">No invites yet.</p>
-        ) : (
+          <h2
+            id="accounts"
+            className="font-display text-[2rem] leading-none font-black"
+          >
+            Accounts
+          </h2>
           <ul className="divide-y divide-border border-y border-border">
-            {invites.map((i) => (
-              <li
-                key={i.id}
-                data-invite={i.id}
-                className="flex flex-col gap-1 py-3"
-              >
+            {accounts.map((a) => (
+              <li key={a.id} className="flex flex-col gap-1 py-3">
                 <p className="font-semibold [overflow-wrap:anywhere]">
-                  {inviteStatus(i, now)}
+                  {a.email}
                 </p>
                 <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
-                  {i.label ? `${i.label}. ` : ""}Created{" "}
-                  {day.format(i.createdAt)}. Expires {day.format(i.expiresAt)}.
+                  Joined {day.format(a.joined)}.{" "}
+                  {a.invited
+                    ? `Invited${a.invite ? `: ${a.invite}` : ""}.`
+                    : "No invite."}
                 </p>
-                {canRevoke(i, now) && <RevokeInvite id={i.id} />}
+                {a.slug && a.storeId ? (
+                  <>
+                    <p className="text-sm [overflow-wrap:anywhere]">
+                      <Link
+                        href={`/${a.slug}`}
+                        className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4"
+                      >
+                        {a.storeName}
+                      </Link>{" "}
+                      <span className="text-muted-foreground">
+                        /{a.slug}.{" "}
+                        {a.suspended ? "Stopped by admin" : LIVE[a.live]}.{" "}
+                        {a.inStock} in stock.{" "}
+                        {a.lastSale
+                          ? `Last sale ${day.format(a.lastSale)}.`
+                          : "No sales yet."}
+                      </span>
+                    </p>
+                    <VendorControls
+                      storeId={a.storeId}
+                      name={a.storeName ?? a.slug}
+                      suspended={a.suspended}
+                      hasImages={a.hasImages}
+                    />
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No store.</p>
+                )}
               </li>
             ))}
           </ul>
-        )}
-        {invites.length === SHOWN && <Capped />}
-      </section>
-      <section
-        aria-labelledby="accounts"
-        className="flex w-full flex-col gap-3"
+          {accounts.length === SHOWN && <Capped />}
+        </section>
+      </div>
+      <Link
+        href="/dashboard"
+        className={`${lineButton} self-start lg:col-span-2 lg:mt-8 lg:justify-self-start`}
       >
-        <h2
-          id="accounts"
-          className="font-display text-[2rem] leading-none font-black"
-        >
-          Accounts
-        </h2>
-        <ul className="divide-y divide-border border-y border-border">
-          {accounts.map((a) => (
-            <li key={a.id} className="flex flex-col gap-1 py-3">
-              <p className="font-semibold [overflow-wrap:anywhere]">
-                {a.email}
-              </p>
-              <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
-                Joined {day.format(a.joined)}.{" "}
-                {a.invited
-                  ? `Invited${a.invite ? `: ${a.invite}` : ""}.`
-                  : "No invite."}
-              </p>
-              {a.slug && a.storeId ? (
-                <>
-                  <p className="text-sm [overflow-wrap:anywhere]">
-                    <Link
-                      href={`/${a.slug}`}
-                      className="inline-flex min-h-11 items-center font-semibold underline underline-offset-4"
-                    >
-                      {a.storeName}
-                    </Link>{" "}
-                    <span className="text-muted-foreground">
-                      /{a.slug}.{" "}
-                      {a.suspended ? "Stopped by admin" : LIVE[a.live]}.{" "}
-                      {a.inStock} in stock.{" "}
-                      {a.lastSale
-                        ? `Last sale ${day.format(a.lastSale)}.`
-                        : "No sales yet."}
-                    </span>
-                  </p>
-                  <VendorControls
-                    storeId={a.storeId}
-                    name={a.storeName ?? a.slug}
-                    suspended={a.suspended}
-                    hasImages={a.hasImages}
-                  />
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">No store.</p>
-              )}
-            </li>
-          ))}
-        </ul>
-        {accounts.length === SHOWN && <Capped />}
-      </section>
-      <Link href="/dashboard" className={`${lineButton} self-start`}>
         Back to dashboard
       </Link>
     </>
