@@ -1,6 +1,7 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
 import { getDb } from "@/db";
+import { getAuth } from "@/lib/auth";
 import { BUYER_COOKIE } from "@/lib/buyer-session";
 import { canonicalRedirect } from "@/lib/canonical-host";
 import { buyerRequest } from "@/lib/request-reads";
@@ -43,6 +44,7 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL("/join", req.url));
     return NextResponse.rewrite(new URL("/_not-found", req.url));
   }
+  if (req.nextUrl.pathname === "/login") return signedInToDashboard(req);
   if (!CHECKED.test(req.nextUrl.pathname)) return;
   const [slug, page, id] = req.nextUrl.pathname.slice(1).split("/");
   if (slug === "dashboard") {
@@ -62,6 +64,19 @@ export async function proxy(req: NextRequest) {
     );
   if (await missing(req, slug, page, id))
     return NextResponse.rewrite(new URL("/_not-found", req.url));
+}
+
+/**
+ * A vendor who is already signed in skips the sign-in form. The session is
+ * checked, not just the cookie: an expired cookie would otherwise bounce
+ * between here and the dashboard (requireUser sends it back to /login).
+ */
+async function signedInToDashboard(req: NextRequest) {
+  if (!getSessionCookie(req)) return;
+  const session = await getAuth()
+    .api.getSession({ headers: req.headers })
+    .catch(() => null);
+  if (session) return NextResponse.redirect(new URL("/dashboard", req.url));
 }
 
 export const config = {
