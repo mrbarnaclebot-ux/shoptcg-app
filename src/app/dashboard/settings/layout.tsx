@@ -9,7 +9,7 @@ export default function SettingsLayout({
   children,
 }: LayoutProps<"/dashboard/settings">) {
   return (
-    <div className="mx-auto grid w-full max-w-lg flex-1 content-start gap-x-14 gap-y-6 px-4 pt-8 pb-16 md:px-6 lg:max-w-[1000px] lg:grid-cols-[14rem_minmax(0,32rem)] lg:px-8">
+    <div className="mx-auto grid w-full max-w-lg flex-1 content-start gap-x-14 gap-y-6 px-4 pt-8 pb-16 md:px-6 lg:max-w-[1280px] lg:grid-cols-[14rem_minmax(0,1fr)] lg:px-8">
       {/* Who is signed in decides the rows, so the menu streams. */}
       <Suspense fallback={<div className="hidden lg:block" />}>
         <Menu />

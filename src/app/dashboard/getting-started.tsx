@@ -69,7 +69,7 @@ export async function GettingStarted({ store }: { store: Store }) {
   return (
     <section
       aria-labelledby="tips-title"
-      className="flex flex-col gap-4 px-5 py-5 shadow-[inset_0_0_0_1.5px_var(--border-strong)]"
+      className="flex flex-col gap-4 px-5 py-5 shadow-[inset_0_0_0_1.5px_var(--border-strong)] lg:p-0 lg:shadow-none"
     >
       <div className="flex flex-col gap-1">
         <h2

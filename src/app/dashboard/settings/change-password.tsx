@@ -15,7 +15,7 @@ export function ChangePassword() {
   return (
     <section
       aria-labelledby="password-h"
-      className="flex max-w-md flex-col gap-4 border-t border-border pt-6"
+      className="flex max-w-md flex-col gap-4 border-t border-border pt-6 lg:max-w-none lg:border-t-0 lg:pt-0"
     >
       <h2 id="password-h" className="text-lg font-semibold">
         Change password

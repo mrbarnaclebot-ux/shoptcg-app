@@ -12,6 +12,12 @@ import { CashBox } from "./cash-box";
 import { waitingCount } from "@/lib/request-reads";
 import { getStoreByOwner } from "@/lib/stores";
 import { RefreshAt } from "@/components/refresh-at";
+import {
+  bentoColumn,
+  bentoLeft,
+  bentoPage,
+  bentoRight,
+} from "@/components/bento";
 import { CreateStoreForm } from "./create-store-form";
 import { CopyLink } from "./copy-link";
 import { GettingStarted } from "./getting-started";
@@ -48,40 +54,65 @@ async function Dashboard({
     getStoreByOwner(getDb(), user.id),
     hasPassword(getDb(), user.id),
   ]);
+  const banner = !passworded && (
+    <section
+      aria-label="Set a password"
+      className="flex flex-col gap-2 bg-surface px-5 py-4 lg:col-span-2 lg:mb-6"
+    >
+      <p className="font-semibold">
+        Set a password so you can sign in without an email link.
+      </p>
+      <Link
+        href="/welcome"
+        className="self-start text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+      >
+        Set password
+      </Link>
+    </section>
+  );
+  if (!store)
+    return (
+      <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-10 px-4 pt-8 pb-16">
+        {banner}
+        <NewStore />
+      </main>
+    );
+  // Desktop: the store and its requests on the left, the boxes you glance at
+  // on the right. A phone keeps one stack in the order below (order-*).
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-10 px-4 pt-8 pb-16">
-      {/* Accounts from before passwords: one step and email links are done with. */}
-      {!passworded && (
-        <section
-          aria-label="Set a password"
-          className="flex flex-col gap-2 bg-surface px-5 py-4"
-        >
-          <p className="font-semibold">
-            Set a password so you can sign in without an email link.
-          </p>
-          <Link
-            href="/welcome"
-            className="self-start text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
-          >
-            Set password
-          </Link>
-        </section>
+    <main
+      className={`mx-auto flex w-full max-w-xl flex-1 flex-col gap-10 px-4 pt-8 pb-16 lg:max-w-[1280px] lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:px-8 ${bentoPage}`}
+    >
+      {banner}
+      {created && (
+        <div className="lg:col-span-2 lg:mb-6">
+          <StoreCreated slug={store.slug} />
+        </div>
       )}
-      {store ? (
-        <>
-          {created && <StoreCreated slug={store.slug} />}
+      <div className={`${bentoColumn} ${bentoLeft}`}>
+        <div className="order-1 lg:order-none">
           <StoreSummary
             store={store}
             waiting={await waitingCount(getDb(), store.id)}
           />
-          {!store.tipsDismissedAt && <GettingStarted store={store} />}
-          <Till storeId={store.id} closing={store.live === "off"} />
+        </div>
+        <div className="order-4 lg:order-none">
           <RequestQueue storeId={store.id} mode={store.sellingMode} />
+        </div>
+      </div>
+      <div className={`${bentoColumn} ${bentoRight}`}>
+        <div className="order-3 lg:order-none">
+          <Till storeId={store.id} closing={store.live === "off"} />
+        </div>
+        <div className="order-5 lg:order-none">
           <Floor slug={store.slug} />
-        </>
-      ) : (
-        <NewStore />
-      )}
+        </div>
+        {!store.tipsDismissedAt && (
+          <div className="order-2 lg:order-none">
+            <GettingStarted store={store} />
+          </div>
+        )}
+      </div>
     </main>
   );
 }

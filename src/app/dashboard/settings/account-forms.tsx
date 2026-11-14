@@ -34,7 +34,7 @@ export function ChangeEmail() {
   return (
     <section
       aria-labelledby="email-h"
-      className="flex max-w-md flex-col gap-4 border-t border-border pt-6"
+      className="flex max-w-md flex-col gap-4 border-t border-border pt-6 lg:max-w-none lg:border-t-0 lg:pt-0"
     >
       <h2 id="email-h" className="text-lg font-semibold">
         Change email
@@ -86,7 +86,7 @@ export function DeleteAccount() {
   return (
     <section
       aria-labelledby="delete-h"
-      className="flex max-w-md flex-col gap-4 border-t border-border pt-6"
+      className="flex max-w-md flex-col gap-4 border-t border-border pt-6 lg:max-w-none lg:border-t-0 lg:pt-0"
     >
       <h2 id="delete-h" className="text-lg font-semibold text-danger">
         Delete account

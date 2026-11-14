@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { bento } from "@/components/bento";
 import { SectionMark } from "@/components/section-mark";
 import { requireStore } from "@/lib/session";
 import { SettingsPage } from "../section";
@@ -18,7 +19,7 @@ export default function StoreProfilePage() {
 async function Profile() {
   const { store } = await requireStore();
   return (
-    <>
+    <div className={bento}>
       <section aria-labelledby="name-h" className="flex flex-col gap-4">
         <SectionMark n={1} id="name-h">
           Name
@@ -26,6 +27,6 @@ async function Profile() {
         <NameForm name={store.name} />
       </section>
       <StoreImages banner={store.bannerUrl} avatar={store.avatarUrl} />
-    </>
+    </div>
   );
 }
