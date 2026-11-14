@@ -2,7 +2,7 @@
 
 Read this first. Update it at the end of every phase, merge or deploy, in the same PR as the work.
 
-_Last updated: 2026-11-13. The product is **tcgmart.app**. `main` and `production` are level after PR #41 (change email, delete account, requester emails, Sentry wiring); #40 password sign-in and invite requests; #39 app icon, #38 help screenshots, #37 onboarding tips and `/help`. The app icon is static PNGs (`public/icon-192.png`, `public/icon-512.png`, `src/app/apple-icon.png`, `src/app/icon.png`, `src/app/favicon.ico`) cut from an OpenRouter (Gemini image) render the owner picked. Production serves https://tcgmart.app and staging https://staging.tcgmart.app; both switched, redirected and smoked on 2026-11-13. Email sends from the verified tcgmart.app Resend domain (`EMAIL_FROM` set 2026-11-13; a real sign-in link was delivered from `receipts@tcgmart.app`)._
+_Last updated: 2026-11-13. The product is **tcgmart.app**. `main` and `production` are level after PR #46 (condition pricing, recent sales, perf quick wins); #45 online checkout; #41 change email, delete account, requester emails, Sentry wiring; #40 password sign-in and invite requests; #39 app icon, #38 help screenshots, #37 onboarding tips and `/help`. The app icon is static PNGs (`public/icon-192.png`, `public/icon-512.png`, `src/app/apple-icon.png`, `src/app/icon.png`, `src/app/favicon.ico`) cut from an OpenRouter (Gemini image) render the owner picked. Production serves https://tcgmart.app and staging https://staging.tcgmart.app; both switched, redirected and smoked on 2026-11-13. Email sends from the verified tcgmart.app Resend domain (`EMAIL_FROM` set 2026-11-13; a real sign-in link was delivered from `receipts@tcgmart.app`)._
 
 ## Where things stand
 
