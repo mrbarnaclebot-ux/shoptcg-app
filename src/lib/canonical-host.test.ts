@@ -25,4 +25,12 @@ describe("canonicalRedirect", () => {
     expect(canonicalRedirect("GET", OLD, url("/api/health"), env)).toBeNull();
     expect(canonicalRedirect("GET", null, url("/"), env)).toBeNull();
   });
+
+  it("leaves Next's own calls to itself alone (the page after sign-in)", () => {
+    for (const host of ["localhost:8080", "127.0.0.1:3000", "[::1]:8080"])
+      expect(canonicalRedirect("GET", host, url("/dashboard"), env)).toBeNull();
+    expect(
+      canonicalRedirect("GET", "localhost.evil.test", url("/"), env)?.href,
+    ).toBe("https://tcgmart.app/");
+  });
 });
