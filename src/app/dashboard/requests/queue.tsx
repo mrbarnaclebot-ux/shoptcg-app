@@ -1,3 +1,4 @@
+import { Inbox } from "lucide-react";
 import Link from "next/link";
 import { SectionMark } from "@/components/section-mark";
 import { lineButton } from "@/components/ticket-button";
@@ -40,7 +41,7 @@ export async function RequestQueue({
   const takings = sold.reduce((sum, s) => sum + Number(s.total), 0);
   return (
     <section aria-labelledby="requests-h" className="flex flex-col gap-4">
-      <SectionMark n={1} id="requests-h">
+      <SectionMark n={1} id="requests-h" icon={Inbox}>
         Requests
       </SectionMark>
       <InstallNudge />

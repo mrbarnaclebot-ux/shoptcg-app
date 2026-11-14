@@ -1,4 +1,5 @@
 import { cn } from "cn";
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 /**
@@ -11,8 +12,11 @@ export function SectionMark(props: {
   level?: "h2" | "h3" | "legend";
   children: ReactNode;
   className?: string;
+  /** A picture of the section beside its title; grey, since orange means tap. */
+  icon?: LucideIcon;
 }) {
   const Tag = props.level ?? "h2";
+  const Icon = props.icon;
   return (
     <Tag
       id={props.id}
@@ -27,6 +31,12 @@ export function SectionMark(props: {
       >
         {String(props.n).padStart(2, "0")}
       </span>
+      {Icon && (
+        <Icon
+          aria-hidden
+          className="size-5 shrink-0 self-center stroke-[1.75] text-muted-foreground"
+        />
+      )}
       {props.children}
     </Tag>
   );

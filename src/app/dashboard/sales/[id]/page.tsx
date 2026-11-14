@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { ArrowLeft } from "lucide-react";
 import { ReceiptSummary } from "@/components/receipt-summary";
 import { Stamp } from "@/components/stamp";
 import { StubValue, Ticket, TicketLoading } from "@/components/ticket";
@@ -21,7 +22,7 @@ export default function ReceiptPage({
   params,
 }: PageProps<"/dashboard/sales/[id]">) {
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-5 px-4 pt-6 pb-16">
+    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col gap-5 px-4 pt-6 pb-16 lg:grid lg:max-w-[1100px] lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start lg:gap-10 lg:px-8 lg:pt-8">
       <Suspense fallback={<TicketLoading>Loading receipt</TicketLoading>}>
         <Receipt params={params} />
       </Suspense>
@@ -65,40 +66,43 @@ async function Receipt({
         </p>
         <ReceiptSummary sale={sale} />
       </Ticket>
-      {sale.void ? (
-        <div role="status" className="flex flex-col gap-1">
-          <p className="font-semibold">
-            Voided {receiptTime(sale.void.createdAt, sale.timeZone)}.{" "}
-            {sale.void.restocked
-              ? "The items went back in stock."
-              : "The items stayed out of stock."}
-          </p>
-          {sale.void.reason && (
-            <p className="text-muted-foreground [overflow-wrap:anywhere]">
-              {sale.void.reason}
+      <div className="flex flex-col gap-5 lg:border lg:border-border lg:p-8">
+        {sale.void ? (
+          <div role="status" className="flex flex-col gap-1">
+            <p className="font-semibold">
+              Voided {receiptTime(sale.void.createdAt, sale.timeZone)}.{" "}
+              {sale.void.restocked
+                ? "The items went back in stock."
+                : "The items stayed out of stock."}
             </p>
-          )}
-          <p className="text-sm text-muted-foreground">
-            It isn&apos;t in your report, ledger or today&apos;s total.
-          </p>
-        </div>
-      ) : sale.buyerEmail ? (
-        <ReceiptEmailStatus
-          saleId={sale.id}
-          status={sale.emailStatus}
-          email={sale.buyerEmail}
-          attemptsLeft={MAX_ATTEMPTS - (sale.emailAttempts ?? 0)}
-        />
-      ) : (
-        <p>Sold at the table. No receipt was emailed.</p>
-      )}
-      <p className="text-sm text-muted-foreground">
-        Receipts can&apos;t be changed once saved.
-      </p>
-      {!sale.void && <VoidSale saleId={sale.id} receiptNo={sale.receiptNo} />}
-      <Link href="/dashboard/sales" className={`${lineButton} self-start`}>
-        All sales
-      </Link>
+            {sale.void.reason && (
+              <p className="text-muted-foreground [overflow-wrap:anywhere]">
+                {sale.void.reason}
+              </p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              It isn&apos;t in your report, ledger or today&apos;s total.
+            </p>
+          </div>
+        ) : sale.buyerEmail ? (
+          <ReceiptEmailStatus
+            saleId={sale.id}
+            status={sale.emailStatus}
+            email={sale.buyerEmail}
+            attemptsLeft={MAX_ATTEMPTS - (sale.emailAttempts ?? 0)}
+          />
+        ) : (
+          <p>Sold at the table. No receipt was emailed.</p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          Receipts can&apos;t be changed once saved.
+        </p>
+        {!sale.void && <VoidSale saleId={sale.id} receiptNo={sale.receiptNo} />}
+        <Link href="/dashboard/sales" className={`${lineButton} self-start`}>
+          <ArrowLeft aria-hidden className="size-5" />
+          All sales
+        </Link>
+      </div>
     </>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "cn";
-import { Upload } from "lucide-react";
+import { ImageIcon, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { SectionMark } from "@/components/section-mark";
@@ -33,7 +33,7 @@ export function StoreImages(props: {
 }) {
   return (
     <section aria-labelledby="look-h" className="flex flex-col gap-4">
-      <SectionMark n={2} id="look-h">
+      <SectionMark n={2} id="look-h" icon={ImageIcon}>
         Banner and profile image
       </SectionMark>
       <p className="text-sm text-muted-foreground">

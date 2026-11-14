@@ -1,5 +1,6 @@
 "use client";
 
+import { Coins, Layers, Percent } from "lucide-react";
 import {
   startTransition,
   useActionState,
@@ -334,7 +335,7 @@ function PricingFields({ values, errors: e }: FieldsProps) {
   const example = vendorPrice(48.1, Number(pct) || 0, Number(rounding), null);
   return (
     <fieldset className="flex flex-col gap-4">
-      <SectionMark n={1} level="legend" className="mb-4">
+      <SectionMark n={1} level="legend" className="mb-4" icon={Percent}>
         Price rule
       </SectionMark>
       <div className="flex flex-col gap-2">
@@ -386,7 +387,7 @@ function PricingFields({ values, errors: e }: FieldsProps) {
 function ConditionFields({ values, errors: e }: FieldsProps) {
   return (
     <fieldset className="flex flex-col gap-4">
-      <SectionMark n={2} level="legend" className="mb-4">
+      <SectionMark n={2} level="legend" className="mb-4" icon={Layers}>
         Played cards
       </SectionMark>
       <p className="text-sm text-muted-foreground">
@@ -418,7 +419,7 @@ function ConditionFields({ values, errors: e }: FieldsProps) {
 function CurrencyFields({ values, errors: e }: FieldsProps) {
   return (
     <fieldset className="flex flex-col gap-4">
-      <SectionMark n={3} level="legend" className="mb-4">
+      <SectionMark n={3} level="legend" className="mb-4" icon={Coins}>
         Second currency
       </SectionMark>
       <p className="text-sm text-muted-foreground">

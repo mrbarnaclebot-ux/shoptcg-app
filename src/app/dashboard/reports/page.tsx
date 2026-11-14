@@ -26,7 +26,7 @@ type Search = Pick<PageProps<"/dashboard/reports">, "searchParams">;
 
 export default function ReportPage({ searchParams }: Search) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-start gap-4 px-4 pt-8 pb-16">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-start gap-4 px-4 pt-8 pb-16 lg:max-w-[1280px] lg:px-8">
       <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
         Report
       </h1>
@@ -295,32 +295,36 @@ async function Report({ searchParams }: Search) {
                 <Row k="Discounts given">{usd(Number(sum.discounts))}</Row>
               </dl>
             </div>
-            <BestSellers rows={report.bestSellers} />
-            <div className="mt-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <Heading>Sales</Heading>
-                <ExportButton
-                  href={`/dashboard/reports/export?from=${range.from}&to=${range.to}`}
-                  unit="line"
-                >
-                  Export CSV
-                </ExportButton>
+            {/* Desktop: what sold beside who bought it. */}
+            <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-10">
+              <BestSellers rows={report.bestSellers} />
+              <div className="mt-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <Heading>Sales</Heading>
+                  <ExportButton
+                    href={`/dashboard/reports/export?from=${range.from}&to=${range.to}`}
+                    unit="line"
+                  >
+                    Export CSV
+                  </ExportButton>
+                </div>
+                {sum.sales > SALES_SHOWN && (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Showing the newest {SALES_SHOWN}. The CSV has all{" "}
+                    {sum.sales}.
+                  </p>
+                )}
+                <ul className="mt-2 border-b border-border">
+                  {report.sales.map((s) => (
+                    <SaleRow
+                      key={s.id}
+                      s={s}
+                      store={store.name}
+                      oneDay={range.from === range.to}
+                    />
+                  ))}
+                </ul>
               </div>
-              {sum.sales > SALES_SHOWN && (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Showing the newest {SALES_SHOWN}. The CSV has all {sum.sales}.
-                </p>
-              )}
-              <ul className="mt-2 border-b border-border">
-                {report.sales.map((s) => (
-                  <SaleRow
-                    key={s.id}
-                    s={s}
-                    store={store.name}
-                    oneDay={range.from === range.to}
-                  />
-                ))}
-              </ul>
             </div>
           </>
         )}
