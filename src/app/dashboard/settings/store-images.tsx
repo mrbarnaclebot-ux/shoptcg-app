@@ -22,7 +22,7 @@ const SLOTS = {
   },
   avatar: {
     title: "Profile image",
-    hint: "1000 x 1000 pixels. Your logo or face.",
+    hint: "400 x 400 pixels. Your logo or face.",
     shape: "aspect-square w-32",
   },
 } as const;

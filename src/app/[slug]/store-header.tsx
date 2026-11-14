@@ -54,8 +54,8 @@ export function StoreHeader(props: {
         <img
           src={store.avatarUrl}
           alt=""
-          width={1000}
-          height={1000}
+          width={400}
+          height={400}
           className={`relative z-[1] size-[72px] -rotate-2 border-4 border-[var(--paper)] bg-surface object-cover lg:size-28 ${store.bannerUrl ? "-mt-9 ml-1 lg:-mt-14" : "mt-6 md:mt-10"}`}
         />
       )}

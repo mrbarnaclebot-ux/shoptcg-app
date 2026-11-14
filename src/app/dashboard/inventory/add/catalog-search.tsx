@@ -311,6 +311,12 @@ function ResultItem({
           <span className="num shrink-0 text-right text-[0.9375rem] font-semibold">
             <span className="sr-only">Market </span>
             {usd(Number(item.market))}
+            {/* Search prices a single at Near Mint; condition comes after. */}
+            {item.kind === "raw" && (
+              <span className="block text-xs font-normal text-muted-foreground">
+                NM
+              </span>
+            )}
           </span>
         )}
       </button>

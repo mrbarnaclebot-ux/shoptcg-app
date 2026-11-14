@@ -186,4 +186,49 @@ describe("syncPrices", () => {
       points.filter((p) => p.date === "2026-11-02").map((p) => p.catalogItemId),
     ).toEqual([a.id]);
   });
+
+  it("keeps recent sales counts without touching our own market", async () => {
+    const [item] = await list([hit({ provider: "sales", providerId: "s" })]);
+    const sales = fakeProvider([], 20);
+    const price = sales.getPrices;
+    sales.getPrices = async (refs) =>
+      (await price(refs)).map((q) => ({
+        ...q,
+        recent: [
+          { date: "2026-11-19", marketUsd: 99, sales: 4 },
+          { date: "2026-11-20", marketUsd: 19, sales: 2 },
+          { date: "2026-11-21", marketUsd: 21, sales: null },
+        ],
+      }));
+    const pick = (n: string) => (n === "sales" ? sales : null);
+    // Yesterday was priced by us at 18; the provider's 99 must not replace it.
+    await db.insert(schema.pricePoint).values({
+      catalogItemId: item.id,
+      date: "2026-11-19",
+      marketUsd: "18.00",
+      source: "fake",
+    });
+    await syncPrices(db, "2026-11-21", pick);
+    const rows = (await db.select().from(schema.pricePoint))
+      .filter((p) => p.catalogItemId === item.id)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    expect(rows.map((p) => [p.date, p.marketUsd, p.sales])).toEqual([
+      ["2026-11-19", "18.00", 4],
+      ["2026-11-20", "19.00", 2],
+      ["2026-11-21", "20.00", null],
+    ]);
+  });
+
+  it("counts a PPT single or slab as 2 credits against maxCalls", async () => {
+    await db.execute(sql`update listing set active = false`);
+    await list([
+      hit({ provider: "ppt", providerId: "p1" }),
+      hit({ provider: "ppt", providerId: "p2" }),
+    ]);
+    const res = await syncPrices(db, "2026-11-22", only("ppt"), {
+      maxCalls: 3,
+      maxBackfill: 0,
+    });
+    expect(res).toMatchObject({ items: 1, credits: 2 });
+  });
 });

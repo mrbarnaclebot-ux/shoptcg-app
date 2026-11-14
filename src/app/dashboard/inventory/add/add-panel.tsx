@@ -11,12 +11,7 @@ import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CatalogItem } from "@/db/schema";
-import {
-  CONDITIONS,
-  GRADERS,
-  GRADES,
-  type Condition,
-} from "@/lib/listing-input";
+import { CONDITIONS, GRADERS, GRADES, type Condition } from "@/lib/condition";
 import type { Grader } from "@/lib/pricing/provider";
 import { toast } from "@/lib/toast";
 import { addCatalogAction } from "../actions";

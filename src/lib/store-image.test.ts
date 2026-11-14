@@ -29,7 +29,7 @@ describe("processImage", () => {
     const avatar = await sharp(
       await processImage("avatar", await photo(600, 900, "png")),
     ).metadata();
-    expect([avatar.width, avatar.height]).toEqual([1000, 1000]);
+    expect([avatar.width, avatar.height]).toEqual([400, 400]);
   });
 
   it("strips the original's metadata", async () => {
@@ -56,8 +56,8 @@ describe("processImage", () => {
 
   it("refuses an image too small to fill the slot, or over 4 MB", async () => {
     await expect(
-      processImage("avatar", await photo(300, 300, "png")),
-    ).rejects.toThrow(/at least 500 x 500/);
+      processImage("avatar", await photo(150, 150, "png")),
+    ).rejects.toThrow(/at least 200 x 200/);
     const huge = Buffer.concat([
       await photo(1600, 600, "jpeg"),
       Buffer.alloc(4 * 1024 * 1024),

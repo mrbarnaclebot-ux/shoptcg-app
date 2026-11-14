@@ -82,9 +82,18 @@ describe("listings", () => {
       setName: "151",
       kind: "raw",
       condition: "LP",
-      market: 48.1,
+      // LP is 85% of the Near Mint market by default.
+      market: 40.89,
+      nmMarket: 48.1,
+      conditionPct: 85,
       asOf: "2026-11-07",
     });
+    // The store sets the share; NM itself is never discounted.
+    await db
+      .update(schema.store)
+      .set({ condLpPct: 50 })
+      .where(eq(schema.store.id, a));
+    expect((await listStock(db, a, { q: "chari" }))[0].market).toBe(24.05);
     expect(await listStock(db, a, { kind: "sealed" })).toHaveLength(0);
     expect(await listStock(db, a, { language: "ja" })).toHaveLength(0);
   });

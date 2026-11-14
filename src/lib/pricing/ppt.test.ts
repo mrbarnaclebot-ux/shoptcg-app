@@ -57,6 +57,12 @@ describe("ppt adapter (recorded fixtures)", () => {
         sampleSize: 241,
       },
     ]);
+    // A single's nightly price asks for a week of history: its sales counts.
+    expect(calls[0].searchParams.get("includeHistory")).toBe("true");
+    expect(calls[0].searchParams.get("days")).toBe("7");
+    serve([["/cards?", history]]);
+    const [withSales] = await client.getPrices([raw]);
+    expect(withSales.recent?.map((p) => p.sales)).toEqual([3, 3, 4, null]);
     serve([
       ["/sealed-products?", { data: sealed.data[0] }],
       ["/cards?", gradedCard],
@@ -101,17 +107,20 @@ describe("ppt adapter (recorded fixtures)", () => {
       number: null,
     });
     serve([["/cards?", history]]);
-    expect((await client.getHistory(raw, 5)).map((p) => p.date)).toEqual([
-      "2026-11-04",
-      "2026-11-05",
-      "2026-11-06",
-      "2026-11-07",
+    // Each day's Near Mint sales come along; the last day has no count yet.
+    expect(
+      (await client.getHistory(raw, 5)).map((p) => [p.date, p.sales]),
+    ).toEqual([
+      ["2026-11-04", 3],
+      ["2026-11-05", 3],
+      ["2026-11-06", 4],
+      ["2026-11-07", null],
     ]);
     serve([["/cards?", gradedCard]]);
     expect(await client.getHistory(psa, 30)).toEqual([
-      { date: "2026-11-02", marketUsd: 1172.1 },
-      { date: "2026-11-04", marketUsd: 1250 },
-      { date: "2026-11-05", marketUsd: 1200 },
+      { date: "2026-11-02", marketUsd: 1172.1, sales: 5 },
+      { date: "2026-11-04", marketUsd: 1250, sales: 1 },
+      { date: "2026-11-05", marketUsd: 1200, sales: 1 },
     ]);
   });
 

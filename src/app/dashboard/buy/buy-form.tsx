@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { BuyMethod } from "@/db/schema";
 import { usd } from "@/lib/format";
-import { CONDITIONS } from "@/lib/listing-input";
+import { CONDITIONS } from "@/lib/condition";
 import { toast } from "@/lib/toast";
 import { buyAction } from "./actions";
 

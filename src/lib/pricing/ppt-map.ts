@@ -25,12 +25,15 @@ export interface PptCard {
   prices?: { market?: number | null; low?: number | null; listings?: number };
   ebay?: {
     salesByGrade?: Record<string, PptGradeStats>;
-    priceHistory?: Record<string, Record<string, { average?: number }>>;
+    priceHistory?: Record<
+      string,
+      Record<string, { average?: number; count?: number }>
+    >;
   };
   priceHistory?: {
     conditions?: Record<
       string,
-      { history?: { date: string; market: number }[] }
+      { history?: { date: string; market: number; volume?: number | null }[] }
     >;
   };
 }
@@ -126,18 +129,30 @@ export function quote<T extends PriceRef>(
       lowUsd,
       highUsd,
       sampleSize: num(s.count),
+      recent: history(ref, data).slice(-RECENT_DAYS),
     };
   }
   const market = positive(c.prices?.market);
   if (market === null) return null;
   const sampleSize = num(c.prices?.listings);
+  const recent = history(ref, data).slice(-RECENT_DAYS);
   return {
     ref,
     marketUsd: market,
     lowUsd: positive(c.prices?.low),
     highUsd: null,
     sampleSize,
+    ...(recent.length ? { recent } : {}),
   };
+}
+
+/** Days of sales the nightly price call asks for and keeps. */
+export const RECENT_DAYS = 7;
+
+// A count we can show: whole, zero or more. Anything else is "unknown".
+function sold(v: unknown) {
+  const n = num(v);
+  return n !== null && n >= 0 ? Math.round(n) : null;
 }
 
 export function history(ref: PriceRef, data: unknown): HistoryPoint[] {
@@ -152,11 +167,19 @@ export function history(ref: PriceRef, data: unknown): HistoryPoint[] {
     const days = c.ebay?.priceHistory?.[gradeKey(ref)] ?? {};
     return Object.entries(days)
       .filter(([, d]) => positive(d.average) !== null)
-      .map(([date, d]) => ({ date, marketUsd: d.average as number }))
+      .map(([date, d]) => ({
+        date,
+        marketUsd: d.average as number,
+        sales: sold(d.count),
+      }))
       .sort((a, b) => a.date.localeCompare(b.date));
   }
   const rows = c.priceHistory?.conditions?.["Near Mint"]?.history ?? [];
   return rows
     .filter((r) => positive(r.market) !== null)
-    .map((r) => ({ date: r.date.slice(0, 10), marketUsd: r.market }));
+    .map((r) => ({
+      date: r.date.slice(0, 10),
+      marketUsd: r.market,
+      sales: sold(r.volume),
+    }));
 }

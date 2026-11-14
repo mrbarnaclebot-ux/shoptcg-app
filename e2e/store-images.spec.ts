@@ -16,7 +16,7 @@ const file = async (name: string, buffer: Buffer | Promise<Buffer>) => ({
 });
 
 const banner = (page: Page) => page.locator('img[width="1500"]');
-const avatar = (page: Page) => page.locator('img[width="1000"]');
+const avatar = (page: Page) => page.locator('img[width="400"]');
 const loaded = (img: ReturnType<typeof banner>) =>
   img.evaluate((el: HTMLImageElement) => [el.naturalWidth, el.naturalHeight]);
 
@@ -39,7 +39,7 @@ test("a vendor sets, replaces and removes their store images", async ({
   const buyer = await (await browser.newContext()).newPage();
   await buyer.goto(`/${slug}`);
   expect(await loaded(banner(buyer))).toEqual([1500, 500]);
-  expect(await loaded(avatar(buyer))).toEqual([1000, 1000]);
+  expect(await loaded(avatar(buyer))).toEqual([400, 400]);
   const first = await banner(buyer).getAttribute("src");
 
   await page
@@ -74,8 +74,8 @@ test("a bad file is refused with the reason, and nothing is saved", async ({
   ).toBeVisible();
   await page
     .getByLabel("Choose profile image")
-    .setInputFiles(await file("tiny.jpg", photo(200, 200, "#fff")));
-  await expect(main.getByText(/at least 500 x 500/)).toBeVisible();
+    .setInputFiles(await file("tiny.jpg", photo(150, 150, "#fff")));
+  await expect(main.getByText(/at least 200 x 200/)).toBeVisible();
   await page.reload();
   await expect(page.getByAltText("Your banner")).toHaveCount(0);
   await expect(page.getByAltText("Your profile image")).toHaveCount(0);

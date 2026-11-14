@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 const POLL_MS = 10_000;
 const RETRY_MS = 5_000;
+const BURST_MS = 400;
 // Postgres drops notifications while LISTEN reconnects, and the stream can't
 // tell, so an up stream still re-reads now and then.
 const HEARTBEAT_MS = 60_000;
@@ -31,6 +32,7 @@ export function useLive(
     let es: EventSource;
     let poll: ReturnType<typeof setInterval> | undefined;
     let retry: ReturnType<typeof setTimeout> | undefined;
+    let burst: ReturnType<typeof setTimeout> | undefined;
     let down = false;
     const connect = () => {
       es = new EventSource(url);
@@ -42,7 +44,12 @@ export function useLive(
         down = false;
       };
       es.onmessage = (m) => {
-        router.refresh();
+        // A busy floor sends bursts (every arriving buyer is an event): the
+        // first one schedules a refresh and the rest of the burst rides on it.
+        burst ??= setTimeout(() => {
+          burst = undefined;
+          router.refresh();
+        }, BURST_MS);
         handler.current?.(JSON.parse(m.data) as LiveMessage);
       };
       es.onerror = () => {
@@ -61,6 +68,7 @@ export function useLive(
       clearInterval(heartbeat);
       clearInterval(poll);
       clearTimeout(retry);
+      clearTimeout(burst);
     };
   }, [url, router]);
   return up;

@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gte, inArray, max } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, gte, inArray, max } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { listing, pricePoint, store } from "@/db/schema";
 import { altPrice } from "@/lib/fx";
@@ -82,6 +82,8 @@ function toPublic(s: PublicStore, held: Held) {
       grade: r.grade,
       imageUrl: safeImageUrl(r.imageUrl),
       market: r.market,
+      // Played singles are priced off Near Mint; the chart scales by this.
+      conditionPct: r.conditionPct,
       price,
       alt: altPrice(price, s.fxRate),
       underPct: underMarket(price, r.market),
@@ -155,6 +157,23 @@ export async function getPublicItem(db: Db, s: PublicStore, id: string) {
   return rows[0] ? toPublic(s, held)(rows[0]) : null;
 }
 
+/** Whether this store shows this listing: what getPublicItem finds, for the proxy's 404. */
+export async function publicItemExists(db: Db, storeId: string, id: string) {
+  if (!UUID.test(id)) return false;
+  const [row] = await db
+    .select({ id: listing.id })
+    .from(listing)
+    .where(
+      and(
+        eq(listing.id, id),
+        eq(listing.storeId, storeId),
+        eq(listing.active, true),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
 /** These listings as buyers see them, for the list review. */
 export async function getPublicItems(db: Db, s: PublicStore, ids: string[]) {
   const ok = ids.filter((id) => UUID.test(id)).slice(0, 30);
@@ -188,4 +207,36 @@ export async function historyPoints(
     .orderBy(asc(pricePoint.date));
   // ponytail: two sources on one day both plot; pick one if a second provider lands.
   return rows.map((r) => ({ date: r.date, market: Number(r.market) }));
+}
+
+/** Days in the last month with market sales, newest first: date, copies, price. */
+export async function recentSales(
+  db: Db,
+  catalogItemId: string,
+  today: string,
+) {
+  const from = new Date(Date.parse(`${today}T00:00:00Z`) - 30 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const rows = await db
+    .select({
+      date: pricePoint.date,
+      sales: pricePoint.sales,
+      market: pricePoint.marketUsd,
+    })
+    .from(pricePoint)
+    .where(
+      and(
+        eq(pricePoint.catalogItemId, catalogItemId),
+        gte(pricePoint.date, from),
+        gt(pricePoint.sales, 0),
+      ),
+    )
+    .orderBy(desc(pricePoint.date))
+    .limit(10);
+  return rows.map((r) => ({
+    date: r.date,
+    sales: r.sales!,
+    market: Number(r.market),
+  }));
 }

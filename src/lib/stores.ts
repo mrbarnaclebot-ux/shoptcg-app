@@ -103,6 +103,12 @@ export async function updateTableLabel(
 
 const checkbox = z.preprocess((v) => v === "on" || v === true, z.boolean());
 
+const conditionPctField = z.coerce
+  .number({ error: "Enter a whole number" })
+  .int("Enter a whole number")
+  .min(1, "Between 1 and 100")
+  .max(100, "Between 1 and 100");
+
 const pricingFields = z.object({
   priceRulePct: z.coerce
     .number({ error: "Enter a whole number" })
@@ -126,6 +132,10 @@ const pricingFields = z.object({
       .max(1_000_000)
       .nullable(),
   ),
+  condLpPct: conditionPctField,
+  condMpPct: conditionPctField,
+  condHpPct: conditionPctField,
+  condDmgPct: conditionPctField,
 });
 
 /** The Pricing settings page: the price rule, rounding and second currency. */

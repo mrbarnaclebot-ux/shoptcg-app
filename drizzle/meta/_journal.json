@@ -204,6 +204,13 @@
       "when": 1794632732473,
       "tag": "0028_online_checkout",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1794636321596,
+      "tag": "0029_condition_prices_sales",
+      "breakpoints": true
     }
   ]
 }
