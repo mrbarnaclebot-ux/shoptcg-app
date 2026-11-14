@@ -14,11 +14,13 @@ import { Stepper } from "@/components/stepper";
 import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { CheckoutErrors, Fulfil, PayWith } from "@/lib/checkout";
 import { altPrice, formatAlt } from "@/lib/fx";
 import { usd } from "@/lib/format";
 import { modeCopy, type SellingMode } from "@/lib/selling-mode";
 import { useLines, writeList } from "../list-island";
 import { sendRequest, startBuyerSession } from "./actions";
+import { CheckoutFields } from "./checkout-fields";
 
 export type ReviewItem = {
   id: string;
@@ -37,7 +39,13 @@ type ReviewStore = {
   currency: string | null;
   fxRate: number | null;
   mode: SellingMode;
+  fulfils: readonly Fulfil[];
+  pays: readonly PayWith[];
+  checkoutNote: string | null;
 };
+
+type Errors = { name?: string; email?: string } & CheckoutErrors;
+const FIELD_ORDER = ["name", "email", "fulfil", "address", "phone", "payWith"];
 
 const noop = () => () => {};
 const useHydrated = () =>
@@ -67,7 +75,7 @@ export function CartReview(props: {
   const hydrated = useHydrated();
   const lines = useLines(store.slug);
   const [pending, start] = useTransition();
-  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+  const [errors, setErrors] = useState<Errors>({});
   const [banner, setBanner] = useState<string | null>(null);
 
   // The list lives on the phone, so a bare or stale URL asks for what's on it.
@@ -135,8 +143,12 @@ export function CartReview(props: {
         return setBanner("Couldn't send. Check your connection and try again.");
       if ("fieldErrors" in res) {
         setErrors(res.fieldErrors);
-        const first = res.fieldErrors.name ? "name" : "email";
-        (form.elements.namedItem(first) as HTMLInputElement).focus();
+        const e: Record<string, string | undefined> = res.fieldErrors;
+        const first = FIELD_ORDER.find((k) => e[k]);
+        const el = first && form.elements.namedItem(first);
+        // A radio group comes back as a list: focus its first option.
+        if (el instanceof RadioNodeList) (el[0] as HTMLElement)?.focus();
+        else if (el instanceof HTMLElement) el.focus();
         return;
       }
       setErrors({});
@@ -277,6 +289,12 @@ export function CartReview(props: {
             />
             <FieldError id="email-error" message={errors.email} />
           </div>
+          <CheckoutFields
+            fulfils={store.fulfils}
+            pays={store.pays}
+            note={store.checkoutNote}
+            errors={errors}
+          />
           <label className="flex min-h-11 items-start gap-3 text-sm">
             <input
               type="checkbox"
@@ -287,8 +305,9 @@ export function CartReview(props: {
             time.
           </label>
           <p className="text-sm text-muted-foreground">
-            By sending, you share your name and email with {store.name} for this
-            request and your receipt. See{" "}
+            By sending, you share your name, email
+            {store.fulfils.length ? " and contact details" : ""} with{" "}
+            {store.name} for this request and your receipt. See{" "}
             <Link
               href="/terms"
               className="text-text underline decoration-brand-text decoration-[1.5px] underline-offset-4"

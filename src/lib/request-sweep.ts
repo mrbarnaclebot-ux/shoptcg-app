@@ -43,6 +43,19 @@ export async function sweepRequests(db: Db) {
       ),
     )
     .returning({ id: request.id });
+  // Where to deliver and who to call outlive no order: sold ones lose them too.
+  await db
+    .update(request)
+    .set({ buyerPhone: null, deliveryAddress: null })
+    .where(
+      and(
+        lte(
+          request.createdAt,
+          sql`now() - make_interval(days => ${PURGE_DAYS})`,
+        ),
+        or(isNotNull(request.buyerPhone), isNotNull(request.deliveryAddress)),
+      ),
+    );
   await sweepFloor(db);
   return { expired, purged: purged.length };
 }

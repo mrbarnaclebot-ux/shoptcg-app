@@ -46,6 +46,16 @@ export const store = pgTable(
     sellingMode: text("selling_mode", { enum: ["table", "online"] })
       .notNull()
       .default("table"),
+    // Online checkout (src/lib/checkout.ts): what a buyer can pick at the cart.
+    // All off means the old way: the vendor gets in touch to arrange both.
+    offerDelivery: boolean("offer_delivery").notNull().default(false),
+    offerPickup: boolean("offer_pickup").notNull().default(false),
+    acceptCash: boolean("accept_cash").notNull().default(false),
+    acceptTransfer: boolean("accept_transfer").notNull().default(false),
+    // Free text so any country's details fit: bank, branch, name, number.
+    bankDetails: text("bank_details"),
+    // Shown at the cart: couriers, areas, fees, where pickup is.
+    checkoutNote: text("checkout_note"),
     // Set when the vendor hides the getting-started tips, so they show once.
     tipsDismissedAt: timestamp("tips_dismissed_at", { withTimezone: true }),
     // A timed pause resumes by itself once now() passes this.
@@ -73,6 +83,14 @@ export const store = pgTable(
     ),
     check("store_name_length", sql`char_length(${t.name}) between 1 and 80`),
     check("store_rounding_step", sql`${t.rounding} in (0, 0.5, 1)`),
+    check(
+      "store_bank_details_length",
+      sql`char_length(${t.bankDetails}) <= 500`,
+    ),
+    check(
+      "store_checkout_note_length",
+      sql`char_length(${t.checkoutNote}) <= 300`,
+    ),
     check("store_price_rule_range", sql`${t.priceRulePct} between -90 and 500`),
     // A second currency is useless without the vendor rate, and vice versa.
     check(

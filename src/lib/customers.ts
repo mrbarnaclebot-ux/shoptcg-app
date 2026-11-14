@@ -72,7 +72,13 @@ export async function removeCustomer(db: Db, storeId: string, id: string) {
     if (!gone) return false;
     await tx
       .update(request)
-      .set({ buyerName: null, buyerEmail: null, ipHash: null })
+      .set({
+        buyerName: null,
+        buyerEmail: null,
+        ipHash: null,
+        buyerPhone: null,
+        deliveryAddress: null,
+      })
       .where(
         and(
           eq(request.storeId, storeId),

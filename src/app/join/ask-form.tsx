@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { TicketButton } from "@/components/ticket-button";
-import { Input } from "@/components/ui/input";
+import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { askForInvite, type AskState } from "./actions";
 
@@ -50,13 +50,12 @@ export function AskForm() {
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="ask-about">How do you sell? (optional)</Label>
-        <textarea
+        <Textarea
           id="ask-about"
           name="about"
           rows={3}
           maxLength={500}
           placeholder="Shows you do, your socials or online shop"
-          className="w-full bg-bg px-3.5 py-2.5 text-base text-text shadow-[inset_0_0_0_1.5px_var(--border-strong)] outline-none placeholder:text-subtle focus-visible:shadow-[inset_0_0_0_2.5px_var(--focus)]"
         />
       </div>
       {state.error && (

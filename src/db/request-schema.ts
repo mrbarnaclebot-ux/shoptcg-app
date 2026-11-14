@@ -14,6 +14,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { FULFIL, PAY_WITH } from "../lib/checkout";
 import { user } from "./auth-schema";
 import { listing, store } from "./schema";
 
@@ -43,6 +44,12 @@ export const request = pgTable(
     buyerName: text("buyer_name"),
     buyerEmail: text("buyer_email"),
     promoOptIn: boolean("promo_opt_in").notNull().default(false),
+    // The buyer's checkout picks at an online store; null when it offered none.
+    // Phone and address are cleared 30 days on, sold or not (request-sweep.ts).
+    fulfil: text("fulfil", { enum: FULFIL }),
+    payWith: text("pay_with", { enum: PAY_WITH }),
+    buyerPhone: text("buyer_phone"),
+    deliveryAddress: text("delivery_address"),
     termsVersion: text("terms_version").notNull(),
     consentedAt: timestamp("consented_at", { withTimezone: true })
       .notNull()
@@ -74,6 +81,22 @@ export const request = pgTable(
       sql`char_length(${t.buyerEmail}) <= 254 and ${t.buyerEmail} = lower(${t.buyerEmail})`,
     ),
     check("request_expiry_after_create", sql`${t.expiresAt} > ${t.createdAt}`),
+    check(
+      "request_fulfil",
+      sql`${t.fulfil} is null or ${t.fulfil} in ('delivery', 'pickup')`,
+    ),
+    check(
+      "request_pay_with",
+      sql`${t.payWith} is null or ${t.payWith} in ('cash', 'transfer')`,
+    ),
+    check(
+      "request_buyer_phone_length",
+      sql`char_length(${t.buyerPhone}) <= 20`,
+    ),
+    check(
+      "request_delivery_address_length",
+      sql`char_length(${t.deliveryAddress}) <= 300`,
+    ),
     // Codes only need to be told apart while a buyer is walking to the table.
     uniqueIndex("request_pending_code_idx")
       .on(t.storeId, t.code)

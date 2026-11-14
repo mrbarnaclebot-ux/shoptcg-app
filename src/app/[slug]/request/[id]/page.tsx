@@ -10,6 +10,7 @@ import { lineButton } from "@/components/ticket-button";
 import { receiptTime } from "@/lib/format";
 import { getDb } from "@/db";
 import { readBuyerSid } from "@/lib/buyer-session";
+import { FULFIL_LABEL, payLabel } from "@/lib/checkout";
 import { buyerRequest } from "@/lib/request-reads";
 import { saleForRequest } from "@/lib/sales";
 import { modeCopy } from "@/lib/selling-mode";
@@ -79,6 +80,7 @@ export default async function RequestPage({
               {r.code}
             </p>
             <HoldWarning at={r.expiresAt.getTime()} soon={soon} />
+            <Checkout r={r} />
             <RequestLines lines={r.lines} />
           </Ticket>
           <CancelRequest id={r.id} />
@@ -141,6 +143,48 @@ async function Sold(props: { requestId: string; slug: string }) {
         Back to store
       </Link>
     </main>
+  );
+}
+
+function Checkout({
+  r,
+}: {
+  r: NonNullable<Awaited<ReturnType<typeof buyerRequest>>>;
+}) {
+  if (!r.fulfil && !r.payWith) return null;
+  const how = [
+    r.fulfil && FULFIL_LABEL[r.fulfil],
+    r.payWith && payLabel(r.payWith, r.fulfil),
+  ].filter(Boolean);
+  return (
+    <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
+      <p className="font-semibold">{how.join(" · ")}</p>
+      {r.deliveryAddress && (
+        <p className="text-sm whitespace-pre-line [overflow-wrap:anywhere]">
+          To {r.deliveryAddress}
+        </p>
+      )}
+      {r.bankDetails && (
+        <section
+          aria-labelledby="bank-h"
+          className="flex flex-col gap-2 bg-bg p-4 shadow-[inset_0_0_0_1.5px_var(--border-strong)]"
+        >
+          <h2 id="bank-h" className="font-semibold">
+            Pay by bank transfer
+          </h2>
+          <p
+            data-testid="bank-details"
+            className="num whitespace-pre-line [overflow-wrap:anywhere]"
+          >
+            {r.bankDetails}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Use {r.code} as the reference. The seller confirms your order once
+            the money arrives.
+          </p>
+        </section>
+      )}
+    </div>
   );
 }
 

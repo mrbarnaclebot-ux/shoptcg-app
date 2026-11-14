@@ -220,6 +220,16 @@ export default function HelpPage() {
               payments or ship.
             </li>
           </ul>
+          <p>
+            An online store can also let buyers choose at checkout. Under{" "}
+            <strong>Online orders</strong>, turn on delivery, pickup, cash on
+            delivery or at pickup, and bank transfer. Delivery asks the buyer
+            for an address and phone; you book the courier (PickMe Flash, Uber
+            parcel or your own). Buyers who choose bank transfer see your bank
+            details after they order, with their order code as the reference.
+            Confirm the sale once the money arrives. Add a note for couriers,
+            areas, fees or where to pick up.
+          </p>
 
           <Shots names={["how-you-sell"]} />
 

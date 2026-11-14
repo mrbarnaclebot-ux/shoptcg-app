@@ -18,4 +18,18 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   );
 }
 
-export { Input };
+// The same field, several lines tall.
+function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+  return (
+    <textarea
+      data-slot="textarea"
+      className={cn(
+        "w-full bg-bg px-3.5 py-2.5 text-base text-text shadow-[inset_0_0_0_1.5px_var(--border-strong)] outline-none placeholder:text-subtle focus-visible:shadow-[inset_0_0_0_2.5px_var(--focus)] aria-invalid:shadow-[inset_0_0_0_2px_var(--danger)]",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+export { Input, Textarea };

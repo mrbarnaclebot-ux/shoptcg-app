@@ -57,6 +57,10 @@ async function Review({
         buyerName: draft.buyerName ?? "Buyer",
         isTest: draft.isTest,
         expiresAt: draft.expiresAt.getTime(),
+        fulfil: draft.fulfil,
+        payWith: draft.payWith,
+        phone: draft.buyerPhone,
+        address: draft.deliveryAddress,
       }}
       lines={lines.map((l) => ({
         listingId: l.listingId,

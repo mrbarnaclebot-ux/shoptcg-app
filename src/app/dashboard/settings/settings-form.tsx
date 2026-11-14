@@ -11,7 +11,7 @@ import { Segmented } from "@/components/segmented";
 import { HangTag } from "@/components/hang-tag";
 import { SectionMark } from "@/components/section-mark";
 import { TicketButton } from "@/components/ticket-button";
-import { Input } from "@/components/ui/input";
+import { Input, Textarea } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usd } from "@/lib/format";
 import { MODE_COPY, SELLING_MODES, type SellingMode } from "@/lib/selling-mode";
@@ -99,10 +99,20 @@ export function PricingForm({ values }: { values: PricingValues }) {
   );
 }
 
+export type CheckoutValues = {
+  offerDelivery: boolean;
+  offerPickup: boolean;
+  acceptCash: boolean;
+  acceptTransfer: boolean;
+  bankDetails: string;
+  checkoutNote: string;
+};
+
 export function TableForm(props: {
   sellingMode: SellingMode;
   tableLabel: string;
   nfcEnabled: boolean;
+  checkout: CheckoutValues;
 }) {
   const [mode, setMode] = useState(props.sellingMode);
   return (
@@ -148,9 +158,95 @@ export function TableForm(props: {
             label="I have an NFC tag on my table"
             hint={`Adds "Or tap your phone here" to your printed table sign.`}
           />
+          {/* Hidden, not unmounted, at a table: a save keeps these as they are. */}
+          <CheckoutFields
+            values={props.checkout}
+            errors={e}
+            hidden={mode !== "online"}
+          />
         </div>
       )}
     </SettingsShell>
+  );
+}
+
+function CheckoutFields(props: {
+  values: CheckoutValues;
+  errors: Record<string, string>;
+  hidden: boolean;
+}) {
+  const { values: v, errors: e } = props;
+  const [transfer, setTransfer] = useState(v.acceptTransfer);
+  return (
+    <fieldset
+      hidden={props.hidden}
+      className="mt-6 flex flex-col gap-2 border-t border-border pt-6"
+    >
+      <legend className="font-semibold">Online orders</legend>
+      <p className="mb-2 text-sm text-muted-foreground">
+        What buyers can choose when they order. Leave all off to arrange it with
+        each buyer yourself.
+      </p>
+      <Toggle
+        name="offerDelivery"
+        checked={v.offerDelivery}
+        label="Delivery"
+        hint="Buyers give an address and phone. You book the courier."
+      />
+      <Toggle
+        name="offerPickup"
+        checked={v.offerPickup}
+        label="Pickup"
+        hint="Buyers collect from you."
+      />
+      <Toggle
+        name="acceptCash"
+        checked={v.acceptCash}
+        label="Cash on delivery or at pickup"
+        hint="Buyers pay when the cards reach them."
+      />
+      <Toggle
+        name="acceptTransfer"
+        checked={v.acceptTransfer}
+        onChange={setTransfer}
+        label="Bank transfer"
+        hint="Buyers see your account details after they order."
+      />
+      <div hidden={!transfer} className="mt-2 mb-2 flex flex-col gap-2">
+        <Label htmlFor="bankDetails">Bank details</Label>
+        <Textarea
+          id="bankDetails"
+          name="bankDetails"
+          rows={4}
+          maxLength={500}
+          defaultValue={v.bankDetails}
+          placeholder={"Bank and branch\nAccount name\nAccount number"}
+          aria-invalid={e.bankDetails ? true : undefined}
+          aria-describedby="bank-hint bank-error"
+        />
+        <p id="bank-hint" className="text-sm text-muted-foreground">
+          Shown only to buyers who choose bank transfer.
+        </p>
+        <Err id="bank-error" msg={e.bankDetails} />
+      </div>
+      <div className="mt-2 flex flex-col gap-2">
+        <Label htmlFor="checkoutNote">Note for buyers (optional)</Label>
+        <Textarea
+          id="checkoutNote"
+          name="checkoutNote"
+          rows={3}
+          maxLength={300}
+          defaultValue={v.checkoutNote}
+          placeholder="Delivery by PickMe Flash or Uber parcel, fee paid on arrival. Pickup in Nugegoda."
+          aria-invalid={e.checkoutNote ? true : undefined}
+          aria-describedby="note-hint note-error"
+        />
+        <p id="note-hint" className="text-sm text-muted-foreground">
+          Shown at checkout: couriers, areas, fees, where to pick up.
+        </p>
+        <Err id="note-error" msg={e.checkoutNote} />
+      </div>
+    </fieldset>
   );
 }
 
@@ -191,6 +287,7 @@ function Toggle(props: {
   checked: boolean;
   label: string;
   hint: string;
+  onChange?: (on: boolean) => void;
 }) {
   return (
     <label className="flex cursor-pointer items-start gap-3 py-2">
@@ -198,6 +295,7 @@ function Toggle(props: {
         type="checkbox"
         name={props.name}
         defaultChecked={props.checked}
+        onChange={(ev) => props.onChange?.(ev.target.checked)}
         className="mt-0.5 size-6 shrink-0 accent-[var(--sun)]"
       />
       <span className="flex flex-col gap-0.5">

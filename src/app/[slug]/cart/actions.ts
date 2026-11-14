@@ -5,6 +5,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db";
 import { ensureBuyerSid, readBuyerSid } from "@/lib/buyer-session";
+import { parseCheckout, storeOffer, type CheckoutErrors } from "@/lib/checkout";
 import { outboxPath } from "@/lib/email";
 import { seedAllowed } from "@/lib/e2e-seed";
 import { previewing } from "@/lib/preview";
@@ -17,7 +18,7 @@ import { getPublicStore } from "@/lib/storefront";
 
 export type SendResult =
   | { ok: true; id: string }
-  | { fieldErrors: { name?: string; email?: string } }
+  | { fieldErrors: { name?: string; email?: string } & CheckoutErrors }
   | { taken: string[] }
   | { closed: true }
   | { limited: true }
@@ -75,15 +76,25 @@ export async function sendRequest(
   slug: string,
   form: FormData,
 ): Promise<SendResult> {
-  const fields = sendSchema.safeParse(Object.fromEntries(form));
-  if (!fields.success) {
-    const e = z.flattenError(fields.error).fieldErrors;
-    return { fieldErrors: { name: e.name?.[0], email: e.email?.[0] } };
-  }
+  const raw = Object.fromEntries(form);
+  const fields = sendSchema.safeParse(raw);
   const lines = parseLines(form.get("lines"));
-  if (!lines.success) return { empty: true };
+  if (fields.success && !lines.success) return { empty: true };
   const db = getDb();
   const store = await getPublicStore(db, slug);
+  const checkout = store ? parseCheckout(storeOffer(store), raw) : null;
+  // Every field's message at once, so the buyer fixes them in one go.
+  if (!fields.success || (checkout && "errors" in checkout)) {
+    const e = fields.success ? {} : z.flattenError(fields.error).fieldErrors;
+    return {
+      fieldErrors: {
+        name: e.name?.[0],
+        email: e.email?.[0],
+        ...(checkout && "errors" in checkout ? checkout.errors : {}),
+      },
+    };
+  }
+  if (!lines.success) return { empty: true };
   // The owner's preview sends a test request, open or not.
   const isTest = Boolean(store) && (await previewing(slug));
   if (!store || (store.state !== "open" && !isTest)) return { closed: true };
@@ -102,6 +113,7 @@ export async function sendRequest(
       promo: fields.data.promo === "on",
       holdMs: hold,
       isTest,
+      checkout: checkout?.value,
     });
   } catch (err) {
     // A failed query's message carries its params: the buyer's name and email.

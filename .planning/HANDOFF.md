@@ -6,7 +6,7 @@ _Last updated: 2026-11-13. The product is **tcgmart.app**. `main` and `productio
 
 ## Where things stand
 
-- **Live:** production https://tcgmart.app (also `www.tcgmart.app`) and staging https://staging.tcgmart.app. The Railway hosts (`web-production-2d3b0.up.railway.app`, `web-staging-staging-6b4e.up.railway.app`) stay attached forever and 308 to the custom domain, because printed signs point at them. Migrations are up to `0027`.
+- **Live:** production https://tcgmart.app (also `www.tcgmart.app`) and staging https://staging.tcgmart.app. The Railway hosts (`web-production-2d3b0.up.railway.app`, `web-staging-staging-6b4e.up.railway.app`) stay attached forever and 308 to the custom domain, because printed signs point at them. Migrations are up to `0028`.
   - Domains were added with the Railway CLI (`railway domain`). DNS lives at the owner's registrar (CNAME + `_railway-verify` TXT per host). Each service has `BETTER_AUTH_URL` and `CANONICAL_HOST` set to its custom domain.
 - **Shipped:** all eight phases, plus:
   - password sign-in (2026-11-13): `/login` is email + password; `/login/forgot` emails a reset link (1 hour) that lands on `/login/reset` and signs straight in. Email links are only for invites now: `/join` (code + email), an admin "Email it to" invite, or approving a request from `/join`'s "No code yet?" form (`invite_request`, migration `0027`, queued on `/admin`, admins emailed). The invite link (48 hours) makes the account and lands on `/welcome` to choose a password. Accounts from before passwords see a "Set a password" nudge on the dashboard, or use Forgot password. Sessions last 30 days, refreshed daily. Every Better Auth HTTP route for sign-in, sign-up and resets is disabled; server actions call `auth.api` behind `src/lib/sign-in-limit.ts`. More → Account has Change password (signs other devices out), Change email (password + a 1-hour link to the new address via `src/lib/account.ts`, stored hashed in `verification`; confirm is a button so mail scanners can't trigger it; the old address gets a notice) and Delete account (types "delete my account" + password; deletes the user row, which cascades the store, sales, ledger and customers, then drops Pinata images and sends a notice). Invite requesters get a "we got it" email and a decline email if dismissed.
@@ -125,7 +125,7 @@ Railway notes (more in memory `railway-config-ignored`):
 
 ## Next up
 
-- [ ] Price on add has only run against TCGdex (free). Add one real card and one sealed product on production and check each shows a market price and a chart within a minute.
+- [ ] Price on add, in the app on production. 2026-11-14: the PPT adapter (`src/lib/pricing/ppt.ts`) returned live search, price and 29 days of history for Charizard ex 199/165 ($291.77) and a Prismatic Evolutions ETB ($187.33; its top sealed hit was the Sam's Club bundle, so watch sealed ranking). Still to do: add one card and one sealed product from a real vendor account and see the price and chart within a minute.
 - [ ] The owner's plan from 2026-11-10, one PR per step:
   1. ~~Settings and nav rework, admin entry and vendor controls.~~ Shipped.
   2. ~~Preview mode.~~ Shipped.
@@ -134,7 +134,8 @@ Railway notes (more in memory `railway-config-ignored`):
   5. ~~Ledger part two: buys and trade-ins, float and a cash check at close.~~ Shipped (PR #28).
   - Sales tax is left out unless the owner asks for it.
 - [ ] Search: trigram index if the unindexed ILIKE gets slow (sketch in PR #27); a rarity column for result rows.
-- [ ] Online stores: payment and delivery are still arranged outside the app. Decide whether online mode needs more than copy.
+- [x] Online checkout (2026-11-14, migration `0028`): an online store turns on delivery, pickup, cash and bank transfer under How you sell → Online orders, with free-text bank details and a buyer note (`src/lib/checkout.ts`). The cart asks only what's offered (one option is shown as a fact); delivery needs an address and phone. Transfer buyers see the bank details on their order page with the code as reference; the seller's review shows the choices, address and a `tel:` link, and preselects the payment method. Phone and address are cleared 30 days on, sold or not. Table stores ask nothing. Built for Sri Lanka first (cash on delivery, PickMe Flash / Uber parcel, transfers); no country-specific fields, so it fits global vendors.
+- [ ] Online checkout follow-ups if vendors ask: email the transfer details to the buyer (today only the order page shows them), a delivery fee line, WhatsApp link for the buyer's phone.
 
 ## Kept on purpose (don't "fix" without a reason)
 
