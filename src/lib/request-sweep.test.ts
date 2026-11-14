@@ -86,6 +86,29 @@ test("unsold requests lose buyer details after 30 days", async () => {
   expect(by.get(recent)?.buyerEmail).toBe("maya@example.test");
 });
 
+test("phone and address go after 30 days, sold or not", async () => {
+  const db = await migratedDb();
+  const s = await shop(db);
+  const old = await past(db, s.storeId, { agoMin: 31 * 1440, holdMin: 15 });
+  const recent = await past(db, s.storeId, { agoMin: 29 * 1440, holdMin: 15 });
+  const contact = { buyerPhone: "077 123 4567", deliveryAddress: "Colombo 3" };
+  // Confirmed keeps its name and email for the receipt, but not these.
+  await db
+    .update(request)
+    .set({ ...contact, status: "confirmed" })
+    .where(eq(request.id, old));
+  await db.update(request).set(contact).where(eq(request.id, recent));
+  await sweepRequests(db);
+  const rows = await db.select().from(request);
+  const by = new Map(rows.map((r) => [r.id, r]));
+  expect(by.get(old)).toMatchObject({
+    buyerPhone: null,
+    deliveryAddress: null,
+    buyerEmail: "maya@example.test",
+  });
+  expect(by.get(recent)).toMatchObject(contact);
+});
+
 test("rate limits: 3 per phone per 10 minutes, 2 pending per store, 30 per address", async () => {
   const db = await migratedDb();
   const s = await shop(db);

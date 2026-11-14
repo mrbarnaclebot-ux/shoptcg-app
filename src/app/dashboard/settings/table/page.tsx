@@ -23,6 +23,14 @@ async function Table() {
         sellingMode={store.sellingMode}
         tableLabel={store.tableLabel ?? ""}
         nfcEnabled={store.nfcEnabled}
+        checkout={{
+          offerDelivery: store.offerDelivery,
+          offerPickup: store.offerPickup,
+          acceptCash: store.acceptCash,
+          acceptTransfer: store.acceptTransfer,
+          bankDetails: store.bankDetails ?? "",
+          checkoutNote: store.checkoutNote ?? "",
+        }}
       />
       <div className="flex flex-col items-start gap-3 border-t border-border pt-6">
         <p className="text-sm text-muted-foreground">

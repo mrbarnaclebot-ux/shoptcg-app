@@ -1,6 +1,7 @@
 import { randomInt } from "node:crypto";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
+import type { Checkout } from "@/lib/checkout";
 import { listing, request, requestLine, store } from "@/db/schema";
 import { listStock } from "@/lib/listings";
 import { notifyLive } from "@/lib/live";
@@ -43,6 +44,7 @@ export type NewRequest = {
   ipHash: string | null;
   holdMs: number;
   isTest?: boolean;
+  checkout?: Checkout;
 };
 
 export type CreateResult =
@@ -129,6 +131,7 @@ async function insertRequest(tx: Db, input: NewRequest): Promise<CreateResult> {
       ipHash: input.ipHash,
       isTest: input.isTest ?? false,
       promoOptIn: input.promo,
+      ...input.checkout,
       termsVersion: TERMS_VERSION,
       expiresAt: sql`now() + make_interval(secs => ${input.holdMs / 1000})`,
     })

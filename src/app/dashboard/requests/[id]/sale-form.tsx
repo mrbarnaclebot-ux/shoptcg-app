@@ -10,6 +10,12 @@ import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { PaymentMethod } from "@/db/schema";
+import {
+  FULFIL_LABEL,
+  payLabel,
+  type Fulfil,
+  type PayWith,
+} from "@/lib/checkout";
 import { usd } from "@/lib/format";
 import { altPrice, formatAlt } from "@/lib/fx";
 import { fromCents, PRICE_RE, priceSale, toCents } from "@/lib/money";
@@ -197,6 +203,10 @@ export function SaleForm(props: {
     buyerName: string;
     isTest: boolean;
     expiresAt: number;
+    fulfil: Fulfil | null;
+    payWith: PayWith | null;
+    phone: string | null;
+    address: string | null;
   };
   lines: DraftLine[];
   currency: string | null;
@@ -223,7 +233,8 @@ export function SaleForm(props: {
     "none",
   );
   const [discountValue, setValue] = useState("");
-  const [method, setMethod] = useState<PaymentMethod | null>(null);
+  // What the buyer said they'd pay with; the seller can still change it.
+  const [method, setMethod] = useState<PaymentMethod | null>(r.payWith);
   const [note, setNote] = useState("");
   const [failed, setFailed] = useState(false);
   const [pending, start] = useTransition();
@@ -317,6 +328,30 @@ export function SaleForm(props: {
         <StubValue k="Code" v={r.code} testId="sale-code" />
         <StubValue k="Hold" v={over ? "Over" : clock(r.expiresAt, now)} />
       </div>
+      {(r.fulfil || r.payWith || r.phone) && (
+        <section
+          aria-label="Delivery and payment"
+          className="flex flex-col gap-1 [overflow-wrap:anywhere]"
+        >
+          <p className="font-semibold">
+            {[
+              r.fulfil && FULFIL_LABEL[r.fulfil],
+              r.payWith && payLabel(r.payWith, r.fulfil),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          {r.address && <p className="whitespace-pre-line">{r.address}</p>}
+          {r.phone && (
+            <a
+              href={`tel:${r.phone.replace(/[^+0-9]/g, "")}`}
+              className="num self-start font-semibold underline decoration-brand-text decoration-[1.5px] underline-offset-4"
+            >
+              {r.phone}
+            </a>
+          )}
+        </section>
+      )}
       <Ticket as="div">
         <ul>
           {lines.map((l) => (

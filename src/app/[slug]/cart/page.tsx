@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { RefreshAt } from "@/components/refresh-at";
 import { getDb } from "@/db";
+import { fulfilOptions, payOptions, storeOffer } from "@/lib/checkout";
 import { MAX_LINES } from "@/lib/requests";
 import { getPublicItems } from "@/lib/storefront";
 import { NotVending } from "../store-header";
@@ -66,6 +67,10 @@ export default async function CartPage({
           currency: store.secondCurrency,
           fxRate: store.fxRate,
           mode: store.sellingMode,
+          fulfils: fulfilOptions(storeOffer(store)),
+          pays: payOptions(storeOffer(store)),
+          checkoutNote:
+            store.sellingMode === "online" ? store.checkoutNote : null,
         }}
         items={items}
         loaded={ids}

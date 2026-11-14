@@ -321,6 +321,10 @@ export async function saleDraft(db: Db, storeId: string, requestId: string) {
       buyerName: request.buyerName,
       isTest: request.isTest,
       expiresAt: request.expiresAt,
+      fulfil: request.fulfil,
+      payWith: request.payWith,
+      buyerPhone: request.buyerPhone,
+      deliveryAddress: request.deliveryAddress,
       saleId: sale.id,
     })
     .from(request)

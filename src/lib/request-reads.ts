@@ -115,6 +115,13 @@ export async function buyerRequest(db: Db, id: string, sessionId: string) {
       slug: store.slug,
       tableLabel: store.tableLabel,
       sellingMode: store.sellingMode,
+      fulfil: request.fulfil,
+      payWith: request.payWith,
+      deliveryAddress: request.deliveryAddress,
+      // Only for a buyer who chose transfer: the page shows it to nobody else.
+      bankDetails: sql<
+        string | null
+      >`case when ${request.payWith} = 'transfer' then ${store.bankDetails} end`,
     })
     .from(request)
     .innerJoin(store, eq(store.id, request.storeId))

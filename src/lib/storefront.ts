@@ -33,6 +33,11 @@ export async function getPublicStore(db: Db, slug: string) {
       nfcEnabled: store.nfcEnabled,
       priceRulePct: store.priceRulePct,
       rounding: store.rounding,
+      offerDelivery: store.offerDelivery,
+      offerPickup: store.offerPickup,
+      acceptCash: store.acceptCash,
+      acceptTransfer: store.acceptTransfer,
+      checkoutNote: store.checkoutNote,
     })
     .from(store)
     .where(eq(store.slug, slug));

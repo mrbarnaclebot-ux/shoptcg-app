@@ -138,12 +138,33 @@ export const pricingSchema = pricingFields.superRefine((v, ctx) => {
     });
 });
 
-/** The How you sell settings page. */
-export const tableSchema = z.object({
-  sellingMode: z.enum(SELLING_MODES),
-  tableLabel: tableLabelSchema,
-  nfcEnabled: checkbox,
-});
+const optionalText = (max: number) =>
+  z.preprocess(
+    (v) => (typeof v === "string" ? v.trim() || null : (v ?? null)),
+    z.string().max(max, `${max} characters at most`).nullable(),
+  );
+
+/** The How you sell settings page, with the online checkout options. */
+export const tableSchema = z
+  .object({
+    sellingMode: z.enum(SELLING_MODES),
+    tableLabel: tableLabelSchema,
+    nfcEnabled: checkbox,
+    offerDelivery: checkbox,
+    offerPickup: checkbox,
+    acceptCash: checkbox,
+    acceptTransfer: checkbox,
+    bankDetails: optionalText(500),
+    checkoutNote: optionalText(300),
+  })
+  .superRefine((v, ctx) => {
+    if (v.acceptTransfer && !v.bankDetails)
+      ctx.addIssue({
+        code: "custom",
+        path: ["bankDetails"],
+        message: "Add the account buyers transfer to",
+      });
+  });
 
 export const storeNameSchema = createStoreSchema.pick({ name: true });
 
