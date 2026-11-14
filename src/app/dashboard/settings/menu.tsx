@@ -1,38 +1,64 @@
 "use client";
 
 import { cn } from "cn";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  BookOpen,
+  ChartColumn,
+  ChevronLeft,
+  ChevronRight,
+  CircleUser,
+  Eye,
+  LifeBuoy,
+  type LucideIcon,
+  ShieldCheck,
+  ShoppingBag,
+  Store,
+  Tag,
+  BellRing,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const HOME = "/dashboard/settings";
 
-type Row = { href: string; label: string; hint: string; wide?: true };
+type Row = {
+  href: string;
+  label: string;
+  hint: string;
+  icon: LucideIcon;
+  wide?: true;
+};
 
 const STORE: Row[] = [
   {
     href: "/dashboard/preview",
     label: "Preview store",
+    icon: Eye,
     hint: "Your page as buyers see it",
   },
   {
     href: `${HOME}/store`,
     label: "Store profile",
+    icon: Store,
     hint: "Name, banner and profile image",
   },
   {
     href: `${HOME}/pricing`,
     label: "Pricing",
+    icon: Tag,
     hint: "Price rule, rounding, second currency",
   },
   {
     href: `${HOME}/table`,
     label: "How you sell",
+    icon: ShoppingBag,
     hint: "At a table or online, table number, sign",
   },
   {
     href: `${HOME}/alerts`,
     label: "Alerts",
+    icon: BellRing,
     hint: "Sound and locked-phone alerts",
   },
 ];
@@ -40,33 +66,39 @@ const RECORDS: Row[] = [
   {
     href: "/dashboard/ledger",
     label: "Ledger",
+    icon: BookOpen,
     hint: "Profit, stock value, stock in and out",
   },
   {
     href: "/dashboard/customers",
     label: "Customers",
+    icon: Users,
     hint: "Buyers and who takes your emails",
   },
   {
     href: "/dashboard/reports",
     label: "Sales report",
+    icon: ChartColumn,
     hint: "Totals by day or weekend, CSV export",
   },
 ];
 const ADMIN: Row = {
   href: "/admin",
   label: "Admin",
+  icon: ShieldCheck,
   hint: "Invites, vendors and system checks",
 };
 const HELP: Row = {
   href: "/help",
   label: "Help",
+  icon: LifeBuoy,
   hint: "How everything works",
 };
 // On a phone the account block sits under the menu, so the row is desktop only.
 const ACCOUNT: Row = {
   href: HOME,
   label: "Account",
+  icon: CircleUser,
   hint: "Sign out",
   wide: true,
 };
@@ -125,11 +157,17 @@ export function SettingsMenu(props: { hasStore: boolean; admin: boolean }) {
                     aria-current={path === r.href ? "page" : undefined}
                     className="group grid min-h-14 grid-cols-[1fr_auto] items-center gap-x-3 py-2 hover:bg-surface lg:min-h-11 lg:border-l-[3px] lg:border-transparent lg:px-3 lg:aria-[current=page]:border-brand"
                   >
-                    <span className="font-semibold lg:font-medium lg:text-muted-foreground lg:group-aria-[current=page]:font-bold lg:group-aria-[current=page]:text-text">
-                      {r.label}
-                      <small className="block text-sm font-normal text-muted-foreground lg:hidden">
-                        {r.hint}
-                      </small>
+                    <span className="grid grid-cols-[1.25rem_1fr] items-start gap-x-3 font-semibold lg:items-center lg:font-medium lg:text-muted-foreground lg:group-aria-[current=page]:font-bold lg:group-aria-[current=page]:text-text">
+                      <r.icon
+                        aria-hidden
+                        className="mt-0.5 size-5 stroke-[1.75] text-muted-foreground lg:mt-0"
+                      />
+                      <span>
+                        {r.label}
+                        <small className="block text-sm font-normal text-muted-foreground lg:hidden">
+                          {r.hint}
+                        </small>
+                      </span>
                     </span>
                     <ChevronRight
                       aria-hidden

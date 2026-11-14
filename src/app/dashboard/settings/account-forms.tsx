@@ -1,5 +1,7 @@
 "use client";
 
+import { headingIcon } from "@/components/bento";
+import { AtSign, Trash2 } from "lucide-react";
 import { useActionState } from "react";
 import { lineButton, TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +39,7 @@ export function ChangeEmail() {
       className="flex max-w-md flex-col gap-4 border-t border-border pt-6 lg:max-w-none lg:border-t-0 lg:pt-0"
     >
       <h2 id="email-h" className="text-lg font-semibold">
+        <AtSign aria-hidden className={headingIcon} />
         Change email
       </h2>
       {state.sent ? (
@@ -89,6 +92,7 @@ export function DeleteAccount() {
       className="flex max-w-md flex-col gap-4 border-t border-border pt-6 lg:max-w-none lg:border-t-0 lg:pt-0"
     >
       <h2 id="delete-h" className="text-lg font-semibold text-danger">
+        <Trash2 aria-hidden className={headingIcon} />
         Delete account
       </h2>
       <p className="text-sm text-muted-foreground">

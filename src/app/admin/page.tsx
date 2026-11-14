@@ -1,3 +1,5 @@
+import { headingIcon } from "@/components/bento";
+import { Activity, MailQuestion, Ticket, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -7,7 +9,7 @@ import {
   bentoPage,
   bentoRight,
 } from "@/components/bento";
-import { Ticket, TicketLoading } from "@/components/ticket";
+import { Ticket as TicketBox, TicketLoading } from "@/components/ticket";
 import { lineButton } from "@/components/ticket-button";
 import { getDb } from "@/db";
 import {
@@ -71,9 +73,9 @@ async function Admin() {
     <>
       <div className={`${bentoColumn} ${bentoLeft}`}>
         <div>
-          <Ticket as="div" className="w-full [--stub:2rem]">
+          <TicketBox as="div" className="w-full [--stub:2rem]">
             <CreateInvite />
-          </Ticket>
+          </TicketBox>
         </div>
         <section
           aria-labelledby="requests"
@@ -83,6 +85,7 @@ async function Admin() {
             id="requests"
             className="font-display text-[2rem] leading-none font-black"
           >
+            <MailQuestion aria-hidden className={headingIcon} />
             Invite requests
           </h2>
           {requests.length === 0 ? (
@@ -116,6 +119,7 @@ async function Admin() {
             id="system"
             className="font-display text-[2rem] leading-none font-black"
           >
+            <Activity aria-hidden className={headingIcon} />
             System
           </h2>
           <ul className="divide-y divide-border border-y border-border">
@@ -144,6 +148,7 @@ async function Admin() {
             id="invites"
             className="font-display text-[2rem] leading-none font-black"
           >
+            <Ticket aria-hidden className={headingIcon} />
             Invites sent
           </h2>
           {invites.length === 0 ? (
@@ -181,6 +186,7 @@ async function Admin() {
             id="accounts"
             className="font-display text-[2rem] leading-none font-black"
           >
+            <Users aria-hidden className={headingIcon} />
             Accounts
           </h2>
           <ul className="divide-y divide-border border-y border-border">

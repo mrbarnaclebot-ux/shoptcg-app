@@ -1,5 +1,6 @@
 "use client";
 
+import { Download } from "lucide-react";
 import { cn } from "cn";
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { lineButton } from "@/components/ticket-button";
@@ -19,6 +20,7 @@ export function ExportButton(props: {
   if (props.disabled)
     return (
       <button type="button" disabled className={cls}>
+        <Download aria-hidden className="size-5" />
         {props.children}
       </button>
     );
@@ -59,6 +61,7 @@ export function ExportButton(props: {
       aria-busy={busy}
       className={cls}
     >
+      <Download aria-hidden className="size-5" />
       {busy ? "Exporting" : props.children}
     </a>
   );

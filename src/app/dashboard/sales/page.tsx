@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { paidBy } from "@/components/receipt-summary";
+import { BookOpen, ChartColumn } from "lucide-react";
 import { Stamp } from "@/components/stamp";
 import { lineButton } from "@/components/ticket-button";
 import { TicketLoading } from "@/components/ticket";
@@ -15,16 +16,18 @@ export const metadata: Metadata = { title: "Sales - tcgmart" };
 
 export default function SalesPage() {
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-start gap-3 px-4 pt-8 pb-16">
+    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-start gap-3 px-4 pt-8 pb-16 lg:max-w-[1280px] lg:px-8">
       <div className="flex w-full items-end justify-between gap-3">
         <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
           Sales
         </h1>
         <div className="flex gap-2">
           <Link href="/dashboard/ledger" className={lineButton}>
+            <BookOpen aria-hidden className="size-5" />
             Ledger
           </Link>
           <Link href="/dashboard/reports" className={lineButton}>
+            <ChartColumn aria-hidden className="size-5" />
             Report
           </Link>
         </div>
@@ -53,12 +56,25 @@ async function Today() {
         </p>
       </>
     );
+  const items = kept.reduce((n, s) => n + s.items, 0);
+  const voided = sales.length - kept.length;
   return (
-    <>
-      <p className="num text-lg font-semibold">
-        {kept.length} {kept.length === 1 ? "sale" : "sales"}, {usd(takings)}
-      </p>
-      <ul className="mt-1 w-full border-b border-border">
+    // Desktop: today's totals in a tile beside the list.
+    <div className="flex w-full flex-col items-start gap-3 lg:mt-4 lg:grid lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:items-start lg:gap-0 lg:border lg:border-border">
+      {/* The phone's one line; on desktop the tile beside the list. */}
+      <div className="flex flex-col gap-4 lg:self-stretch lg:border-r lg:border-border lg:p-8">
+        <p className="num text-lg font-semibold">
+          {kept.length} {kept.length === 1 ? "sale" : "sales"}, {usd(takings)}
+        </p>
+        <p className="font-display num hidden text-[3rem] leading-none font-extrabold lg:block">
+          {usd(takings)}
+        </p>
+        <p className="num hidden text-sm text-muted-foreground lg:block">
+          {items} {items === 1 ? "item" : "items"} sold.
+          {voided > 0 && ` ${voided} voided, left out of the total.`}
+        </p>
+      </div>
+      <ul className="mt-1 w-full border-b border-border lg:mt-0 lg:border-b-0 lg:px-8 lg:py-4">
         {sales.map((s) => (
           <li key={s.id} className="border-t border-border">
             <Link
@@ -89,6 +105,6 @@ async function Today() {
           </li>
         ))}
       </ul>
-    </>
+    </div>
   );
 }

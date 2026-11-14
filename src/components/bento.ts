@@ -15,6 +15,10 @@ export const bento =
 export const bentoColumn =
   "contents lg:flex lg:flex-col lg:*:p-8 lg:[&>*+*]:border-t lg:[&>*+*]:border-border";
 
+/** An icon at the start of a heading, sized by the heading's own font. */
+export const headingIcon =
+  "mr-2 inline-block size-[0.8em] shrink-0 align-[-0.08em] stroke-[1.75] text-muted-foreground";
+
 /** The two-column page grid; pair with bentoLeft / bentoRight columns. */
 export const bentoPage = "lg:grid lg:content-start lg:gap-0";
 export const bentoLeft = "lg:border lg:border-border";

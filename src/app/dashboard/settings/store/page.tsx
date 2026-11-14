@@ -1,3 +1,4 @@
+import { Type } from "lucide-react";
 import type { Metadata } from "next";
 import { bento } from "@/components/bento";
 import { SectionMark } from "@/components/section-mark";
@@ -21,7 +22,7 @@ async function Profile() {
   return (
     <div className={bento}>
       <section aria-labelledby="name-h" className="flex flex-col gap-4">
-        <SectionMark n={1} id="name-h">
+        <SectionMark n={1} id="name-h" icon={Type}>
           Name
         </SectionMark>
         <NameForm name={store.name} />

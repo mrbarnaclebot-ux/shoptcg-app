@@ -1,5 +1,6 @@
+import { headingIcon } from "@/components/bento";
 import { and, count, eq } from "drizzle-orm";
-import { Check } from "lucide-react";
+import { Check, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { getDb } from "@/db";
 import { listing } from "@/db/schema";
@@ -76,6 +77,7 @@ export async function GettingStarted({ store }: { store: Store }) {
           id="tips-title"
           className="font-display text-[2rem] leading-none font-black"
         >
+          <ListChecks aria-hidden className={headingIcon} />
           Getting started
         </h2>
         <p className="text-sm text-muted-foreground">

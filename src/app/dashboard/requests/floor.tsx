@@ -1,3 +1,4 @@
+import { Users } from "lucide-react";
 import { SectionMark } from "@/components/section-mark";
 import { getDb } from "@/db";
 import { floor, type FloorBasket } from "@/lib/floor";
@@ -25,7 +26,7 @@ export async function Floor({ slug }: { slug: string }) {
   if (!store || !now) return null;
   return (
     <section aria-labelledby="floor-h" className="flex flex-col gap-4">
-      <SectionMark n={2} id="floor-h">
+      <SectionMark n={2} id="floor-h" icon={Users}>
         {modeCopy(store.sellingMode).floorTitle}
       </SectionMark>
       <p data-testid="floor-counts">

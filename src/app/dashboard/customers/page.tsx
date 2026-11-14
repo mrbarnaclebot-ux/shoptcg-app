@@ -1,3 +1,4 @@
+import { Search } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -21,7 +22,7 @@ type Search = Pick<PageProps<"/dashboard/customers">, "searchParams">;
 
 export default function CustomersPage({ searchParams }: Search) {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-start gap-4 px-4 pt-8 pb-16">
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-start gap-4 px-4 pt-8 pb-16 lg:max-w-[1280px] lg:px-8">
       <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
         Customers
       </h1>
@@ -101,6 +102,7 @@ async function Customers({ searchParams }: Search) {
           />
         </label>
         <button type="submit" className={lineButton}>
+          <Search aria-hidden className="size-5" />
           Search
         </button>
       </form>
@@ -149,7 +151,7 @@ async function Customers({ searchParams }: Search) {
             </>
           )
         ) : (
-          <ul className="border-b border-border">
+          <ul className="border-b border-border lg:grid lg:grid-cols-2 lg:gap-x-10 xl:grid-cols-3">
             {rows.map((c) => {
               const status = promoStatus(c, timeZone);
               return (

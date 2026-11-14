@@ -1,5 +1,7 @@
 "use client";
 
+import { headingIcon } from "@/components/bento";
+import { Wallet } from "lucide-react";
 import { useState, useTransition, type ReactNode } from "react";
 import { lineButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
@@ -115,6 +117,7 @@ export function CashBox(props: { till: OpenTill | null; closing: boolean }) {
         id="cash-h"
         className="font-display text-2xl leading-none font-extrabold"
       >
+        <Wallet aria-hidden className={headingIcon} />
         Cash box
       </h2>
       {done && (
