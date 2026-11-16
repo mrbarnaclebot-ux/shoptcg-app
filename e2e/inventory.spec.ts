@@ -132,7 +132,9 @@ test("a vendor sells something that isn't a card, under Other", async ({
   await page.getByLabel("Category (optional)").fill("Supplies");
   await page.getByLabel("Fixed price (optional)").fill("2");
   // Too small to see is refused, and nothing is added.
-  await page.getByLabel("Photo (optional)").setInputFiles("src/app/favicon.ico");
+  await page
+    .getByLabel("Photo (optional)")
+    .setInputFiles("src/app/favicon.ico");
   await page.getByRole("button", { name: "Add custom item" }).click();
   await expect(page.locator("#photo-error")).toBeVisible();
   await page
