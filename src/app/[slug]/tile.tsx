@@ -12,20 +12,26 @@ import { AddButton } from "./list-island";
 // card's scan is the card itself and fills it; sealed product and vendor
 // photos can be any shape, so they show whole on the surface colour.
 const fills = (it: Pick<PublicItem, "kind" | "catalogItemId">) =>
-  it.kind !== "sealed" && it.catalogItemId !== null;
+  (it.kind === "raw" || it.kind === "graded") && it.catalogItemId !== null;
 
-const PLACEHOLDER = { raw: "Card", graded: "Slab", sealed: "Sealed" };
+const PLACEHOLDER = {
+  raw: "Card",
+  graded: "Slab",
+  sealed: "Sealed",
+  other: "Item",
+};
 
 // Japanese and Chinese names get their own lang so the right glyphs render.
 export const HTML_LANG = { en: undefined, ja: "ja", zh: "zh" } as const;
 
-/** "Base Set 4/102. NM", "Graded. PSA 10" or "Sealed". */
+/** "Base Set 4/102. NM", "Graded. PSA 10", "Sealed" or an other item's category. */
 export function metaLine(
   it: Pick<
     PublicItem,
     "kind" | "setName" | "number" | "condition" | "grader" | "grade"
   >,
 ) {
+  if (it.kind === "other") return it.setName || "Other";
   const grade = gradeLabel(it);
   if (it.kind !== "raw")
     return it.kind === "graded" ? `Graded. ${grade}` : grade;
@@ -93,7 +99,7 @@ export function Art(props: {
           )}
         </span>
       )}
-      {it.language !== "en" && (
+      {it.language !== "en" && it.kind !== "other" && (
         <span className="absolute top-1.5 left-1.5 bg-bg px-1.5 py-0.5 text-xs font-semibold">
           {LANGUAGE_LABEL[it.language]}
         </span>

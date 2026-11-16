@@ -162,7 +162,11 @@ export async function previewCsvAction(
     searchCatalog(
       db,
       searchText(input),
-      { kind: input.kind, language: input.language },
+      // "other" never gets here (previewOne keeps it custom).
+      {
+        kind: input.kind === "other" ? "raw" : input.kind,
+        language: input.language,
+      },
       provider,
       limit,
     ),

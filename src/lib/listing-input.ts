@@ -3,7 +3,8 @@ import { z } from "zod";
 import { CONDITIONS, GRADERS, GRADES, type Condition } from "@/lib/condition";
 
 export { CONDITIONS, type Condition };
-export const KINDS = ["raw", "graded", "sealed"] as const;
+export const KINDS = ["raw", "graded", "sealed", "other"] as const;
+export type Kind = (typeof KINDS)[number];
 export const LANGUAGES = ["en", "ja", "zh"] as const;
 
 // Blank form fields arrive as "" and mean "not set".
@@ -78,7 +79,8 @@ export const customListingSchema = z
     setName: optText(120).default(null),
     number: optText(20).default(null),
     kind: z.enum(KINDS),
-    language: z.enum(LANGUAGES),
+    // Supplies and collectibles have none; English keeps them off the JP/CN chips.
+    language: z.enum(LANGUAGES).default("en"),
     grader: optText(20).default(null),
     grade: optText(10).default(null),
     imageUrl: z

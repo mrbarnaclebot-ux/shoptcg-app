@@ -23,7 +23,7 @@ import type {
 
 export type StockFilter = {
   q?: string;
-  kind?: "raw" | "graded" | "sealed" | "hidden";
+  kind?: "raw" | "graded" | "sealed" | "other" | "hidden";
   language?: "en" | "ja" | "zh";
   /** Any of these languages (the public page's multi-select chips). */
   languages?: ("en" | "ja" | "zh")[];

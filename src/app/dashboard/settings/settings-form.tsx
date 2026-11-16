@@ -121,6 +121,7 @@ export type CheckoutValues = {
   acceptTransfer: boolean;
   bankDetails: string;
   checkoutNote: string;
+  whatsapp: string;
 };
 
 export function TableForm(props: {
@@ -266,6 +267,26 @@ function CheckoutFields(props: {
           Shown at checkout: couriers, areas, fees, where to pick up.
         </p>
         <Err id="note-error" msg={e.checkoutNote} />
+      </div>
+      <div className="mt-2 flex flex-col gap-2">
+        <Label htmlFor="whatsapp">WhatsApp number (optional)</Label>
+        <Input
+          id="whatsapp"
+          name="whatsapp"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          maxLength={20}
+          defaultValue={v.whatsapp}
+          placeholder="+94 77 123 4567"
+          aria-invalid={e.whatsapp ? true : undefined}
+          aria-describedby="whatsapp-hint whatsapp-error"
+        />
+        <p id="whatsapp-hint" className="text-sm text-muted-foreground">
+          Buyers get a button on their order to message you, for example to send
+          the transfer slip.
+        </p>
+        <Err id="whatsapp-error" msg={e.whatsapp} />
       </div>
     </fieldset>
   );

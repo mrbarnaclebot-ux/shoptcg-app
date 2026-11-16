@@ -10,7 +10,7 @@ import { toast } from "@/lib/toast";
 import { addCustomAction, type CustomState } from "../actions";
 import { Added, StockFields } from "./add-panel";
 
-type Kind = "raw" | "graded" | "sealed";
+type Kind = "raw" | "graded" | "sealed" | "other";
 
 function Field(props: {
   name: string;
@@ -39,9 +39,12 @@ function Field(props: {
   );
 }
 
-// For what no price source covers: Chinese products and odd slabs. The vendor
-// sets the price, since there is no market price to follow.
+// For what no price source covers: Chinese products, odd slabs, and other
+// things a store sells (sleeves, toploaders, die-cast). The vendor sets the
+// price, since there is no market price to follow.
 export function CustomForm() {
+  const [kind, setKind] = useState<Kind>("raw");
+  const other = kind === "other";
   const [state, action, pending] = useActionState<CustomState, FormData>(
     addCustomAction,
     {},
@@ -68,13 +71,22 @@ export function CustomForm() {
         label="Name"
         required
         error={e.name}
-        placeholder="Pikachu promo"
+        placeholder={other ? "Penny sleeves, 100 pack" : "Pikachu promo"}
       />
-      <div className="grid grid-cols-[1fr_7rem] gap-3">
-        <Field name="setName" label="Set (optional)" error={e.setName} />
-        <Field name="number" label="Number" error={e.number} />
-      </div>
-      <KindFields errors={e} />
+      <KindFields kind={kind} setKind={setKind} errors={e} />
+      {other ? (
+        <Field
+          name="setName"
+          label="Category (optional)"
+          placeholder="Supplies, Hot Wheels"
+          error={e.setName}
+        />
+      ) : (
+        <div className="grid grid-cols-[1fr_7rem] gap-3">
+          <Field name="setName" label="Set (optional)" error={e.setName} />
+          <Field name="number" label="Number" error={e.number} />
+        </div>
+      )}
       <Field
         name="imageUrl"
         label="Image link (optional)"
@@ -100,8 +112,15 @@ export function CustomForm() {
 }
 
 // Type decides which of condition or grader + grade the item carries.
-function KindFields({ errors: e }: { errors: Record<string, string> }) {
-  const [kind, setKind] = useState<Kind>("raw");
+function KindFields({
+  kind,
+  setKind,
+  errors: e,
+}: {
+  kind: Kind;
+  setKind: (k: Kind) => void;
+  errors: Record<string, string>;
+}) {
   const [language, setLanguage] = useState("en");
   const [condition, setCondition] = useState("NM");
   return (
@@ -115,19 +134,22 @@ function KindFields({ errors: e }: { errors: Record<string, string> }) {
           ["raw", "Raw"],
           ["graded", "Graded"],
           ["sealed", "Sealed"],
+          ["other", "Other"],
         ]}
       />
-      <Segmented
-        name="language"
-        label="Language"
-        value={language}
-        onChange={setLanguage}
-        options={[
-          ["en", "English"],
-          ["ja", "Japanese"],
-          ["zh", "Chinese"],
-        ]}
-      />
+      {kind !== "other" && (
+        <Segmented
+          name="language"
+          label="Language"
+          value={language}
+          onChange={setLanguage}
+          options={[
+            ["en", "English"],
+            ["ja", "Japanese"],
+            ["zh", "Chinese"],
+          ]}
+        />
+      )}
       {kind === "raw" && (
         <Segmented
           name="condition"

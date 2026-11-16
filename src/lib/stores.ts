@@ -154,6 +154,18 @@ const optionalText = (max: number) =>
     z.string().max(max, `${max} characters at most`).nullable(),
   );
 
+/** "+94 77 123 4567" as wa.me wants it, "94771234567"; blank is none. */
+export const whatsappSchema = z.preprocess(
+  (v) => (typeof v === "string" ? v.replace(/[\s()+-]/g, "") || null : null),
+  z
+    .string()
+    .regex(
+      /^[1-9][0-9]{7,14}$/,
+      "Start with the country code, like +94 77 123 4567",
+    )
+    .nullable(),
+);
+
 /** The How you sell settings page, with the online checkout options. */
 export const tableSchema = z
   .object({
@@ -166,6 +178,7 @@ export const tableSchema = z
     acceptTransfer: checkbox,
     bankDetails: optionalText(500),
     checkoutNote: optionalText(300),
+    whatsapp: whatsappSchema,
   })
   .superRefine((v, ctx) => {
     if (v.acceptTransfer && !v.bankDetails)

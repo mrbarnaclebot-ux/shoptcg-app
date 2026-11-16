@@ -15,6 +15,7 @@ import {
   getStoreByOwner,
   getStoreBySlug,
   setStoreState,
+  whatsappSchema,
 } from "@/lib/stores";
 
 let db: Db;
@@ -245,4 +246,16 @@ it("the migration keeps open stores open and closed ones paused", async () => {
   const now = old as unknown as Db;
   expect((await getStoreByOwner(now, "a"))?.live).toBe("open");
   expect((await getStoreByOwner(now, "b"))?.live).toBe("paused");
+});
+
+describe("whatsappSchema", () => {
+  it("keeps the digits wa.me wants, with the country code", () => {
+    expect(whatsappSchema.parse("+94 77 123-4567")).toBe("94771234567");
+    expect(whatsappSchema.parse("(1) 415 555 0100")).toBe("14155550100");
+    expect(whatsappSchema.parse("  ")).toBeNull();
+  });
+  it("refuses a local number without the country code", () => {
+    expect(whatsappSchema.safeParse("077 123 4567").success).toBe(false);
+    expect(whatsappSchema.safeParse("12345").success).toBe(false);
+  });
 });

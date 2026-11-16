@@ -211,6 +211,13 @@
       "when": 1794636321596,
       "tag": "0029_condition_prices_sales",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1794829897610,
+      "tag": "0030_whatsapp_other_items",
+      "breakpoints": true
     }
   ]
 }

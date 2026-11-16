@@ -11,7 +11,7 @@ const one = <T extends z.ZodType>(t: T) =>
   );
 
 const filterSchema = z.object({
-  type: one(z.enum(["raw", "graded", "sealed"])),
+  type: one(z.enum(["raw", "graded", "sealed", "other"])),
   lang: z
     .preprocess((v) => (v === undefined ? [] : [v].flat()), z.array(z.string()))
     .transform((a) =>

@@ -13,7 +13,7 @@ import { toast } from "@/lib/toast";
 import { buyAction } from "./actions";
 
 type Stock = { id: string; name: string; meta: string; qty: number };
-type Kind = "raw" | "graded" | "sealed";
+type Kind = "raw" | "graded" | "sealed" | "other";
 type NewItem = {
   name: string;
   kind: Kind;
@@ -108,7 +108,7 @@ export function BuyForm({ stock }: { stock: Stock[] }) {
                 item: {
                   name: l.item!.name,
                   kind: l.item!.kind,
-                  language: l.item!.language,
+                  language: l.item!.kind === "other" ? "en" : l.item!.language,
                   condition: l.item!.kind === "raw" ? l.item!.condition : null,
                   grader: l.item!.kind === "graded" ? l.item!.grader : null,
                   grade: l.item!.kind === "graded" ? l.item!.grade : null,
@@ -334,19 +334,22 @@ function NewItemFields(props: {
           ["raw", "Raw"],
           ["graded", "Graded"],
           ["sealed", "Sealed"],
+          ["other", "Other"],
         ]}
       />
-      <Segmented
-        name="new-language"
-        label="Language"
-        value={v.language}
-        onChange={(language) => set({ language })}
-        options={[
-          ["en", "English"],
-          ["ja", "Japanese"],
-          ["zh", "Chinese"],
-        ]}
-      />
+      {v.kind !== "other" && (
+        <Segmented
+          name="new-language"
+          label="Language"
+          value={v.language}
+          onChange={(language) => set({ language })}
+          options={[
+            ["en", "English"],
+            ["ja", "Japanese"],
+            ["zh", "Chinese"],
+          ]}
+        />
+      )}
       {v.kind === "raw" && (
         <Segmented
           name="new-condition"

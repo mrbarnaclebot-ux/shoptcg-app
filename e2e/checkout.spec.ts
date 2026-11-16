@@ -33,6 +33,11 @@ test("an online buyer picks delivery and bank transfer, then sees where to pay",
   await page
     .getByLabel("Note for buyers (optional)")
     .fill("PickMe Flash in Colombo, fee on arrival.");
+  // A local number has no country code, so wa.me can't use it.
+  await page.getByLabel("WhatsApp number (optional)").fill("077 123 4567");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator("#whatsapp-error")).toHaveText(/country code/);
+  await page.getByLabel("WhatsApp number (optional)").fill("+94 77 123 4567");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
 
@@ -57,6 +62,12 @@ test("an online buyer picks delivery and bank transfer, then sees where to pay",
   await expect(buyer.getByText("Delivery · Bank transfer")).toBeVisible();
   await expect(buyer.getByTestId("bank-details")).toHaveText(BANK);
   await expect(buyer.getByText(`Use ${code} as the reference.`)).toBeVisible();
+  // The buyer can send the slip; the first message names the order.
+  const wa = await buyer
+    .getByRole("link", { name: "Message the seller on WhatsApp" })
+    .getAttribute("href");
+  expect(wa).toMatch(/^https:\/\/wa\.me\/94771234567\?text=/);
+  expect(decodeURIComponent(wa!)).toContain(`order ${code} by bank transfer`);
 
   // The seller sees where to send it and who to call, with transfer picked.
   await page.goto("/dashboard");
@@ -98,6 +109,10 @@ test("a pickup and cash buyer sees no bank details, and a table store asks nothi
   await sent(buyer);
   await expect(buyer.getByText("Pickup · Cash at pickup")).toBeVisible();
   await expect(buyer.getByTestId("bank-details")).toHaveCount(0);
+  // No number saved, no WhatsApp button.
+  await expect(
+    buyer.getByRole("link", { name: "Message the seller on WhatsApp" }),
+  ).toHaveCount(0);
 
   // Back at a table, the same store's cart asks none of it.
   await saveSettings(page, { mode: "At a table" });

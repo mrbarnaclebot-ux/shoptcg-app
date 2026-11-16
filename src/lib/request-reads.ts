@@ -90,7 +90,7 @@ export type Line = {
   grader: string | null;
   grade: string | null;
   imageUrl: string | null;
-  kind: "raw" | "graded" | "sealed";
+  kind: "raw" | "graded" | "sealed" | "other";
   condition: "NM" | "LP" | "MP" | "HP" | "DMG" | null;
   language: "en" | "ja" | "zh";
 };
@@ -122,6 +122,9 @@ export async function buyerRequest(db: Db, id: string, sessionId: string) {
       bankDetails: sql<
         string | null
       >`case when ${request.payWith} = 'transfer' then ${store.bankDetails} end`,
+      whatsapp: sql<
+        string | null
+      >`case when ${store.sellingMode} = 'online' then ${store.whatsapp} end`,
     })
     .from(request)
     .innerJoin(store, eq(store.id, request.storeId))
