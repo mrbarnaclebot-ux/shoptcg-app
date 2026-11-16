@@ -81,6 +81,16 @@ export default async function RequestPage({
             </p>
             <HoldWarning at={r.expiresAt.getTime()} soon={soon} />
             <Checkout r={r} />
+            {r.whatsapp && (
+              <a
+                href={whatsappHref(r.whatsapp, store.name, r.code, r.payWith)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${lineButton} mt-4`}
+              >
+                Message the seller on WhatsApp
+              </a>
+            )}
             <RequestLines lines={r.lines} />
           </Ticket>
           <CancelRequest id={r.id} />
@@ -186,6 +196,20 @@ function Checkout({
       )}
     </div>
   );
+}
+
+/** wa.me with a first message that names the order, so the seller can find it. */
+function whatsappHref(
+  number: string,
+  storeName: string,
+  code: string,
+  payWith: string | null,
+) {
+  const text =
+    payWith === "transfer"
+      ? `Hi ${storeName}, I've paid for order ${code} by bank transfer. Here is the slip:`
+      : `Hi ${storeName}, about my order ${code}:`;
+  return `https://wa.me/${number}?text=${encodeURIComponent(text)}`;
 }
 
 function Ended(props: { title: string; sub: string; action: ReactNode }) {

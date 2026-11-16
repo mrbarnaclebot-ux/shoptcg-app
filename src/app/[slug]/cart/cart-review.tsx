@@ -26,7 +26,7 @@ export type ReviewItem = {
   id: string;
   name: string;
   meta: string;
-  kind: "raw" | "graded" | "sealed";
+  kind: "raw" | "graded" | "sealed" | "other";
   imageUrl: string | null;
   price: number | null;
   available: number;

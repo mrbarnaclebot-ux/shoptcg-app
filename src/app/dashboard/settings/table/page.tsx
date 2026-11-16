@@ -30,6 +30,7 @@ async function Table() {
           acceptTransfer: store.acceptTransfer,
           bankDetails: store.bankDetails ?? "",
           checkoutNote: store.checkoutNote ?? "",
+          whatsapp: store.whatsapp ? `+${store.whatsapp}` : "",
         }}
       />
       <div className="flex flex-col items-start gap-3 border-t border-border pt-6">

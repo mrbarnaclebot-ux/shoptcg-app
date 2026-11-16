@@ -219,8 +219,10 @@ export default function HelpPage() {
             </p>
             <ul>
               <li>
-                <strong>Can&apos;t find it?</strong> Add a custom item with your
-                own name and price.
+                <strong>Can&apos;t find it, or not a card?</strong> Add a custom
+                item with your own name and price. Pick <strong>Other</strong>{" "}
+                for sleeves, toploaders, die-cast and other collectibles, with a
+                category of your own; buyers filter them under Other.
               </li>
               <li>
                 <strong>Lots of stock?</strong> Import a CSV.{" "}
@@ -299,9 +301,11 @@ export default function HelpPage() {
               for an address and phone; you book the courier (PickMe Flash, Uber
               parcel or your own). Buyers who choose bank transfer see your bank
               details after they order, with their order code as the reference.
-              Confirm the sale once the money arrives. Add a note for couriers,
-              areas, fees or where to pick up. Addresses and phone numbers are
-              cleared after 30 days.
+              Confirm the sale once the money arrives. Add your WhatsApp number
+              and buyers get a button on their order to message you, for example
+              with the transfer slip. Add a note for couriers, areas, fees or
+              where to pick up. Addresses and phone numbers are cleared after 30
+              days.
             </p>
           </Section>
 

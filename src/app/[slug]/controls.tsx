@@ -9,6 +9,7 @@ const TYPES = [
   ["raw", "Raw"],
   ["graded", "Graded"],
   ["sealed", "Sealed"],
+  ["other", "Other"],
 ] as const;
 
 const LANGS = [

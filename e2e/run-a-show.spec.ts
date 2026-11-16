@@ -76,7 +76,9 @@ test("a vendor runs a whole show", async ({ page, browser }) => {
 
     await page.goto("/dashboard/inventory/add");
     await page
-      .getByRole("button", { name: "Not in the catalog? Add a custom item" })
+      .getByRole("button", {
+        name: "Not in the catalog, or not a card? Add it yourself",
+      })
       .click();
     await page.getByText("Chinese", { exact: true }).click();
     await page.getByLabel("Name").fill(CUSTOM);

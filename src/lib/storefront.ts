@@ -54,7 +54,7 @@ export async function getPublicStore(db: Db, slug: string) {
 export type Sort = "price-desc" | "price-asc" | "name" | "new";
 
 export type PublicFilter = {
-  type?: "raw" | "graded" | "sealed";
+  type?: "raw" | "graded" | "sealed" | "other";
   langs?: ("en" | "ja" | "zh")[];
   q?: string;
   sort?: Sort;

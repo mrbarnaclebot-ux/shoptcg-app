@@ -195,7 +195,12 @@ function Details({ item, store }: { item: PublicItem; store: PublicStore }) {
   );
 }
 
-const KIND = { raw: "Single card", graded: "Graded slab", sealed: "Sealed" };
+const KIND = {
+  raw: "Single card",
+  graded: "Graded slab",
+  sealed: "Sealed",
+  other: "Other",
+};
 const LANGUAGE = { en: "English", ja: "Japanese", zh: "Chinese" };
 
 /** The rows a collector checks before buying, only those this item has. */
@@ -209,9 +214,10 @@ function facts(it: PublicItem): [string, string][] {
         ? `${CONDITION_NAME[it.condition] ?? it.condition} (${it.condition})`
         : null,
     ],
-    ["Set", it.setName],
+    // An other item's "set" is the vendor's category; it has no language.
+    [it.kind === "other" ? "Category" : "Set", it.setName],
     ["Number", it.number],
-    ["Language", LANGUAGE[it.language]],
+    ["Language", it.kind === "other" ? null : LANGUAGE[it.language]],
   ];
   return rows.filter((r): r is [string, string] => Boolean(r[1]));
 }

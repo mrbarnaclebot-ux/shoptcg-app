@@ -165,8 +165,9 @@ export type PreviewRow = {
 type Search = (input: CustomListingInput) => Promise<CatalogItem[]>;
 
 async function previewOne(input: CustomListingInput, search: Search) {
-  // No price source covers Chinese products, so they are always custom.
-  if (input.language === "zh") return { match: null, note: null };
+  // No price source covers Chinese products or non-card items, so they are always custom.
+  if (input.language === "zh" || input.kind === "other")
+    return { match: null, note: null };
   try {
     return { match: pickMatch(input, await search(input)), note: null };
   } catch (err) {

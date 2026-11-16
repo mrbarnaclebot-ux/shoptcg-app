@@ -15,7 +15,7 @@ export function AddFlow() {
         className="inline-flex min-h-11 items-center self-start font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
       >
         {mode === "search"
-          ? "Not in the catalog? Add a custom item"
+          ? "Not in the catalog, or not a card? Add it yourself"
           : "Back to catalog search"}
       </button>
     </div>

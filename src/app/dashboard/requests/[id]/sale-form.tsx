@@ -30,7 +30,7 @@ export type DraftLine = {
   name: string;
   meta: string;
   number: string | null;
-  kind: "raw" | "graded" | "sealed";
+  kind: "raw" | "graded" | "sealed" | "other";
   imageUrl: string | null;
   qty: number;
   price: string;

@@ -56,6 +56,9 @@ export const store = pgTable(
     bankDetails: text("bank_details"),
     // Shown at the cart: couriers, areas, fees, where pickup is.
     checkoutNote: text("checkout_note"),
+    // Digits with the country code ("94771234567"): the buyer's order page links
+    // to wa.me so they can send the transfer slip.
+    whatsapp: text("whatsapp"),
     // Set when the vendor hides the getting-started tips, so they show once.
     tipsDismissedAt: timestamp("tips_dismissed_at", { withTimezone: true }),
     // A timed pause resumes by itself once now() passes this.
@@ -101,6 +104,7 @@ export const store = pgTable(
       "store_checkout_note_length",
       sql`char_length(${t.checkoutNote}) <= 300`,
     ),
+    check("store_whatsapp_format", sql`${t.whatsapp} ~ '^[0-9]{8,15}$'`),
     check("store_price_rule_range", sql`${t.priceRulePct} between -90 and 500`),
     // A second currency is useless without the vendor rate, and vice versa.
     check(
@@ -229,7 +233,7 @@ export type CatalogItem = typeof catalogItem.$inferSelect;
 export type NewCatalogItem = typeof catalogItem.$inferInsert;
 
 // One stock line in a store: a catalog item, or a custom item (CN cards, odd
-// slabs) described by the vendor. kind and language are copied from the
+// slabs, "other" things like sleeves or die-cast) described by the vendor. kind and language are copied from the
 // catalog item so filters and the condition rule work the same for both.
 export const listing = pgTable(
   "listing",
@@ -239,7 +243,9 @@ export const listing = pgTable(
       .notNull()
       .references(() => store.id, { onDelete: "cascade" }),
     catalogItemId: uuid("catalog_item_id").references(() => catalogItem.id),
-    kind: text("kind", { enum: ["raw", "graded", "sealed"] }).notNull(),
+    kind: text("kind", {
+      enum: ["raw", "graded", "sealed", "other"],
+    }).notNull(),
     language: text("language", { enum: ["en", "ja", "zh"] }).notNull(),
     name: text("name"),
     setName: text("set_name"),
@@ -264,7 +270,10 @@ export const listing = pgTable(
   (t) => [
     index("listing_store_idx").on(t.storeId, t.createdAt),
     index("listing_catalog_item_idx").on(t.catalogItemId),
-    check("listing_kind", sql`${t.kind} in ('raw', 'graded', 'sealed')`),
+    check(
+      "listing_kind",
+      sql`${t.kind} in ('raw', 'graded', 'sealed', 'other')`,
+    ),
     check("listing_language", sql`${t.language} in ('en', 'ja', 'zh')`),
     check(
       "listing_item_source",

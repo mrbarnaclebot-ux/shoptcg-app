@@ -60,7 +60,7 @@ export const receiptTime = (at: Date, timeZone: string) =>
     timeZoneName: "short",
   });
 
-/** "NM", "PSA 10" or "Sealed": the one-word state of a listing. */
+/** "NM", "PSA 10", "Sealed" or "Other": the one-word state of a listing. */
 export function gradeLabel(r: {
   kind: string;
   condition: string | null;
@@ -69,6 +69,7 @@ export function gradeLabel(r: {
 }) {
   if (r.kind === "graded") return [r.grader, r.grade].filter(Boolean).join(" ");
   if (r.kind === "sealed") return "Sealed";
+  if (r.kind === "other") return "Other";
   return r.condition ?? "";
 }
 

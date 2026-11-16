@@ -2,7 +2,7 @@ import { cn } from "cn";
 import { LANGUAGE_LABEL } from "@/lib/format";
 
 // Every thumb is card-shaped so rows line up; sealed shows whole inside it.
-type Kind = "raw" | "graded" | "sealed";
+type Kind = "raw" | "graded" | "sealed" | "other";
 
 // Outline drawings for items with no photo, one per kind, in a 0 0 24 24 box.
 // ponytail: line placeholders until the item has a photo.
@@ -17,6 +17,7 @@ const OUTLINE = {
   sealed: (
     <path d="M3.5 8 12 4l8.5 4v9L12 21l-8.5-4zM3.5 8 12 12l8.5-4M12 12v9" />
   ),
+  other: <rect x="4" y="4" width="16" height="16" rx="1.5" />,
 } as const;
 
 function Placeholder(props: {
@@ -63,9 +64,11 @@ function Placeholder(props: {
 export const kindOf = (label: string | null) =>
   label === "Sealed"
     ? "sealed"
-    : /^(PSA|BGS|CGC|SGC)/.test(label ?? "")
-      ? "graded"
-      : "raw";
+    : label === "Other"
+      ? "other"
+      : /^(PSA|BGS|CGC|SGC)/.test(label ?? "")
+        ? "graded"
+        : "raw";
 
 export function CardThumb({
   src,
@@ -102,7 +105,12 @@ export function CardThumb({
       alt=""
       loading="lazy"
       decoding="async"
-      className={cn(box, kind === "sealed" ? "object-contain" : "object-cover")}
+      className={cn(
+        box,
+        kind === "sealed" || kind === "other"
+          ? "object-contain"
+          : "object-cover",
+      )}
     />
   );
 }
