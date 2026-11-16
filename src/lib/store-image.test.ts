@@ -1,7 +1,13 @@
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
 import { putImage } from "@/lib/image-store";
-import { ImageError, processImage, sniff } from "@/lib/store-image";
+import {
+  ImageError,
+  processImage,
+  processPhoto,
+  sniff,
+} from "@/lib/store-image";
+import { ownPhotoUrl } from "@/lib/pricing/images";
 
 const photo = (
   width: number,
@@ -84,5 +90,39 @@ describe("putImage without Pinata", () => {
     await expect(
       putImage(bytes, "x.webp", { RAILWAY_ENVIRONMENT: "production" }),
     ).rejects.toBeInstanceOf(ImageError);
+  });
+});
+
+describe("processPhoto", () => {
+  it("keeps the item's shape, at most 800 px a side, as WebP", async () => {
+    const out = await processPhoto(await photo(3000, 1500, "jpeg"));
+    const meta = await sharp(out).metadata();
+    expect([meta.format, meta.width, meta.height]).toEqual(["webp", 800, 400]);
+    expect(meta.exif).toBeUndefined();
+    // Never enlarged.
+    const small = await sharp(
+      await processPhoto(await photo(300, 240, "png")),
+    ).metadata();
+    expect([small.width, small.height]).toEqual([300, 240]);
+  });
+  it("refuses a photo too small to see, or not an image", async () => {
+    await expect(processPhoto(await photo(150, 400, "webp"))).rejects.toThrow(
+      ImageError,
+    );
+    await expect(processPhoto(Buffer.from("not an image"))).rejects.toThrow(
+      ImageError,
+    );
+  });
+});
+
+describe("ownPhotoUrl", () => {
+  const env = { PINATA_GATEWAY_URL: "https://shop.mypinata.cloud" };
+  it("shows our uploads and nothing else", () => {
+    const pinned = "https://shop.mypinata.cloud/ipfs/bafy123";
+    expect(ownPhotoUrl(pinned, env)).toBe(pinned);
+    expect(ownPhotoUrl("data:image/webp;base64,AAAA", env)).not.toBeNull();
+    expect(ownPhotoUrl("https://evil.test/ipfs/bafy123", env)).toBeNull();
+    expect(ownPhotoUrl("data:text/html;base64,AAAA", env)).toBeNull();
+    expect(ownPhotoUrl(pinned, {})).toBeNull();
   });
 });

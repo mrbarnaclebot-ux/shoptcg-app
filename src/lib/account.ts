@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { and, eq, gt, like } from "drizzle-orm";
 import type { Db } from "@/db/open";
-import { store, user, verification } from "@/db/schema";
+import { listing, store, user, verification } from "@/db/schema";
 
 const CHANGE_MS = 60 * 60_000;
 const hash = (token: string) =>
@@ -79,7 +79,7 @@ export async function confirmEmailChange(
 
 /**
  * Removes the account and, by cascade, its store, stock, sales, buys, buyer
- * requests and sessions. Returns the store's image file ids so the caller can
+ * requests and sessions. Returns the store's and its items' image file ids so the caller can
  * drop them from storage after the rows are gone.
  */
 export async function deleteAccount(db: Db, userId: string) {
@@ -88,12 +88,24 @@ export async function deleteAccount(db: Db, userId: string) {
       .select({ banner: store.bannerFileId, avatar: store.avatarFileId })
       .from(store)
       .where(eq(store.ownerUserId, userId));
+    const photos = s
+      ? await tx
+          .select({ id: listing.imageFileId })
+          .from(listing)
+          .innerJoin(store, eq(store.id, listing.storeId))
+          .where(eq(store.ownerUserId, userId))
+      : [];
     const [gone] = await tx
       .delete(user)
       .where(eq(user.id, userId))
       .returning({ email: user.email });
     return gone
-      ? { email: gone.email, files: [s?.banner, s?.avatar].filter(Boolean) }
+      ? {
+          email: gone.email,
+          files: [s?.banner, s?.avatar, ...photos.map((p) => p.id)].filter(
+            Boolean,
+          ),
+        }
       : null;
   });
 }

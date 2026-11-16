@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { CONDITIONS } from "@/lib/condition";
 import type { StockRow } from "@/lib/listings";
 import { toast } from "@/lib/toast";
-import { updateListingAction } from "./actions";
+import { PhotoField } from "./add/custom-form";
+import { setPhotoAction, updateListingAction } from "./actions";
 
 export function EditPanel({
   row,
@@ -74,7 +75,56 @@ export function EditPanel({
           </TicketButton>
         </div>
       </form>
+      {row.catalogItemId === null && <Photo row={row} />}
     </Ticket>
+  );
+}
+
+/** A custom item's own photo: catalog art comes from the price source. */
+function Photo({ row }: { row: StockRow }) {
+  const [error, setError] = useState<string>();
+  const [pending, start] = useTransition();
+  const send = (form: FormData, done: string) =>
+    start(async () => {
+      form.set("id", row.id);
+      const res = await setPhotoAction(form);
+      setError(res.error);
+      if (res.error) toast.notSaved(res.error);
+      else toast.itemUpdated(row.name, done);
+    });
+  return (
+    <form
+      className="mt-5 flex flex-col gap-3 border-t border-dashed border-border-strong pt-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        send(new FormData(e.currentTarget), "Photo saved.");
+      }}
+    >
+      <PhotoField id={`photo-${row.id}`} error={error} />
+      <div className="flex flex-wrap gap-3">
+        <TicketButton
+          type="submit"
+          variant="secondary"
+          disabled={pending}
+          aria-busy={pending}
+        >
+          {pending ? "Saving" : "Save photo"}
+        </TicketButton>
+        {row.imageUrl && (
+          <TicketButton
+            variant="secondary"
+            disabled={pending}
+            onClick={() => {
+              const form = new FormData();
+              form.set("remove", "1");
+              send(form, "Photo removed.");
+            }}
+          >
+            Remove photo
+          </TicketButton>
+        )}
+      </div>
+    </form>
   );
 }
 

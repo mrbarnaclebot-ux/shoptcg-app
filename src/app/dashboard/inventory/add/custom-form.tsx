@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { startTransition, useActionState, useEffect, useState } from "react";
 import { Segmented } from "@/components/segmented";
 import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +60,14 @@ export function CustomForm() {
     <form
       key={state.n ?? 0}
       action={action}
+      // A form action resets the fields even when the server refuses them, so
+      // a bad photo would wipe the rest. Dispatch by hand: a success still
+      // clears the form, through the key above.
+      onSubmit={(ev) => {
+        ev.preventDefault();
+        const data = new FormData(ev.currentTarget);
+        startTransition(() => action(data));
+      }}
       noValidate
       className="flex flex-col gap-5"
     >
@@ -87,12 +95,7 @@ export function CustomForm() {
           <Field name="number" label="Number" error={e.number} />
         </div>
       )}
-      <Field
-        name="imageUrl"
-        label="Image link (optional)"
-        placeholder="https://"
-        error={e.imageUrl}
-      />
+      <PhotoField error={e.photo} />
       <StockFields errors={e} />
       <p className="text-sm text-muted-foreground">
         Custom items have no market price, so set a fixed price or add one
@@ -171,5 +174,32 @@ function KindFields({
         </div>
       )}
     </>
+  );
+}
+
+/** A photo from the phone's camera or files; the server re-encodes it. */
+export function PhotoField(props: { id?: string; error?: string }) {
+  const id = props.id ?? "photo";
+  return (
+    <div className="flex flex-col gap-2">
+      <Label htmlFor={id}>Photo (optional)</Label>
+      <input
+        id={id}
+        name="photo"
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        aria-invalid={props.error ? true : undefined}
+        aria-describedby={`${id}-hint${props.error ? ` ${id}-error` : ""}`}
+        className="text-sm file:mr-3 file:min-h-11 file:cursor-pointer file:border-0 file:bg-transparent file:px-4 file:font-semibold file:shadow-[inset_0_0_0_1.5px_currentColor]"
+      />
+      <p id={`${id}-hint`} className="text-sm text-muted-foreground">
+        JPEG, PNG or WebP, up to 4 MB. Shown whole on your store page.
+      </p>
+      {props.error && (
+        <p id={`${id}-error`} className="text-sm text-danger">
+          {props.error}
+        </p>
+      )}
+    </div>
   );
 }

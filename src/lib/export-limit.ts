@@ -19,3 +19,5 @@ export function hourlyLimit(max: number) {
 export const exportAllowed = hourlyLimit(30);
 /** Image uploads cost a re-encode and a stored file, so 20 an hour. */
 export const uploadAllowed = hourlyLimit(20);
+/** Item photos: a vendor may add a shelf of them in one go. */
+export const photoAllowed = hourlyLimit(60);

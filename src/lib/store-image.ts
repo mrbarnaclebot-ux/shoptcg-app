@@ -31,23 +31,56 @@ export function sniff(b: Uint8Array) {
   return null;
 }
 
+/** Decodes an upload whose first bytes and decoded format agree. */
+async function decode(input: Uint8Array) {
+  if (input.byteLength > MAX_IMAGE_BYTES)
+    throw new ImageError("That image is over 4 MB. Pick a smaller one.");
+  const format = sniff(input);
+  if (!format) throw new ImageError(WRONG_TYPE);
+  const image = sharp(input, { limitInputPixels: MAX_PIXELS });
+  const meta = await image.metadata();
+  if (meta.format !== format) throw new ImageError(WRONG_TYPE);
+  return { image, width: meta.width ?? 0, height: meta.height ?? 0 };
+}
+
+// An item photo shows whole (sleeves, boxes, die-cast are any shape), so it
+// keeps its shape. 800 covers the item page's 420 px at 2x.
+const PHOTO_MAX = 800;
+const PHOTO_MIN = 200;
+
+/**
+ * A vendor's photo of an item, re-encoded as WebP at most 800 px a side. Like
+ * processImage, only our encoder's output is kept, so metadata is gone.
+ */
+export async function processPhoto(input: Uint8Array) {
+  try {
+    const { image, width, height } = await decode(input);
+    if (width < PHOTO_MIN || height < PHOTO_MIN)
+      throw new ImageError(
+        `That photo is too small. Use at least ${PHOTO_MIN} x ${PHOTO_MIN} pixels.`,
+      );
+    return await image
+      .rotate()
+      .resize(PHOTO_MAX, PHOTO_MAX, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toBuffer();
+  } catch (err) {
+    if (err instanceof ImageError) throw err;
+    throw new ImageError("We couldn't read that image. Try another file.");
+  }
+}
+
 /**
  * Decodes the upload and re-encodes it as WebP at exactly the stored size,
  * cropped around the centre. Only our own encoder's output is ever stored, so
  * EXIF and GPS data, and anything hidden in the original file, are gone.
  */
 export async function processImage(kind: ImageKind, input: Uint8Array) {
-  if (input.byteLength > MAX_IMAGE_BYTES)
-    throw new ImageError("That image is over 4 MB. Pick a smaller one.");
-  const format = sniff(input);
-  if (!format) throw new ImageError(WRONG_TYPE);
   const { width, height } = IMAGE_SIZE[kind];
   try {
-    const image = sharp(input, { limitInputPixels: MAX_PIXELS });
-    const meta = await image.metadata();
-    if (meta.format !== format) throw new ImageError(WRONG_TYPE);
+    const { image, ...got } = await decode(input);
     // Half size still looks fine on a phone; smaller would be stretched to blur.
-    if ((meta.width ?? 0) < width / 2 || (meta.height ?? 0) < height / 2)
+    if (got.width < width / 2 || got.height < height / 2)
       throw new ImageError(
         `That image is too small. Use at least ${width / 2} x ${height / 2} pixels.`,
       );

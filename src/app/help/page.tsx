@@ -222,7 +222,9 @@ export default function HelpPage() {
                 <strong>Can&apos;t find it, or not a card?</strong> Add a custom
                 item with your own name and price. Pick <strong>Other</strong>{" "}
                 for sleeves, toploaders, die-cast and other collectibles, with a
-                category of your own; buyers filter them under Other.
+                category of your own; buyers filter them under Other. Add a
+                photo from your phone when you add it, or later from{" "}
+                <strong>Edit</strong>.
               </li>
               <li>
                 <strong>Lots of stock?</strong> Import a CSV.{" "}

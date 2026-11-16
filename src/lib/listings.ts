@@ -5,6 +5,7 @@ import {
   eq,
   ilike,
   inArray,
+  isNull,
   or,
   sql,
   type Column,
@@ -210,7 +211,7 @@ function customValues(storeId: string, input: CustomListingInput) {
 export async function addCustomListing(
   db: Db,
   storeId: string,
-  input: CustomListingInput,
+  input: CustomListingInput & { imageFileId?: string | null },
 ) {
   await assertRoom(db, storeId, 1);
   const [row] = await db
@@ -281,6 +282,42 @@ export async function updateListing(
     .where(and(eq(listing.id, id), eq(listing.storeId, storeId)))
     .returning({ id: listing.id });
   return rows.length > 0;
+}
+
+/**
+ * Sets or clears (null) a custom listing's photo. Returns the file id it
+ * replaced for the caller to drop from storage, or undefined when the listing
+ * is not this store's custom item (catalog art isn't the vendor's to change).
+ */
+export async function setListingPhoto(
+  db: Db,
+  storeId: string,
+  id: string,
+  image: { url: string; fileId: string | null } | null,
+) {
+  return db.transaction(async (tx) => {
+    const [old] = await tx
+      .select({ fileId: listing.imageFileId })
+      .from(listing)
+      .where(
+        and(
+          eq(listing.id, id),
+          eq(listing.storeId, storeId),
+          isNull(listing.catalogItemId),
+        ),
+      )
+      .for("update");
+    if (!old) return undefined;
+    await tx
+      .update(listing)
+      .set({
+        imageUrl: image?.url ?? null,
+        imageFileId: image?.fileId ?? null,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(listing.id, id));
+    return old.fileId;
+  });
 }
 
 /** Moves qty by delta within 0 to 9999; null when the listing is not theirs. */
