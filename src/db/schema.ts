@@ -253,6 +253,8 @@ export const listing = pgTable(
     grader: text("grader"),
     grade: text("grade"),
     imageUrl: text("image_url"),
+    // Set when imageUrl is the vendor's uploaded photo, so a replace can drop it.
+    imageFileId: text("image_file_id"),
     condition: text("condition", { enum: ["NM", "LP", "MP", "HP", "DMG"] }),
     qty: integer("qty").notNull().default(1),
     overridePrice: numeric("override_price", { precision: 12, scale: 2 }),

@@ -131,6 +131,15 @@ test("a vendor sells something that isn't a card, under Other", async ({
   await page.getByLabel("Name").fill("Penny sleeves, 100 pack");
   await page.getByLabel("Category (optional)").fill("Supplies");
   await page.getByLabel("Fixed price (optional)").fill("2");
+  // Too small to see is refused, and nothing is added.
+  await page
+    .getByLabel("Photo (optional)")
+    .setInputFiles("src/app/favicon.ico");
+  await page.getByRole("button", { name: "Add custom item" }).click();
+  await expect(page.locator("#photo-error")).toBeVisible();
+  await page
+    .getByLabel("Photo (optional)")
+    .setInputFiles("public/icon-512.png");
   await page.getByRole("button", { name: "Add custom item" }).click();
   await expect(page.getByText("Added Penny sleeves, 100 pack")).toBeVisible();
 
@@ -138,6 +147,22 @@ test("a vendor sells something that isn't a card, under Other", async ({
   const tile = page.locator("[data-tile]").filter({ hasText: "Penny sleeves" });
   await expect(tile).toContainText("Supplies");
   await expect(tile).toContainText("$2");
+  // The photo is ours, re-encoded (a data URL without Pinata).
+  await expect(tile.locator("img")).toHaveAttribute(
+    "src",
+    /^data:image\/webp;base64,/,
+  );
+
+  // The edit panel removes it.
+  await page.goto("/dashboard/inventory");
+  const row = page.getByRole("listitem").filter({ hasText: "Penny sleeves" });
+  await row.getByRole("button", { name: "Edit" }).click();
+  await row.getByRole("button", { name: "Remove photo" }).click();
+  await expect(row.getByRole("button", { name: "Remove photo" })).toHaveCount(
+    0,
+  );
+  await page.goto(`/e2e-${id}?type=other`);
+  await expect(tile.locator("img")).toHaveCount(0);
   await page.goto(`/e2e-${id}?type=raw`);
   await expect(page.getByText("Penny sleeves")).toHaveCount(0);
 });

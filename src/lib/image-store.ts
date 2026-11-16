@@ -1,4 +1,5 @@
 import { isDeployed } from "@/lib/deployed";
+import { gatewayHost } from "@/lib/pricing/images";
 import { ImageError } from "@/lib/store-image";
 
 type Env = Record<string, string | undefined>;
@@ -9,11 +10,7 @@ const FILES = "https://api.pinata.cloud/v3/files/public";
 
 function pinata(env: Env) {
   const jwt = env.PINATA_JWT;
-  // Accepts "name.mypinata.cloud" or a full URL.
-  const host = env.PINATA_GATEWAY_URL?.replace(/^https?:\/\//, "").replace(
-    /\/.*$/,
-    "",
-  );
+  const host = gatewayHost(env);
   return jwt && host ? { jwt, host } : null;
 }
 

@@ -40,6 +40,8 @@ const nextConfig: NextConfig = {
     "js",
     ...(process.env.E2E_SEED === "1" ? ["e2e.ts"] : []),
   ],
+  // Item photos ride in the add form: 4 MB (MAX_IMAGE_BYTES) plus the form.
+  experimental: { serverActions: { bodySizeLimit: "5mb" } },
   cacheComponents: true,
   partialPrefetching: true,
   reactCompiler: true,

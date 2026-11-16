@@ -4,7 +4,7 @@ import { listing, pricePoint, store } from "@/db/schema";
 import { altPrice } from "@/lib/fx";
 import { listStock, type StockRow } from "@/lib/listings";
 import { heldByListing, type Held } from "@/lib/request-reads";
-import { safeImageUrl } from "@/lib/pricing/images";
+import { ownPhotoUrl, safeImageUrl } from "@/lib/pricing/images";
 import { changesInMs, resumesInMin, storeState } from "@/lib/store-state";
 import { underMarket, vendorPrice } from "@/lib/vendor-price";
 
@@ -80,7 +80,7 @@ function toPublic(s: PublicStore, held: Held) {
       condition: r.condition,
       grader: r.grader,
       grade: r.grade,
-      imageUrl: safeImageUrl(r.imageUrl),
+      imageUrl: safeImageUrl(r.imageUrl) ?? ownPhotoUrl(r.imageUrl),
       market: r.market,
       // Played singles are priced off Near Mint; the chart scales by this.
       conditionPct: r.conditionPct,

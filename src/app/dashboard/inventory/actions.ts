@@ -26,9 +26,13 @@ import {
   importListings,
   ListingError,
   stepQty,
+  setListingPhoto,
   updateListing,
 } from "@/lib/listings";
+import { photoAllowed } from "@/lib/export-limit";
+import { dropImage, putImage, type StoredImage } from "@/lib/image-store";
 import { defaultProvider } from "@/lib/pricing/provider";
+import { ImageError, processPhoto } from "@/lib/store-image";
 import { addToTableSale } from "@/lib/requests";
 import { requireStore } from "@/lib/session";
 import { priceNewListings } from "@/lib/sync-prices";
@@ -88,6 +92,51 @@ export async function updateListingAction(patch: unknown): Promise<Result> {
   return {};
 }
 
+/**
+ * The form's photo, re-encoded and stored: null when none was picked, or the
+ * message to show when it can't be used.
+ */
+async function storePhoto(
+  store: { id: string; slug: string },
+  file: FormDataEntryValue | null,
+): Promise<StoredImage | null | string> {
+  if (!(file instanceof File) || !file.size) return null;
+  if (!photoAllowed(store.id)) return "Too many photos. Try again in an hour.";
+  try {
+    const bytes = await processPhoto(new Uint8Array(await file.arrayBuffer()));
+    return await putImage(bytes, `${store.slug}-item.webp`);
+  } catch (err) {
+    if (err instanceof ImageError) return err.message;
+    console.error("[inventory] photo upload failed", err);
+    return "Couldn't save that photo. Try again.";
+  }
+}
+
+/** Sets (a "photo" file) or removes ("remove" = 1) a custom item's photo, from the edit panel. */
+export async function setPhotoAction(form: FormData): Promise<Result> {
+  const { store } = await requireStore();
+  const id = z.uuid().safeParse(form.get("id"));
+  if (!id.success) return { error: "That item is not in your stock." };
+  const photo = await storePhoto(store, form.get("photo"));
+  if (typeof photo === "string") return { error: photo };
+  if (!photo && form.get("remove") !== "1")
+    return { error: "Pick a photo first." };
+  try {
+    const old = await setListingPhoto(getDb(), store.id, id.data, photo);
+    if (old === undefined) {
+      await dropImage(photo?.fileId ?? null);
+      return { error: "That item is not in your stock." };
+    }
+    if (old !== (photo?.fileId ?? null)) await dropImage(old);
+  } catch (err) {
+    await dropImage(photo?.fileId ?? null);
+    console.error("[inventory] set photo failed", err);
+    return { error: SAVE_FAILED };
+  }
+  refresh();
+  return {};
+}
+
 export async function addCatalogAction(
   input: unknown,
 ): Promise<Result & Partial<Added>> {
@@ -127,9 +176,17 @@ export async function addCustomAction(
   const { store } = await requireStore();
   const parsed = customListingSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { errors: fieldErrors(parsed.error) };
+  const photo = await storePhoto(store, form.get("photo"));
+  if (typeof photo === "string") return { errors: { photo } };
   try {
     const db = getDb();
-    const row = await addCustomListing(db, store.id, parsed.data);
+    const row = await addCustomListing(db, store.id, {
+      ...parsed.data,
+      ...(photo && { imageUrl: photo.url, imageFileId: photo.fileId }),
+    }).catch(async (err) => {
+      await dropImage(photo?.fileId ?? null);
+      throw err;
+    });
     const first = await isFirst(db, store.id);
     const { name, qty, overridePrice, condition } = parsed.data;
     const price = overridePrice ? Number(overridePrice) : null;

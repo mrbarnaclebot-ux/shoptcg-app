@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Stamp } from "@/components/stamp";
 import { TapeHatch } from "@/components/tape-hatch";
 import { formatAlt, usdTag } from "@/lib/fx";
+import { isCardArt } from "@/lib/pricing/images";
 import { gradeLabel, LANGUAGE_LABEL } from "@/lib/format";
 import type { PublicItem } from "@/lib/storefront";
 import { AddButton } from "./list-island";
@@ -75,6 +76,8 @@ export function Art(props: {
           fill
           sizes={props.sizes}
           quality={70}
+          // Vendor photos are already stored small, on a host not in remotePatterns.
+          unoptimized={!isCardArt(it.imageUrl)}
           loading={props.eager ? "eager" : "lazy"}
           className={cn(
             fills(it) ? "object-cover" : "object-contain p-3",
