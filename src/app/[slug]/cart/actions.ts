@@ -1,20 +1,18 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { after } from "next/server";
 import { z } from "zod";
 import { getDb } from "@/db";
 import { ensureBuyerSid, readBuyerSid } from "@/lib/buyer-session";
 import { parseCheckout, storeOffer, type CheckoutErrors } from "@/lib/checkout";
-import { outboxPath } from "@/lib/email";
 import { seedAllowed } from "@/lib/e2e-seed";
 import { previewing } from "@/lib/preview";
 import { pushNewRequest } from "@/lib/push";
-import { ipHash } from "@/lib/request-limit";
 import { cancelRequest, createRequest, MAX_LINES } from "@/lib/requests";
 import { HOLD_MS, type SellingMode } from "@/lib/selling-mode";
-import { clientIp } from "@/lib/sign-in-limit";
 import { getPublicStore } from "@/lib/storefront";
+import { addressHash } from "../address-hash";
 
 export type SendResult =
   | { ok: true; id: string }
@@ -63,13 +61,6 @@ async function holdMs(mode: SellingMode) {
   if (!seedAllowed(process.env)) return HOLD_MS[mode];
   const ms = Number((await cookies()).get("e2e_hold_ms")?.value);
   return ms > 0 ? ms : HOLD_MS[mode];
-}
-
-// e2e sends from one machine; the per-phone limits still apply there.
-async function addressHash() {
-  const ip = outboxPath(process.env) ? null : clientIp(await headers());
-  const secret = process.env.BETTER_AUTH_SECRET;
-  return ip && secret ? ipHash(ip, secret) : null;
 }
 
 export async function sendRequest(

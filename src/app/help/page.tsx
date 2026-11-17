@@ -1,5 +1,6 @@
 import {
   BellRing,
+  CalendarClock,
   BookOpen,
   CircleHelp,
   Flag,
@@ -22,7 +23,7 @@ import { Wordmark } from "@/components/wordmark";
 export const metadata: Metadata = {
   title: "Help - tcgmart",
   description:
-    "How to set up and run your tcgmart store: stock, pricing, selling online or at a table, carts, sales, buys and the ledger.",
+    "How to set up and run your tcgmart store: stock, pricing, selling online or at a table, claim events, carts, sales, buys and the ledger.",
 };
 
 // Screenshots from e2e/help-shots.spec.ts (rerun it after a UI change).
@@ -71,6 +72,7 @@ const SECTIONS: [id: string, title: string, icon: LucideIcon][] = [
   ["stock", "Adding stock", PackagePlus],
   ["pricing", "Pricing", Tag],
   ["selling", "Online or at a table", ShoppingBag],
+  ["claims", "Claim events", CalendarClock],
   ["open", "Opening and pausing", Power],
   ["quick", "Quick sales at the table", Zap],
   ["carts", "Carts and sales", ShoppingCart],
@@ -309,6 +311,44 @@ export default function HelpPage() {
               where to pick up. Addresses and phone numbers are cleared after 30
               days.
             </p>
+          </Section>
+
+          <Section id="claims">
+            <p>
+              An online store can run a timed claim sale. Under{" "}
+              <strong>More → Claim events</strong>, tap{" "}
+              <strong>New event</strong>, name it, start now or later, pick how
+              long it runs and choose items from your stock. Use your store
+              prices or set an event price per item.
+            </p>
+            <ul>
+              <li>
+                Share the link, for example to your WhatsApp group. Buyers join
+                once with their name, WhatsApp number and email, then claim with
+                one tap. They can join before it starts.
+              </li>
+              <li>
+                The last one can only be claimed once. Set how many items one
+                buyer can claim, and how many of each item, so nobody takes
+                everything.
+              </li>
+              <li>
+                Event items leave your store page until the end. It ends at the
+                time you set or when everything is claimed. Whatever isn&apos;t
+                claimed comes back to your store.
+              </li>
+              <li>
+                Each buyer&apos;s claims show on the event page with a WhatsApp
+                button. Once they pay, tap <strong>Mark as paid</strong> and
+                confirm the sale; they get an email receipt. Claims not paid in
+                the time you set go back to your store.
+              </li>
+              <li>
+                <strong>Release</strong> gives a buyer&apos;s claims back (into
+                the event while it runs). <strong>Block</strong> also stops
+                their number and email joining your events again.
+              </li>
+            </ul>
           </Section>
 
           <Section id="open" shots={["store-control"]}>

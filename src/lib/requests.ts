@@ -17,7 +17,7 @@ import { uniqueViolation } from "@/lib/stores";
 import { vendorPrice } from "@/lib/vendor-price";
 
 /** Bumped when the buyer consent wording or the Terms change. */
-export const TERMS_VERSION = "2026-11-12";
+export const TERMS_VERSION = "2026-11-17";
 /** A table hold: the vendor's own table sale and test requests use it. */
 export const HOLD_MS = MODE_HOLD_MS.table;
 export const MAX_LINES = 30;
@@ -66,7 +66,7 @@ type StoreRow = { id: string; priceRulePct: number; rounding: string };
 async function quote(tx: Db, s: StoreRow, lines: LineInput[]) {
   const ids = lines.map((l) => l.listingId);
   const [rows, held] = await Promise.all([
-    listStock(tx, s.id, { ids }),
+    listStock(tx, s.id, { ids, forSale: true }),
     heldByListing(tx, s.id, ids),
   ]);
   const by = new Map(rows.map((r) => [r.id, r]));

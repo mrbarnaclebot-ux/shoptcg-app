@@ -3,6 +3,7 @@
 import { cn } from "cn";
 import {
   BookOpen,
+  CalendarClock,
   ChartColumn,
   ChevronLeft,
   ChevronRight,
@@ -36,6 +37,12 @@ const STORE: Row[] = [
     label: "Preview store",
     icon: Eye,
     hint: "Your page as buyers see it",
+  },
+  {
+    href: "/dashboard/events",
+    label: "Claim events",
+    icon: CalendarClock,
+    hint: "Timed claim sales for online stores",
   },
   {
     href: `${HOME}/store`,

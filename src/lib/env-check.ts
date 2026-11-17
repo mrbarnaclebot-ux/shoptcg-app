@@ -5,6 +5,7 @@ type Env = Record<string, string | undefined>;
 
 const VAPID = ["VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "VAPID_SUBJECT"];
 const PINATA = ["PINATA_JWT", "PINATA_GATEWAY_URL"];
+const TURNSTILE = ["TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY"];
 // Test hooks: sign-in links written to a file, and the routes that mint invites and stock.
 const TEST_ONLY = ["MAGIC_LINK_OUTBOX", "E2E_SEED"];
 
@@ -32,6 +33,11 @@ export function checkEnv(env: Env) {
   if (pinata.length === 1) errors.push(`Set both of ${PINATA.join(", ")}`);
   if (!pinata.length)
     warnings.push("Pinata unset: store image uploads are off");
+  const turnstile = TURNSTILE.filter((k) => env[k]);
+  if (turnstile.length === 1)
+    errors.push(`Set both of ${TURNSTILE.join(", ")}`);
+  if (!turnstile.length)
+    warnings.push("Turnstile unset: buyers can't join claim events");
   if (!env.EMAIL_FROM || /@resend[.]dev>?$/i.test(env.EMAIL_FROM.trim()))
     warnings.push(
       "EMAIL_FROM unset or Resend's test sender: mail only reaches the Resend account owner",

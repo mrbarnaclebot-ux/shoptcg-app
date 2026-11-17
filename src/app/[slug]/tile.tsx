@@ -50,9 +50,14 @@ export function stockLine(it: PublicItem, short = false) {
   return it.available === 1 ? "Last one" : `${it.available} left`;
 }
 
+type ArtItem = Pick<
+  PublicItem,
+  "imageUrl" | "kind" | "catalogItemId" | "number" | "setName" | "language"
+>;
+
 /** Card art or a paper placeholder with the set number in the poster face. */
 export function Art(props: {
-  it: PublicItem;
+  it: ArtItem;
   sizes: string;
   eager?: boolean;
   className?: string;

@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, min, sql, sum } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, min, sql, sum } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import {
   activeHold,
@@ -172,6 +172,8 @@ export async function storeQueue(db: Db, storeId: string, timeZone: string) {
     .where(
       and(
         eq(request.storeId, storeId),
+        // Claims are worked from their event's page.
+        isNull(request.claimEventId),
         sql`(${effectiveStatus} = 'pending' or (${effectiveStatus} = 'expired' and ${today}))`,
       ),
     )
@@ -198,6 +200,7 @@ export async function waitingCount(db: Db, storeId: string) {
         eq(request.storeId, storeId),
         eq(request.isTest, false),
         eq(request.walkUp, false),
+        isNull(request.claimEventId),
         sql`${effectiveStatus} = 'pending'`,
       ),
     );
@@ -217,6 +220,7 @@ export async function pendingDuplicate(
       and(
         eq(request.sessionId, k.sessionId),
         eq(request.storeId, k.storeId),
+        isNull(request.claimEventId),
         sql`${effectiveStatus} = 'pending'`,
       ),
     );

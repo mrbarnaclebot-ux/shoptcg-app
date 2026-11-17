@@ -29,7 +29,8 @@ export default function TermsPage() {
             </li>
             <li>
               Buyers: your name and email, only when you send a request to a
-              vendor, so they can confirm the sale and email your receipt.
+              vendor, so they can confirm the sale and email your receipt, and
+              your WhatsApp number when you join a claim event.
             </li>
             <li>
               Promotions: only if you tick the optional box. You can unsubscribe
@@ -51,6 +52,19 @@ export default function TermsPage() {
             an online store). If the request doesn&apos;t end in a sale, your
             details are deleted after 30 days. Promo emails are separate: they
             need the optional box, which starts unticked.
+          </p>
+          <h2 id="claim-events">Claim events</h2>
+          <p>
+            To join a vendor&apos;s claim event you give your name, WhatsApp
+            number and email. The vendor sees them with what you claimed, so
+            they can message you on WhatsApp to arrange payment and email your
+            receipt. Each claim holds the item until the vendor marks it paid,
+            or until the time to pay after the event runs out. Joining runs a
+            Cloudflare Turnstile check that you are a person, which Cloudflare
+            processes under its own privacy policy. A vendor can release your
+            claims or block your number and email from their events. Your phone
+            number is deleted after 30 days, and your name and email too if
+            nothing was sold.
           </p>
           <h2>Store images</h2>
           <p>

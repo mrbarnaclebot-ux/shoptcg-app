@@ -225,6 +225,13 @@
       "when": 1794835279918,
       "tag": "0031_listing_photo",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794893006925,
+      "tag": "0032_claim_events",
+      "breakpoints": true
     }
   ]
 }
