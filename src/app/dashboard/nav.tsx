@@ -17,7 +17,7 @@ const TABS = [
     href: "/dashboard/settings",
     label: "More",
     icon: Ellipsis,
-    also: ["/dashboard/customers", "/dashboard/preview"],
+    also: ["/dashboard/customers", "/dashboard/preview", "/dashboard/events"],
   },
 ];
 

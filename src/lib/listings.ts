@@ -11,7 +11,14 @@ import {
   type Column,
 } from "drizzle-orm";
 import type { Db } from "@/db/open";
-import { catalogItem, listing, pricePoint, store } from "@/db/schema";
+import {
+  catalogItem,
+  claimEvent,
+  claimEventItem,
+  listing,
+  pricePoint,
+  store,
+} from "@/db/schema";
 import { gradedItem } from "@/lib/catalog";
 import type {
   CatalogListingInput,
@@ -32,7 +39,15 @@ export type StockFilter = {
   id?: string;
   /** These listings, for a buyer's list and request. */
   ids?: string[];
+  /** Leave out listings in a claim event that hasn't ended: they sell there only. */
+  forSale?: true;
 };
+
+/** In a claim event that hasn't ended (same test as eventOpen in claim-events.ts). */
+export const inOpenEvent = sql<boolean>`exists (
+  select 1 from ${claimEventItem} join ${claimEvent} on ${claimEvent.id} = ${claimEventItem.eventId}
+  where ${claimEventItem.listingId} = ${listing.id}
+    and ${claimEvent.endedAt} is null and ${claimEvent.endsAt} > now())`;
 
 // ponytail: no pagination; vendors hold 50 to 500 items. Page past this cap if one grows.
 const MAX_ROWS = 1000;
@@ -69,6 +84,7 @@ function filterConds(storeId: string, f: StockFilter) {
   if (f.languages?.length) conds.push(inArray(listing.language, f.languages));
   if (f.id) conds.push(eq(listing.id, f.id));
   if (f.ids) conds.push(inArray(listing.id, f.ids));
+  if (f.forSale) conds.push(sql`not ${inOpenEvent}`);
   const q = f.q?.trim();
   if (q) {
     const like = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
@@ -109,6 +125,7 @@ function columns(latest: ReturnType<typeof latestPrices>) {
     overridePrice: listing.overridePrice,
     cost: listing.cost,
     active: listing.active,
+    inEvent: inOpenEvent,
     createdAt: listing.createdAt,
     // At this listing's condition; nmMarket is the provider's Near Mint price.
     market: conditionMarket(latest.market),

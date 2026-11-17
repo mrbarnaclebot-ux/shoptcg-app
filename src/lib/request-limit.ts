@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { and, count, eq, gt, sql } from "drizzle-orm";
+import { and, count, eq, gt, isNull, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { request } from "@/db/schema";
 
@@ -43,7 +43,11 @@ export async function requestLimited(
   k: { sessionId: string; storeId: string; ipHash: string | null },
 ) {
   const { session, ip, pendingPerStore } = REQUEST_LIMITS;
-  const bySession = eq(request.sessionId, k.sessionId);
+  // Joining a claim event is limited on its own (claim-events.ts).
+  const bySession = and(
+    eq(request.sessionId, k.sessionId),
+    isNull(request.claimEventId),
+  );
   const checks = [
     countWhere(db, and(bySession, since(session.windowMs))).then(
       (n) => n >= session.max,

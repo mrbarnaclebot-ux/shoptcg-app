@@ -4,6 +4,7 @@ import { getDb } from "@/db";
 import { getAuth } from "@/lib/auth";
 import { BUYER_COOKIE } from "@/lib/buyer-session";
 import { canonicalRedirect } from "@/lib/canonical-host";
+import { eventExists } from "@/lib/claim-events";
 import { buyerRequest } from "@/lib/request-reads";
 import { RESERVED_SLUGS, slugSchema } from "@/lib/slug";
 import { getPublicStore, publicItemExists, UUID } from "@/lib/storefront";
@@ -17,6 +18,8 @@ async function missing(req: NextRequest, slug: string, page?: string, id = "") {
   if (!store) return true;
   // Link prefetches land here too, so this stays a single-row lookup.
   if (page === "item") return !(await publicItemExists(db, store.id, id));
+  if (page === "claim")
+    return !UUID.test(id) || !(await eventExists(db, store.id, id));
   if (page !== "request") return false;
   // The waiting screen exists only for the phone that sent the request.
   const sid = req.cookies.get(BUYER_COOKIE)?.value;
@@ -27,7 +30,7 @@ async function missing(req: NextRequest, slug: string, page?: string, id = "") {
 // The paths that need a store or session check. Everything else only gets the
 // canonical-host redirect, so a printed sign on the old domain still lands.
 const CHECKED =
-  /^\/(?:dashboard(?:\/.*)?|join\/[^/]+|[^/]+(?:\/(?:cart|list)|\/(?:item|request)\/[^/]+)?)$/;
+  /^\/(?:dashboard(?:\/.*)?|join\/[^/]+|[^/]+(?:\/(?:cart|list)|\/(?:item|request|claim)\/[^/]+)?)$/;
 
 export async function proxy(req: NextRequest) {
   const moved = canonicalRedirect(

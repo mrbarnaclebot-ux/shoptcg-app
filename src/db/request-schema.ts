@@ -27,6 +27,94 @@ export const REQUEST_STATUS = [
 ] as const;
 export type RequestStatus = (typeof REQUEST_STATUS)[number];
 
+// A timed claim sale at an online store (src/lib/claim-events.ts). Its status
+// is computed on read from the clock, like storeState, so no job flips rows.
+export const claimEvent = pgTable(
+  "claim_event",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => store.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    // Set when the vendor ends it before endsAt.
+    endedAt: timestamp("ended_at", { withTimezone: true }),
+    // market: the store's normal price at claim time; custom: claim_event_item.price.
+    priceMode: text("price_mode", { enum: ["market", "custom"] }).notNull(),
+    allowUnclaim: boolean("allow_unclaim").notNull().default(false),
+    // Claims stay held this long after the end, for the buyer to pay.
+    payWithinHours: integer("pay_within_hours").notNull().default(24),
+    maxPerBuyer: integer("max_per_buyer").notNull().default(5),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("claim_event_store_idx").on(t.storeId, t.endsAt),
+    check(
+      "claim_event_title_length",
+      sql`char_length(${t.title}) between 1 and 80`,
+    ),
+    check(
+      "claim_event_window",
+      sql`${t.endsAt} > ${t.startsAt} and ${t.endsAt} <= ${t.startsAt} + interval '7 days'`,
+    ),
+    check(
+      "claim_event_price_mode",
+      sql`${t.priceMode} in ('market', 'custom')`,
+    ),
+    check("claim_event_pay_within", sql`${t.payWithinHours} between 1 and 168`),
+    check("claim_event_max_per_buyer", sql`${t.maxPerBuyer} between 1 and 99`),
+  ],
+);
+
+export type ClaimEvent = typeof claimEvent.$inferSelect;
+
+export const claimEventItem = pgTable(
+  "claim_event_item",
+  {
+    eventId: uuid("event_id")
+      .notNull()
+      .references(() => claimEvent.id, { onDelete: "cascade" }),
+    // deleteListing refuses while the event hasn't ended (claims would vanish);
+    // after that the row can go with its listing.
+    listingId: uuid("listing_id")
+      .notNull()
+      .references(() => listing.id, { onDelete: "cascade" }),
+    // Required in custom mode (checked in createEvent), unused in market mode.
+    price: numeric("price", { precision: 12, scale: 2 }),
+    maxPerBuyer: integer("max_per_buyer").notNull().default(1),
+  },
+  (t) => [
+    primaryKey({
+      name: "claim_event_item_pk",
+      columns: [t.eventId, t.listingId],
+    }),
+    index("claim_event_item_listing_idx").on(t.listingId),
+    check("claim_event_item_price_positive", sql`${t.price} > 0`),
+    check("claim_event_item_max", sql`${t.maxPerBuyer} between 1 and 99`),
+  ],
+);
+
+// The vendor's Block: this phone or email can't join the store's events again.
+export const claimBlock = pgTable(
+  "claim_block",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => store.id, { onDelete: "cascade" }),
+    phone: text("phone"),
+    email: text("email"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("claim_block_store_idx").on(t.storeId)],
+);
+
 // A buyer's "I'm interested" list. While pending and unexpired its lines hold
 // stock (active_hold); release is a status change, so holds cannot orphan.
 export const request = pgTable(
@@ -60,6 +148,10 @@ export const request = pgTable(
     // Built by the vendor for a buyer standing at the table: no email, no
     // alert, and it can be sold while the store is paused.
     walkUp: boolean("walk_up").notNull().default(false),
+    // Set on a buyer's claims in one claim event; one pending request each.
+    claimEventId: uuid("claim_event_id").references(() => claimEvent.id),
+    // The buyer's last claim, for the once-a-second limit.
+    lastClaimAt: timestamp("last_claim_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -104,6 +196,18 @@ export const request = pgTable(
     index("request_store_created_idx").on(t.storeId, t.createdAt.desc()),
     index("request_session_idx").on(t.sessionId, t.createdAt),
     index("request_ip_idx").on(t.ipHash, t.createdAt),
+    // One joined buyer per phone, email and browser per event.
+    ...(
+      [
+        ["request_claim_phone_idx", t.buyerPhone],
+        ["request_claim_email_idx", t.buyerEmail],
+        ["request_claim_session_idx", t.sessionId],
+      ] as const
+    ).map(([name, col]) =>
+      uniqueIndex(name)
+        .on(t.claimEventId, col)
+        .where(sql`${t.claimEventId} is not null and ${t.status} = 'pending'`),
+    ),
     index("request_pending_expiry_idx")
       .on(t.expiresAt)
       .where(sql`${t.status} = 'pending'`),

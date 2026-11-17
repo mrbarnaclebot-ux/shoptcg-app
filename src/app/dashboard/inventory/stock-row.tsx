@@ -51,7 +51,9 @@ export function StockRow(props: {
         </span>
         <div className="col-start-2 row-start-2 flex items-center gap-3 lg:col-start-4 lg:row-start-1">
           <Qty row={row} />
-          {row.active && row.qty > 0 && price !== null && <Sell row={row} />}
+          {row.active && row.qty > 0 && price !== null && !row.inEvent && (
+            <Sell row={row} />
+          )}
         </div>
         <PriceTag {...props} />
         <button
@@ -85,6 +87,7 @@ function Name({ row, price }: { row: Row; price: number | null }) {
         <span className="lg:hidden">. {LANGUAGE_LABEL[row.language]}</span>
       </p>
       {!row.active && <HatchTag>Hidden from buyers</HatchTag>}
+      {row.inEvent && <HatchTag>In a claim event</HatchTag>}
     </div>
   );
 }

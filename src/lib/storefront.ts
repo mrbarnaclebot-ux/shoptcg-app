@@ -1,8 +1,19 @@
-import { and, asc, count, desc, eq, gt, gte, inArray, max } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  max,
+  sql,
+} from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { listing, pricePoint, store } from "@/db/schema";
 import { altPrice } from "@/lib/fx";
-import { listStock, type StockRow } from "@/lib/listings";
+import { inOpenEvent, listStock, type StockRow } from "@/lib/listings";
 import { heldByListing, type Held } from "@/lib/request-reads";
 import { ownPhotoUrl, safeImageUrl } from "@/lib/pricing/images";
 import { changesInMs, resumesInMin, storeState } from "@/lib/store-state";
@@ -118,6 +129,7 @@ export async function listPublicStock(
     kind: f.type,
     languages: f.langs,
     q: f.q,
+    forSale: true,
   });
   const by = BY[f.sort ?? "price-desc"];
   const held = await heldByListing(db, s.id);
@@ -151,7 +163,7 @@ export const UUID =
 export async function getPublicItem(db: Db, s: PublicStore, id: string) {
   if (!UUID.test(id)) return null;
   const [rows, held] = await Promise.all([
-    listStock(db, s.id, { id }),
+    listStock(db, s.id, { id, forSale: true }),
     heldByListing(db, s.id, [id]),
   ]);
   return rows[0] ? toPublic(s, held)(rows[0]) : null;
@@ -168,6 +180,7 @@ export async function publicItemExists(db: Db, storeId: string, id: string) {
         eq(listing.id, id),
         eq(listing.storeId, storeId),
         eq(listing.active, true),
+        sql`not ${inOpenEvent}`,
       ),
     )
     .limit(1);
@@ -179,7 +192,7 @@ export async function getPublicItems(db: Db, s: PublicStore, ids: string[]) {
   const ok = ids.filter((id) => UUID.test(id)).slice(0, 30);
   if (!ok.length) return [];
   const [rows, held] = await Promise.all([
-    listStock(db, s.id, { ids: ok }),
+    listStock(db, s.id, { ids: ok, forSale: true }),
     heldByListing(db, s.id, ok),
   ]);
   return rows.map(toPublic(s, held));

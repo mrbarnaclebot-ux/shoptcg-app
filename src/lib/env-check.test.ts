@@ -13,6 +13,8 @@ const ok = {
   PINATA_JWT: "j",
   PINATA_GATEWAY_URL: "x.mypinata.cloud",
   EMAIL_FROM: "tcgmart <hello@shop.example>",
+  TURNSTILE_SITE_KEY: "site",
+  TURNSTILE_SECRET_KEY: "secret",
 };
 
 describe("checkEnv", () => {
@@ -43,6 +45,12 @@ describe("checkEnv", () => {
     expect(
       checkEnv({ ...ok, PINATA_GATEWAY_URL: undefined }).errors[0],
     ).toMatch(/both of PINATA/);
+  });
+
+  it("refuses half the Turnstile pair", () => {
+    expect(
+      checkEnv({ ...ok, TURNSTILE_SECRET_KEY: undefined }).errors[0],
+    ).toMatch(/both of TURNSTILE/);
   });
 
   it("refuses test hooks on a deployed service only", () => {

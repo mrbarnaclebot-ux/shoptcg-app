@@ -13,6 +13,8 @@ export type LiveType =
   | "cancelled"
   | "confirmed"
   | "voided"
+  // A claim added or given back in a claim event; r is the request (or event).
+  | "claim"
   | "floor";
 export type LiveEvent = { s: string; r: string; t: LiveType };
 

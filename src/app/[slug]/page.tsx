@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { RefreshAt } from "@/components/refresh-at";
 import { lineButton } from "@/components/ticket-button";
 import { getDb } from "@/db";
+import { storeEvent } from "@/lib/claim-events";
 import { modeCopy } from "@/lib/selling-mode";
 import {
   listPublicStock,
@@ -53,7 +54,10 @@ export default async function StorePage({
   const store = await storeOr404((await params).slug);
   if (store.state === "off") return <NotVending store={store} />;
   const f = parseFilter(await searchParams);
-  const summary = await storeSummary(getDb(), store.id);
+  const [summary, event] = await Promise.all([
+    storeSummary(getDb(), store.id),
+    storeEvent(getDb(), store.id),
+  ]);
   return (
     <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col px-4 md:px-6 lg:px-8">
       <StoreHeader store={store} {...summary} />
@@ -70,6 +74,24 @@ export default async function StorePage({
             ? `. Back in about ${store.resumesInMin} min.`
             : "."}
         </p>
+      )}
+      {event && (
+        <Link
+          href={`/${store.slug}/claim/${event.id}`}
+          className="paper -mx-4 mb-3 flex items-center justify-between gap-3 px-4 py-3 md:mx-0"
+        >
+          <span>
+            <span className="block text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+              {event.status === "scheduled"
+                ? "Claim event soon"
+                : "Claim event live"}
+            </span>
+            <span className="font-bold">{event.title}</span>
+          </span>
+          <span className="shrink-0 font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]">
+            {event.status === "scheduled" ? "Join now" : "Claim now"}
+          </span>
+        </Link>
       )}
       <Controls slug={store.slug} f={f} />
       <Suspense fallback={<GridSkeleton />}>

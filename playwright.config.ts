@@ -55,6 +55,9 @@ export default defineConfig({
       // Empty: uploads stay in the database row and nothing reaches Pinata.
       PINATA_JWT: "",
       PINATA_GATEWAY_URL: "",
+      // Empty: claim-event joins skip the bot check off Railway.
+      TURNSTILE_SITE_KEY: "",
+      TURNSTILE_SECRET_KEY: "",
       E2E_SEED: "1",
       BETTER_AUTH_URL: url,
       // Signs in without an invite; e2e/invites.spec.ts uses it for /admin.
