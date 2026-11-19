@@ -21,12 +21,14 @@ import {
   CONDITION_NAME,
   type ConditionPcts,
 } from "@/lib/condition";
+import { slugSchema, toSlug } from "@/lib/slug";
 import { MODE_COPY, SELLING_MODES, type SellingMode } from "@/lib/selling-mode";
 import { toast } from "@/lib/toast";
 import { vendorPrice } from "@/lib/vendor-price";
 import {
   saveNameAction,
   savePricingAction,
+  saveSlugAction,
   saveTableAction,
   type SettingsState,
 } from "./actions";
@@ -308,12 +310,52 @@ export function NameForm({ name }: { name: string }) {
             aria-describedby="name-hint name-error"
           />
           <p id="name-hint" className="text-sm text-muted-foreground">
-            Shown on your store page, sign and receipts. Your link stays the
-            same, and old receipts keep the old name.
+            Shown on your store page, sign and receipts. Old receipts keep the
+            old name.
           </p>
           <Err id="name-error" msg={e.name} />
         </div>
       )}
+    </SettingsShell>
+  );
+}
+
+/** The store link; the old one keeps working and sends buyers here. */
+export function SlugForm({ slug, host }: { slug: string; host: string }) {
+  const [value, setValue] = useState(slug);
+  const check = slugSchema.safeParse(value);
+  return (
+    <SettingsShell action={saveSlugAction}>
+      {(e) => {
+        const err = check.success ? e.slug : check.error.issues[0]?.message;
+        return (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="slug">Store link</Label>
+            <div className="flex h-12 items-center bg-bg pl-3.5 shadow-[inset_0_0_0_1.5px_var(--border-strong)] focus-within:shadow-[inset_0_0_0_2.5px_var(--focus)] has-aria-invalid:shadow-[inset_0_0_0_2px_var(--danger)]">
+              <span className="text-base text-muted-foreground select-none">
+                {host}/
+              </span>
+              <Input
+                id="slug"
+                name="slug"
+                required
+                maxLength={40}
+                value={value}
+                onChange={(ev) => setValue(toSlug(ev.target.value))}
+                aria-invalid={err ? true : undefined}
+                aria-describedby="slug-hint slug-error"
+                className="h-full bg-transparent pl-0.5 shadow-none focus-visible:shadow-none aria-invalid:shadow-none"
+              />
+            </div>
+            <p id="slug-hint" className="text-sm text-muted-foreground">
+              Lowercase letters, numbers and dashes. Your old link and printed
+              signs keep working and send buyers to the new one. Print a new
+              sign when you can.
+            </p>
+            <Err id="slug-error" msg={err} />
+          </div>
+        );
+      }}
     </SettingsShell>
   );
 }

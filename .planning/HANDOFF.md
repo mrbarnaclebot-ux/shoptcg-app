@@ -27,7 +27,8 @@ _Last updated: 2026-11-16. The product is **tcgmart.app**. `main` and `productio
   - Migration `0017` added `banner_url`, `banner_file_id`, `avatar_url`, `avatar_file_id`. Migration `0023` dropped the old `stores.logo_url`.
 - **Settings and admin:**
   - "More" (`/dashboard/settings`) is a menu on a phone and a side list on desktop (`settings/menu.tsx`, `settings/layout.tsx`). Each section is its own page with its own Save: `store` (name, images), `pricing`, `table`, `alerts`. The menu works without a store, so an admin with no store can reach `/admin`.
-  - The store name can be changed. The link (slug) can't, and old receipts keep the old name.
+  - The store name can be changed; old receipts keep the old name.
+  - The store link (slug) can be changed under Store profile, "Link" (`changeSlug` in `src/lib/stores.ts`). The old slug goes into `store_old_slug` (migration `0033`) and stays that store's for good: `src/proxy.ts` 308s `/<old>/...` to the current slug with the rest of the path and query, so printed signs and shared links keep working. Nobody else can create or move to an old slug. Moving back to one of the store's own old slugs takes it off the list. A store keeps at most 5 old slugs (`MAX_OLD_SLUGS`); past that only a move back is allowed. Not handled: a buyer's saved cart (`list:<slug>` in localStorage) doesn't follow the move, and the check-then-write isn't race-proof across two stores grabbing one name at the same instant.
   - `/admin` now also shows each vendor's store, state, stock count and last sale, with "Stop store" and "Remove images", and a System list (last price date, plus the boot warnings from `env-check.ts`).
   - "Stop store" sets `stores.suspended_at` (migration `0018`). While set, `storeState` is `off` whatever the vendor chose, and the vendor's dashboard says so in place of the open/pause control.
   - Admins are still the `ADMIN_EMAILS` variable (the owner's address on both environments).

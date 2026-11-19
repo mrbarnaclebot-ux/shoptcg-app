@@ -11,8 +11,12 @@ import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import { slugSchema } from "@/lib/slug";
 import {
+  changeSlug,
   createStore,
   getStoreByOwner,
+  MAX_OLD_SLUGS,
+  movedSlug,
+  SLUG_TAKEN,
   getStoreBySlug,
   setStoreState,
   whatsappSchema,
@@ -95,7 +99,10 @@ describe("createStore", () => {
       cause: { code: "23505", constraint_name: "store_slug_unique" },
     };
     const returning = () => Promise.reject(err);
-    const fake = { insert: () => ({ values: () => ({ returning }) }) };
+    const fake = {
+      select: () => ({ from: () => ({ where: async () => [] }) }),
+      insert: () => ({ values: () => ({ returning }) }),
+    };
     const res = await createStore(fake as unknown as Db, "u3", {
       name: "X",
       slug: "taken",
@@ -257,5 +264,49 @@ describe("whatsappSchema", () => {
   it("refuses a local number without the country code", () => {
     expect(whatsappSchema.safeParse("077 123 4567").success).toBe(false);
     expect(whatsappSchema.safeParse("12345").success).toBe(false);
+  });
+});
+
+describe("changeSlug", () => {
+  it("moves the store, keeps the old link and guards it", async () => {
+    await addUser("s1");
+    await addUser("s2");
+    await createStore(db, "s1", { name: "Old Name", slug: "pokekade" });
+    await createStore(db, "s2", { name: "Other", slug: "other-store" });
+
+    expect(await changeSlug(db, "s1", "uzitcg")).toEqual({
+      ok: true,
+      slug: "uzitcg",
+    });
+    expect((await getStoreByOwner(db, "s1"))?.slug).toBe("uzitcg");
+    expect(await movedSlug(db, "pokekade")).toBe("uzitcg");
+    expect(await movedSlug(db, "nobody")).toBeNull();
+
+    // Nobody else can take the old link, by rename or by a new store.
+    expect(await changeSlug(db, "s2", "pokekade")).toEqual({
+      ok: false,
+      error: SLUG_TAKEN,
+    });
+    await addUser("s3");
+    const made = await createStore(db, "s3", { name: "X", slug: "pokekade" });
+    expect(made.ok).toBe(false);
+    // Nor the current one, and bad slugs are refused.
+    expect((await changeSlug(db, "s2", "uzitcg")).ok).toBe(false);
+    expect((await changeSlug(db, "s2", "login")).ok).toBe(false);
+
+    // Going back reclaims it; the link it left now redirects instead.
+    expect((await changeSlug(db, "s1", "pokekade")).ok).toBe(true);
+    expect(await movedSlug(db, "pokekade")).toBeNull();
+    expect(await movedSlug(db, "uzitcg")).toBe("pokekade");
+  });
+
+  it("caps how many old links one store keeps", async () => {
+    await addUser("s4");
+    await createStore(db, "s4", { name: "Hopper", slug: "hop-0" });
+    for (let i = 1; i <= MAX_OLD_SLUGS; i++)
+      expect((await changeSlug(db, "s4", `hop-${i}`)).ok).toBe(true);
+    expect((await changeSlug(db, "s4", "hop-new")).ok).toBe(false);
+    // Returning to an old one is still allowed.
+    expect((await changeSlug(db, "s4", "hop-0")).ok).toBe(true);
   });
 });

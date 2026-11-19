@@ -5,14 +5,9 @@ import { useActionState, useEffect, useState } from "react";
 import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { slugSchema } from "@/lib/slug";
+import { slugSchema, toSlug } from "@/lib/slug";
 import { toast } from "@/lib/toast";
 import { createStoreAction, type CreateStoreState } from "./actions";
-
-// Nudges typed text toward a valid slug; the zod schema still has the final say.
-function toSlug(value: string) {
-  return value.toLowerCase().replace(/\s+/g, "-");
-}
 
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;

@@ -8,14 +8,21 @@ import { eventExists } from "@/lib/claim-events";
 import { buyerRequest } from "@/lib/request-reads";
 import { RESERVED_SLUGS, slugSchema } from "@/lib/slug";
 import { getPublicStore, publicItemExists, UUID } from "@/lib/storefront";
+import { movedSlug } from "@/lib/stores";
 
 // A page streams its first byte before notFound() can run, which locks in a
 // 200 in production, so a real 404 has to be decided here.
-async function missing(req: NextRequest, slug: string, page?: string, id = "") {
+// A store's old link answers with its current slug instead.
+async function missing(
+  req: NextRequest,
+  slug: string,
+  page?: string,
+  id = "",
+): Promise<boolean | string> {
   if (!slugSchema.safeParse(slug).success) return true;
   const db = getDb();
   const store = await getPublicStore(db, slug);
-  if (!store) return true;
+  if (!store) return (await movedSlug(db, slug)) ?? true;
   // Link prefetches land here too, so this stays a single-row lookup.
   if (page === "item") return !(await publicItemExists(db, store.id, id));
   if (page === "claim")
@@ -65,8 +72,13 @@ export async function proxy(req: NextRequest) {
       new URL(`/${slug}/cart${req.nextUrl.search}`, req.url),
       308,
     );
-  if (await missing(req, slug, page, id))
-    return NextResponse.rewrite(new URL("/_not-found", req.url));
+  const gone = await missing(req, slug, page, id);
+  if (typeof gone === "string") {
+    const to = req.nextUrl.clone();
+    to.pathname = `/${gone}${req.nextUrl.pathname.slice(slug.length + 1)}`;
+    return NextResponse.redirect(to, 308);
+  }
+  if (gone) return NextResponse.rewrite(new URL("/_not-found", req.url));
 }
 
 /**

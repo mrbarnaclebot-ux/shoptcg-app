@@ -41,6 +41,11 @@ export const slugSchema = z
   )
   .refine((s) => !RESERVED_SLUGS.has(s), "That address is reserved");
 
+// Nudges typed text toward a valid slug; the zod schema still has the final say.
+export function toSlug(value: string) {
+  return value.toLowerCase().replace(/\s+/g, "-");
+}
+
 export const createStoreSchema = z.object({
   name: z.string().trim().min(1, "Enter a store name").max(80, "Too long"),
   slug: slugSchema,

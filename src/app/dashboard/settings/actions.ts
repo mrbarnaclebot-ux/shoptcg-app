@@ -19,6 +19,7 @@ import { newPassword } from "@/lib/password";
 import { requireUser } from "@/lib/session";
 import { allowMagicLink } from "@/lib/sign-in-limit";
 import {
+  changeSlug,
   pricingSchema,
   storeNameSchema,
   tableSchema,
@@ -56,6 +57,14 @@ export async function saveTableAction(_prev: SettingsState, form: FormData) {
 
 export async function saveNameAction(_prev: SettingsState, form: FormData) {
   return save(storeNameSchema, form);
+}
+
+export async function saveSlugAction(_prev: SettingsState, form: FormData) {
+  const user = await requireUser();
+  const res = await changeSlug(getDb(), user.id, form.get("slug"));
+  if (!res.ok) return { errors: { slug: res.error } };
+  refresh();
+  return { saved: true as const };
 }
 
 export type PasswordState = { saved?: true; error?: string };

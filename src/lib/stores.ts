@@ -1,9 +1,9 @@
-import { eq, getTableColumns, sql } from "drizzle-orm";
+import { count, eq, getTableColumns, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db";
-import { store, type Store } from "@/db/schema";
+import { store, storeOldSlug, type Store } from "@/db/schema";
 import { SELLING_MODES } from "@/lib/selling-mode";
-import { createStoreSchema } from "@/lib/slug";
+import { createStoreSchema, slugSchema } from "@/lib/slug";
 import {
   autoPaused,
   changesInMs,
@@ -39,6 +39,81 @@ export async function getStoreBySlug(db: Db, slug: string) {
   return rows[0] ?? null;
 }
 
+/** The store an old link belonged to, if any. */
+async function oldSlugOwner(db: Pick<Db, "select">, slug: string) {
+  const [row] = await db
+    .select({ storeId: storeOldSlug.storeId })
+    .from(storeOldSlug)
+    .where(eq(storeOldSlug.slug, slug));
+  return row?.storeId ?? null;
+}
+
+/** Where an old link points now: the store's current slug, or null. */
+export async function movedSlug(db: Db, oldSlug: string) {
+  const [row] = await db
+    .select({ slug: store.slug })
+    .from(storeOldSlug)
+    .innerJoin(store, eq(store.id, storeOldSlug.storeId))
+    .where(eq(storeOldSlug.slug, oldSlug));
+  return row?.slug ?? null;
+}
+
+// Every old link is kept for good, so this caps how many names one store holds.
+export const MAX_OLD_SLUGS = 5;
+
+export type ChangeSlugResult =
+  { ok: true; slug: string } | { ok: false; error: string };
+
+/**
+ * Moves the owner's store to a new link. The old one is kept and redirects;
+ * going back to one of the store's own old links takes it out of that list.
+ */
+export async function changeSlug(
+  db: Db,
+  ownerUserId: string,
+  input: unknown,
+): Promise<ChangeSlugResult> {
+  const parsed = slugSchema.safeParse(input);
+  if (!parsed.success)
+    return { ok: false, error: parsed.error.issues[0].message };
+  const slug = parsed.data;
+  try {
+    return await db.transaction(async (tx) => {
+      const [cur] = await tx
+        .select({ id: store.id, slug: store.slug })
+        .from(store)
+        .where(eq(store.ownerUserId, ownerUserId))
+        .for("update");
+      if (!cur) return { ok: false, error: "Create your store first." };
+      if (cur.slug === slug) return { ok: true, slug };
+      const owner = await oldSlugOwner(tx, slug);
+      // ponytail: check-then-write, so two stores grabbing one name in the same
+      // instant could both pass; a trigger closes it if that ever matters.
+      if (owner && owner !== cur.id) return { ok: false, error: SLUG_TAKEN };
+      if (owner) {
+        await tx.delete(storeOldSlug).where(eq(storeOldSlug.slug, slug));
+      } else {
+        const [{ n }] = await tx
+          .select({ n: count() })
+          .from(storeOldSlug)
+          .where(eq(storeOldSlug.storeId, cur.id));
+        if (n >= MAX_OLD_SLUGS)
+          return {
+            ok: false,
+            error: `Your link has changed ${MAX_OLD_SLUGS} times already. Pick one of your old links, or ask us to change it.`,
+          };
+      }
+      await tx.update(store).set({ slug }).where(eq(store.id, cur.id));
+      await tx.insert(storeOldSlug).values({ slug: cur.slug, storeId: cur.id });
+      return { ok: true, slug };
+    });
+  } catch (err) {
+    if (uniqueViolation(err) === "store_slug_unique")
+      return { ok: false, error: SLUG_TAKEN };
+    throw err;
+  }
+}
+
 // Drizzle wraps driver errors; postgres-js and PGlite name the constraint field differently.
 export function uniqueViolation(err: unknown): string | null {
   const cause = (err as { cause?: Record<string, unknown> })?.cause ?? err;
@@ -60,6 +135,8 @@ export async function createStore(
       errors: { name: flat.name?.[0], slug: flat.slug?.[0] },
     };
   }
+  if (await oldSlugOwner(db, parsed.data.slug))
+    return { ok: false, errors: { slug: SLUG_TAKEN } };
   try {
     const [row] = await db
       .insert(store)
