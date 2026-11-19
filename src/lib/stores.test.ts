@@ -5,14 +5,21 @@ import { PGlite } from "@electric-sql/pglite";
 import { eq, sql } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { drizzle } from "drizzle-orm/pglite";
+import { drizzle as drizzlePg } from "drizzle-orm/postgres-js";
+import { migrate as migratePg } from "drizzle-orm/postgres-js/migrator";
+import postgres from "postgres";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "@/db";
 import * as schema from "@/db/schema";
 import { slugSchema } from "@/lib/slug";
 import {
+  changeSlug,
   createStore,
   getStoreByOwner,
+  MAX_OLD_SLUGS,
+  movedSlug,
+  SLUG_TAKEN,
   getStoreBySlug,
   setStoreState,
   whatsappSchema,
@@ -80,7 +87,7 @@ describe("createStore", () => {
     const taken = await createStore(db, "u2", { name: "X", slug: "pika" });
     expect(taken).toEqual({
       ok: false,
-      errors: { slug: "That address is taken" },
+      errors: { slug: SLUG_TAKEN },
     });
     const second = await createStore(db, "u1", { name: "Y", slug: "other" });
     expect(second).toEqual({
@@ -95,14 +102,19 @@ describe("createStore", () => {
       cause: { code: "23505", constraint_name: "store_slug_unique" },
     };
     const returning = () => Promise.reject(err);
-    const fake = { insert: () => ({ values: () => ({ returning }) }) };
+    const tx = {
+      execute: async () => [],
+      select: () => ({ from: () => ({ where: async () => [] }) }),
+      insert: () => ({ values: () => ({ returning }) }),
+    };
+    const fake = { transaction: (fn: (t: typeof tx) => unknown) => fn(tx) };
     const res = await createStore(fake as unknown as Db, "u3", {
       name: "X",
       slug: "taken",
     });
     expect(res).toEqual({
       ok: false,
-      errors: { slug: "That address is taken" },
+      errors: { slug: SLUG_TAKEN },
     });
   });
 
@@ -257,5 +269,87 @@ describe("whatsappSchema", () => {
   it("refuses a local number without the country code", () => {
     expect(whatsappSchema.safeParse("077 123 4567").success).toBe(false);
     expect(whatsappSchema.safeParse("12345").success).toBe(false);
+  });
+});
+
+describe("changeSlug", () => {
+  it("moves the store, keeps the old link and guards it", async () => {
+    await addUser("s1");
+    await addUser("s2");
+    await createStore(db, "s1", { name: "Old Name", slug: "pokekade" });
+    await createStore(db, "s2", { name: "Other", slug: "other-store" });
+
+    expect(await changeSlug(db, "s1", "uzitcg")).toEqual({
+      ok: true,
+      slug: "uzitcg",
+    });
+    expect((await getStoreByOwner(db, "s1"))?.slug).toBe("uzitcg");
+    expect(await movedSlug(db, "pokekade")).toBe("uzitcg");
+    expect(await movedSlug(db, "nobody")).toBeNull();
+
+    // Nobody else can take the old link, by rename or by a new store.
+    expect(await changeSlug(db, "s2", "pokekade")).toEqual({
+      ok: false,
+      error: SLUG_TAKEN,
+    });
+    await addUser("s3");
+    const made = await createStore(db, "s3", { name: "X", slug: "pokekade" });
+    expect(made.ok).toBe(false);
+    // Nor the current one, and bad slugs are refused.
+    expect((await changeSlug(db, "s2", "uzitcg")).ok).toBe(false);
+    expect((await changeSlug(db, "s2", "login")).ok).toBe(false);
+
+    // Going back reclaims it; the link it left now redirects instead.
+    expect((await changeSlug(db, "s1", "pokekade")).ok).toBe(true);
+    expect(await movedSlug(db, "pokekade")).toBeNull();
+    expect(await movedSlug(db, "uzitcg")).toBe("pokekade");
+  });
+
+  it("caps how many old links one store keeps", async () => {
+    await addUser("s4");
+    await createStore(db, "s4", { name: "Hopper", slug: "hop-0" });
+    for (let i = 1; i <= MAX_OLD_SLUGS; i++)
+      expect((await changeSlug(db, "s4", `hop-${i}`)).ok).toBe(true);
+    expect((await changeSlug(db, "s4", "hop-new")).ok).toBe(false);
+    // Returning to an old one is still allowed.
+    expect((await changeSlug(db, "s4", "hop-0")).ok).toBe(true);
+  });
+});
+
+// CI sets DATABASE_URL to a real Postgres, where the two writes truly overlap.
+const url = process.env.DATABASE_URL;
+describe.runIf(Boolean(url))("slug race (Postgres)", () => {
+  it("never lets a moved-from link be taken at the same instant", async () => {
+    const pg = drizzlePg(postgres(url!, { max: 8, onnotice: () => {} }), {
+      schema,
+    }) as unknown as Db;
+    await migratePg(pg as Parameters<typeof migratePg>[0], {
+      migrationsFolder: "drizzle",
+    });
+    const run = Math.random().toString(36).slice(2, 8);
+    const user = async (id: string) => {
+      await pg
+        .insert(schema.user)
+        .values({ id, name: "", email: `${id}@x.test` });
+      return id;
+    };
+    for (let i = 0; i < 10; i++) {
+      const from = `race-${run}-${i}`;
+      const mover = await user(`m-${run}-${i}`);
+      const other = await user(`o-${run}-${i}`);
+      const joiner = await user(`j-${run}-${i}`);
+      await createStore(pg, mover, { name: "M", slug: from });
+      await createStore(pg, other, { name: "O", slug: `${from}-o` });
+      // The mover leaves `from` while one store renames to it and one is created on it.
+      const [moved, renamed, created] = await Promise.all([
+        changeSlug(pg, mover, `${from}-new`),
+        changeSlug(pg, other, from),
+        createStore(pg, joiner, { name: "J", slug: from }),
+      ]);
+      expect(moved.ok).toBe(true);
+      expect(renamed).toEqual({ ok: false, error: SLUG_TAKEN });
+      expect(created).toEqual({ ok: false, errors: { slug: SLUG_TAKEN } });
+      expect(await movedSlug(pg, from)).toBe(`${from}-new`);
+    }
   });
 });

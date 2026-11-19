@@ -17,9 +17,10 @@ test("each settings page saves on its own, and the store can be renamed", async 
   await expect(page.getByLabel("I have an NFC tag on my table")).toBeChecked();
 
   await page.getByRole("link", { name: "Store profile" }).click();
+  const nameTile = page.getByRole("region", { name: "Name" });
   await page.getByLabel("Store name").fill("Renamed Cards");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+  await nameTile.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(nameTile.getByText("Saved.", { exact: true })).toBeVisible();
   await page.goto("/dashboard");
   await expect(
     page.getByRole("heading", { level: 1, name: "Renamed Cards" }),
@@ -27,10 +28,29 @@ test("each settings page saves on its own, and the store can be renamed", async 
 
   await page.goto("/dashboard/settings/store");
   await page.getByLabel("Store name").fill(" ");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await nameTile.getByRole("button", { name: "Save", exact: true }).click();
   await expect(
     page.locator("main").getByText("Enter a store name"),
   ).toBeVisible();
+});
+
+test("a new store link takes over, and the old one still lands", async ({
+  page,
+}) => {
+  const id = await newVendor(page);
+  await page.goto("/dashboard/settings/store");
+  const linkTile = page.getByRole("region", { name: "Link" });
+  await page.getByLabel("Store link").fill(`moved-${id}`);
+  await linkTile.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(linkTile.getByText("Saved.", { exact: true })).toBeVisible();
+
+  await page.goto(`/e2e-${id}/cart?from=sign`);
+  await expect(page).toHaveURL(new RegExp(`/moved-${id}/cart\\?from=sign$`));
+
+  // A reserved word is refused before it reaches the server.
+  await page.goto("/dashboard/settings/store");
+  await page.getByLabel("Store link").fill("login");
+  await expect(linkTile.getByText("That address is reserved")).toBeVisible();
 });
 
 test("on a phone, More is a menu and its pages lead back to it", async ({

@@ -128,6 +128,22 @@ export const store = pgTable(
   ],
 );
 
+// A store's old links. Each one stays its store's for good and 308s to the
+// current slug (src/proxy.ts), so printed signs and shared links keep working.
+export const storeOldSlug = pgTable(
+  "store_old_slug",
+  {
+    slug: text("slug").primaryKey(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => store.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("store_old_slug_store_id_idx").on(t.storeId)],
+);
+
 export type Store = typeof store.$inferSelect;
 
 // One sellable thing from a price provider. A graded slab is its own row so

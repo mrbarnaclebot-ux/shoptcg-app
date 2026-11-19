@@ -25,8 +25,9 @@ test("help page pictures", async ({ page, browser }) => {
   // A believable name for the pictures, and a table number for the sign.
   await page.goto("/dashboard/settings/store");
   await page.getByLabel("Store name").fill("Pallet Town Cards");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+  const nameTile = page.getByRole("region", { name: "Name" });
+  await nameTile.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(nameTile.getByText("Saved.", { exact: true })).toBeVisible();
 
   await page.goto("/dashboard");
   await shot(page.getByRole("region", { name: "Getting started" }), "tips");
