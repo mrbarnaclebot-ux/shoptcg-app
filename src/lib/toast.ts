@@ -148,7 +148,7 @@ export const toast = {
     ),
 
   slugTaken: (slug: string) =>
-    error("Link taken", `"${slug}" is in use. Try "${slug}-cards".`),
+    error("Link unavailable", `"${slug}" is in use. Try "${slug}-cards".`),
   storeState: (state: "open" | "paused" | "off", minutes: number | null) => {
     if (state === "open")
       return show("ok", "You're open", "Buyers can send requests now.", 4000);

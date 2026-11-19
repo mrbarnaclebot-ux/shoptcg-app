@@ -12,7 +12,7 @@ import {
   type StoreState,
 } from "@/lib/store-state";
 
-export const SLUG_TAKEN = "That address is taken";
+export const SLUG_TAKEN = "That link is unavailable";
 
 export type FieldErrors = { name?: string; slug?: string; form?: string };
 
@@ -37,6 +37,18 @@ export async function getStoreByOwner(db: Db, ownerUserId: string) {
 export async function getStoreBySlug(db: Db, slug: string) {
   const rows = await db.select().from(store).where(eq(store.slug, slug));
   return rows[0] ?? null;
+}
+
+type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
+
+/**
+ * Holds these slugs until the transaction ends. Every path that takes a slug
+ * (create, change) locks it before checking store_old_slug, so a name can't be
+ * claimed by two stores at once. Sorted, so two changes never deadlock.
+ */
+async function lockSlugs(tx: Tx, ...slugs: string[]) {
+  for (const s of [...new Set(slugs)].sort())
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${s}))`);
 }
 
 /** The store an old link belonged to, if any. */
@@ -86,9 +98,8 @@ export async function changeSlug(
         .for("update");
       if (!cur) return { ok: false, error: "Create your store first." };
       if (cur.slug === slug) return { ok: true, slug };
+      await lockSlugs(tx, slug, cur.slug);
       const owner = await oldSlugOwner(tx, slug);
-      // ponytail: check-then-write, so two stores grabbing one name in the same
-      // instant could both pass; a trigger closes it if that ever matters.
       if (owner && owner !== cur.id) return { ok: false, error: SLUG_TAKEN };
       if (owner) {
         await tx.delete(storeOldSlug).where(eq(storeOldSlug.slug, slug));
@@ -135,14 +146,17 @@ export async function createStore(
       errors: { name: flat.name?.[0], slug: flat.slug?.[0] },
     };
   }
-  if (await oldSlugOwner(db, parsed.data.slug))
-    return { ok: false, errors: { slug: SLUG_TAKEN } };
   try {
-    const [row] = await db
-      .insert(store)
-      .values({ ownerUserId, ...parsed.data })
-      .returning();
-    return { ok: true, store: row };
+    return await db.transaction(async (tx): Promise<CreateStoreResult> => {
+      await lockSlugs(tx, parsed.data.slug);
+      if (await oldSlugOwner(tx, parsed.data.slug))
+        return { ok: false, errors: { slug: SLUG_TAKEN } };
+      const [row] = await tx
+        .insert(store)
+        .values({ ownerUserId, ...parsed.data })
+        .returning();
+      return { ok: true, store: row };
+    });
   } catch (err) {
     // The DB constraints are the source of truth for uniqueness, so races stay safe.
     const constraint = uniqueViolation(err);
