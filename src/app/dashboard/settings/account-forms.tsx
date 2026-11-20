@@ -6,6 +6,7 @@ import { useActionState } from "react";
 import { lineButton, TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import {
   changeEmailAction,
   deleteAccountAction,
@@ -17,10 +18,9 @@ function Current({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-2">
       <Label htmlFor={id}>Your password</Label>
-      <Input
+      <PasswordInput
         id={id}
         name="current"
-        type="password"
         autoComplete="current-password"
         required
       />

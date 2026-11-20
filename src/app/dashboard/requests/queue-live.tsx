@@ -145,7 +145,7 @@ export function QueueTicket({ t }: { t: TicketView }) {
         }
       >
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <span className="font-display text-[1.875rem] leading-none font-extrabold">
+          <span className="font-display text-2xl font-extrabold">
             {t.buyerName}
           </span>
           <span className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground">

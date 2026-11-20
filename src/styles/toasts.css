@@ -149,9 +149,14 @@ body:has([data-toast-clear]) .toasts > li:nth-last-child(n + 3) {
 .toasts button:hover {
   background: color-mix(in oklch, currentColor 8%, transparent);
 }
+/* The ring sits on the toast: lamp ink on paper (5.1:1), the lamp on the
+   night of a failure (7.4:1). --sun on paper was 2.4:1. */
 .toasts button:focus-visible {
-  outline: 2px solid var(--sun);
+  outline: 2px solid var(--sun-ink);
   outline-offset: 2px;
+}
+[data-toast="bad"] button:focus-visible {
+  outline-color: var(--sun);
 }
 
 /* The edge prints in from the top; text never fades. */

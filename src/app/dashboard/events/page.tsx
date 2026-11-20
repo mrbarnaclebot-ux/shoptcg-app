@@ -11,15 +11,13 @@ import { BackToMore } from "../back-to-more";
 import { eventTime } from "./format";
 import { StatusStamp } from "./status";
 
-export const metadata: Metadata = { title: "Claim events - tcgmart" };
+export const metadata: Metadata = { title: "Claim events" };
 
 export default function EventsPage() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-start gap-4 px-4 pt-4 pb-16 lg:max-w-[1280px] lg:px-8">
       <BackToMore />
-      <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
-        Claim events
-      </h1>
+      <h1 className="font-display text-4xl font-black">Claim events</h1>
       <p className="max-w-2xl text-muted-foreground">
         A timed sale on its own page. Buyers join with their name, WhatsApp and
         email, then claim with one tap. It ends at the time you set or when

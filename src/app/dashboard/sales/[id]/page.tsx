@@ -16,7 +16,7 @@ import { UUID } from "@/lib/storefront";
 import { ReceiptEmailStatus } from "./receipt-email-status";
 import { VoidSale } from "./void-sale";
 
-export const metadata: Metadata = { title: "Receipt - tcgmart" };
+export const metadata: Metadata = { title: "Receipt" };
 
 export default function ReceiptPage({
   params,
@@ -58,7 +58,7 @@ async function Receipt({
         }
       >
         <Stamp className="self-start">{sale.void ? "Voided" : "Paid"}</Stamp>
-        <h1 className="font-display text-[2.5rem] leading-[0.9] font-black [overflow-wrap:anywhere]">
+        <h1 className="font-display text-3xl font-black [overflow-wrap:anywhere]">
           {sale.storeName}
         </h1>
         <p className="text-muted-foreground">

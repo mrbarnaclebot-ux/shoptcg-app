@@ -9,7 +9,7 @@ import { unsubscribe } from "./actions";
 export const instant = false;
 
 export const metadata: Metadata = {
-  title: "Unsubscribe - tcgmart",
+  title: "Unsubscribe",
   robots: { index: false },
 };
 
@@ -36,7 +36,7 @@ export default async function UnsubscribePage({
       <div className="paper flex flex-col items-start gap-4 p-6">
         {!name ? (
           <>
-            <h1 className="font-display text-[2.5rem] leading-[0.9] font-black">
+            <h1 className="font-display text-3xl font-black">
               This link has expired.
             </h1>
             <p>
@@ -45,14 +45,14 @@ export default async function UnsubscribePage({
           </>
         ) : done ? (
           <>
-            <h1 className="font-display text-[2.5rem] leading-[0.9] font-black [overflow-wrap:anywhere]">
+            <h1 className="font-display text-3xl font-black [overflow-wrap:anywhere]">
               You&apos;re off {name}&apos;s list.
             </h1>
             <p>You&apos;ll still get receipts for things you buy.</p>
           </>
         ) : (
           <>
-            <h1 className="font-display text-[2.5rem] leading-[0.9] font-black [overflow-wrap:anywhere]">
+            <h1 className="font-display text-3xl font-black [overflow-wrap:anywhere]">
               Stop emails from {name}?
             </h1>
             <form action={unsubscribe}>

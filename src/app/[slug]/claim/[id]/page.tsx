@@ -27,7 +27,7 @@ export async function generateMetadata({
   const { slug, id } = await params;
   const { store, e } = await eventOr404(slug, id);
   return {
-    title: `${e.title} - ${store.name} - tcgmart`,
+    title: `${e.title} – ${store.name}`,
     description: `A claim sale from ${store.name}. Claim cards and sealed product before they go.`,
     robots: { index: false },
   };

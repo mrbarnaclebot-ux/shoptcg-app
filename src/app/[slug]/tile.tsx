@@ -233,7 +233,7 @@ function PriceBlock({
     return <span className="text-sm font-semibold">{askPrice}</span>;
   return (
     <span className="flex flex-col">
-      <span className="font-display num text-[1.875rem] leading-[0.9] font-extrabold">
+      <span className="font-display num text-2xl leading-[0.9] font-extrabold">
         {usdTag(it.price)}
       </span>
       {currency && it.alt !== null && (

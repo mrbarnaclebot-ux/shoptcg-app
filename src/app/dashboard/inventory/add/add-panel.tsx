@@ -299,9 +299,7 @@ function ItemHeader({ item }: { item: CatalogItem }) {
         className="w-20"
       />
       <div className="min-w-0">
-        <h2 className="font-display text-[1.875rem] leading-none font-extrabold">
-          {item.name}
-        </h2>
+        <h2 className="font-display text-2xl font-extrabold">{item.name}</h2>
         <p className="text-sm text-muted-foreground">
           {[item.setName, item.number].filter(Boolean).join(" ")}
         </p>

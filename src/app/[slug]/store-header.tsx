@@ -75,7 +75,7 @@ function StoreTitle(props: {
     <header
       className={`grid grid-cols-[1fr_auto] items-start gap-x-4 gap-y-2 pb-4 ${props.tight ? "pt-4" : "pt-6 md:pt-10"}`}
     >
-      <h1 className="font-display text-[2.5rem] leading-[0.9] font-black text-balance md:text-[4rem]">
+      <h1 className="font-display text-3xl font-black text-balance md:text-[4rem]">
         {store.name}
       </h1>
       {store.tableLabel && modeCopy(store.sellingMode).showTable && (

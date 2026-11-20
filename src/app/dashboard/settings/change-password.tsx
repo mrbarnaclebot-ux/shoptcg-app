@@ -4,8 +4,8 @@ import { headingIcon } from "@/components/bento";
 import { KeyRound } from "lucide-react";
 import { useActionState } from "react";
 import { TicketButton } from "@/components/ticket-button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { NewPasswordFields } from "../../login/login-form";
 import { changePasswordAction, type PasswordState } from "./actions";
 
@@ -31,10 +31,9 @@ export function ChangePassword() {
         <form action={action} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="current">Current password</Label>
-            <Input
+            <PasswordInput
               id="current"
               name="current"
-              type="password"
               autoComplete="current-password"
               required
             />

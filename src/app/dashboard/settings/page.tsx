@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AccountBlock } from "./account-block";
 
-export const metadata: Metadata = { title: "More - tcgmart" };
+export const metadata: Metadata = { title: "More" };
 
 // A phone sees only the menu from the layout. The desk's More tab opens Store
 // profile; this bare URL shows the account there, so old links still work.

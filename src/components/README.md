@@ -2,7 +2,8 @@
 
 Shared UI used by more than one route. Visual language: "Show floor, after dark" (`.planning/design/variations/v3-showfloor`). Two materials: the hall (default) and paper (add `.paper`; every token re-binds).
 
-- `ui/`: shadcn primitives (button, card, input, label), restyled square-cut.
+- `ui/`: shadcn primitives (input, label), restyled square-cut, and `PasswordInput` (Show / Hide).
+- `public-chrome.tsx`: `PublicHeader` (wordmark, "Seller sign in") and `PublicFooter` (Help, Terms, the disclaimer) for the landing, help, terms, join, sign-in and error pages.
 - `ticket.tsx`: paper ticket with notches, perforated stub and stub number.
 - `ticket-button.tsx`: `TicketButton` (the screen's one primary: notched lamp-orange with a perforated stub) and `lineButton` (secondary cut-line class).
 - `stamp.tsx`, `hang-tag.tsx`, `table-number.tsx`, `tape-hatch.tsx`, `section-mark.tsx`: under-market stamp, price tag, lamp-lit number block, "On hold"/"Sold out" tape, big-numeral section marker.

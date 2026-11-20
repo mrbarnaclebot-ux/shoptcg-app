@@ -334,7 +334,7 @@ function ResultItem({
           </span>
         </span>
         {item.market !== null && (
-          <span className="num shrink-0 text-right text-[0.9375rem] font-semibold">
+          <span className="num shrink-0 text-right text-md font-semibold">
             <span className="sr-only">Market </span>
             {usd(Number(item.market))}
             {/* Search prices a single at Near Mint; condition comes after. */}

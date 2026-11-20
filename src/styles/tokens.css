@@ -26,6 +26,7 @@
   --text-xs--line-height: 1.1rem;
   --text-sm: 0.875rem;
   --text-sm--line-height: 1.3rem;
+  --text-md: 0.9375rem;
   --text-base: 1rem;
   --text-base--line-height: 1.55rem;
   --text-lg: 1.125rem;
@@ -36,6 +37,8 @@
   --text-2xl--line-height: 1;
   --text-3xl: 2.5rem;
   --text-3xl--line-height: 0.9;
+  --text-4xl: 3.5rem;
+  --text-4xl--line-height: 0.82;
   --text-display: 4rem;
   --text-display--line-height: 0.82;
 

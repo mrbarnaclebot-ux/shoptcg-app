@@ -1,7 +1,7 @@
 import { getImageProps } from "next/image";
 import type { ReactNode } from "react";
+import { PublicFooter, PublicHeader } from "@/components/public-chrome";
 import { Ticket } from "@/components/ticket";
-import { Wordmark } from "@/components/wordmark";
 import table from "../../../public/media/table.jpg";
 
 export const authLink =
@@ -10,11 +10,11 @@ export const authLink =
 /** The hall photo beside a paper form: sign in and join. */
 export function AuthShell(props: {
   title: string;
-  intro: ReactNode;
+  intro?: ReactNode;
   children: ReactNode;
-  /** Below the form's ticket: /join's "No code yet?" request. */
-  after?: ReactNode;
   foot: ReactNode;
+  /** The header's "Seller sign in"; off where this page is the way in. */
+  signIn?: boolean;
 }) {
   return (
     <div className="grid flex-1 md:grid-cols-[minmax(0,1fr)_minmax(0,560px)]">
@@ -35,24 +35,24 @@ export function AuthShell(props: {
         </figcaption>
       </figure>
       <div className="flex flex-col px-4 md:px-12">
-        <header className="py-2 md:py-6">
-          <Wordmark />
-        </header>
+        <PublicHeader signIn={props.signIn} className="px-0 md:px-0" />
         <main className="flex w-full max-w-[440px] flex-1 flex-col gap-7 pt-8 md:justify-center md:pt-0 md:pb-24">
           <div className="flex flex-col gap-3">
-            <h1 className="font-display text-[4rem] leading-[0.82] font-black">
+            <h1 className="font-display text-display font-black">
               {props.title}
             </h1>
-            <p className="text-muted-foreground">{props.intro}</p>
+            {props.intro && (
+              <p className="text-muted-foreground">{props.intro}</p>
+            )}
           </div>
           <Ticket as="div" className="[--stub:2rem]">
             {props.children}
           </Ticket>
-          {props.after}
           <div className="flex flex-col gap-1 text-sm text-muted-foreground">
             {props.foot}
           </div>
         </main>
+        <PublicFooter className="px-0 md:px-0" />
       </div>
     </div>
   );

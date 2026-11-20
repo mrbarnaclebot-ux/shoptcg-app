@@ -32,7 +32,7 @@ import { VendorControls } from "./vendor-controls";
 const LIVE = { open: "Open", paused: "Paused", off: "Not vending" } as const;
 
 export const metadata: Metadata = {
-  title: "Admin - tcgmart",
+  title: "Admin",
   robots: { index: false },
 };
 
@@ -47,7 +47,7 @@ export default function AdminPage({ searchParams }: Search) {
       <div className="lg:col-span-2">
         <BackToMore />
       </div>
-      <h1 className="font-display text-[3.5rem] leading-[0.82] font-black lg:col-span-2 lg:mb-8">
+      <h1 className="font-display text-4xl font-black lg:col-span-2 lg:mb-8">
         Admin
       </h1>
       <Suspense fallback={<TicketLoading>Checking who you are</TicketLoading>}>

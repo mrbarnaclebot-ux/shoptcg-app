@@ -17,7 +17,7 @@ import { requireStore, sellerTimeZone } from "@/lib/session";
 import { BackToMore } from "../back-to-more";
 import { RemoveCustomer } from "./remove-customer";
 
-export const metadata: Metadata = { title: "Customers - tcgmart" };
+export const metadata: Metadata = { title: "Customers" };
 
 type Search = Pick<PageProps<"/dashboard/customers">, "searchParams">;
 
@@ -25,9 +25,7 @@ export default function CustomersPage({ searchParams }: Search) {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-start gap-4 px-4 pt-4 pb-16 lg:max-w-[1280px] lg:px-8">
       <BackToMore />
-      <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
-        Customers
-      </h1>
+      <h1 className="font-display text-4xl font-black">Customers</h1>
       <Suspense fallback={<TicketLoading>Finding your buyers</TicketLoading>}>
         <Customers searchParams={searchParams} />
       </Suspense>

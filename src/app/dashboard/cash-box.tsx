@@ -31,7 +31,7 @@ function Row(props: { k: string; children: ReactNode; big?: boolean }) {
       <dd
         className={
           props.big
-            ? "font-display num text-[1.875rem] leading-none font-extrabold"
+            ? "font-display num text-2xl font-extrabold"
             : "num font-semibold"
         }
       >

@@ -53,7 +53,7 @@ test("the item page: zoom, details, add a quantity, back to the same filters", a
     .getByRole("link", { name: /Charizard ex/ })
     .first()
     .click();
-  await expect(buyer).toHaveTitle(/^Charizard ex - E2E Cards/);
+  await expect(buyer).toHaveTitle(/^Charizard ex – E2E Cards/);
   await expect(buyer.locator('meta[property="og:image"]')).toHaveAttribute(
     "content",
     /tcgdex/,

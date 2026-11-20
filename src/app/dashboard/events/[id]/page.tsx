@@ -17,7 +17,7 @@ import { eventTime } from "../format";
 import { StatusStamp } from "../status";
 import { BuyerActions, EndEvent } from "./controls";
 
-export const metadata: Metadata = { title: "Claim event - tcgmart" };
+export const metadata: Metadata = { title: "Claim event" };
 
 export default function EventPage({
   params,

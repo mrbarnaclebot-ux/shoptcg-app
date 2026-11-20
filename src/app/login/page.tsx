@@ -3,13 +3,13 @@ import Link from "next/link";
 import { AuthShell, authLink } from "./auth-shell";
 import { LoginForm } from "./login-form";
 
-export const metadata: Metadata = { title: "Sign in - tcgmart" };
+export const metadata: Metadata = { title: "Sign in" };
 
 export default function LoginPage() {
   return (
     <AuthShell
       title="Sign in"
-      intro="Used email links before? Tap Forgot password once to set one."
+      signIn={false}
       foot={
         <>
           <p>
@@ -30,6 +30,11 @@ export default function LoginPage() {
               terms
             </Link>
             .
+          </p>
+          {/* Only accounts from before passwords need this, so it sits last. */}
+          <p className="mt-2">
+            Signed in with email links before? Use Forgot password once to
+            choose a password.
           </p>
         </>
       }

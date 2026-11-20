@@ -29,7 +29,7 @@ export function ContinuousTabs(props: {
             href={tab.href}
             scroll={false}
             aria-current={tab.on ? "true" : undefined}
-            className="relative -mb-[1.5px] inline-flex min-h-11 min-w-11 shrink-0 items-end justify-center px-3 pb-2.5 text-[0.9375rem] font-medium text-muted-foreground transition-colors duration-150 hover:text-text aria-[current=true]:font-bold aria-[current=true]:text-text"
+            className="relative -mb-[1.5px] inline-flex min-h-11 min-w-11 shrink-0 items-end justify-center px-3 pb-2.5 text-md font-medium text-muted-foreground transition-colors duration-150 hover:text-text aria-[current=true]:font-bold aria-[current=true]:text-text"
           >
             {tab.label}
             {tab.on && (

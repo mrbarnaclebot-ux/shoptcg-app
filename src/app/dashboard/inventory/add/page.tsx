@@ -7,7 +7,7 @@ import { requireStore } from "@/lib/session";
 import { storePricing } from "@/lib/vendor-price";
 import { AddFlow } from "./add-flow";
 
-export const metadata: Metadata = { title: "Add stock - tcgmart" };
+export const metadata: Metadata = { title: "Add stock" };
 
 export default function AddPage() {
   return (
@@ -19,9 +19,7 @@ export default function AddPage() {
         <ChevronLeft aria-hidden className="size-4" />
         Inventory
       </Link>
-      <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
-        Add stock
-      </h1>
+      <h1 className="font-display text-4xl font-black">Add stock</h1>
       <Suspense fallback={<TicketLoading>Loading</TicketLoading>}>
         <Flow />
       </Suspense>

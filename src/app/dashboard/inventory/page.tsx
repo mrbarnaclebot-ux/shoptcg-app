@@ -19,7 +19,7 @@ import { Bulk } from "./bulk";
 import { filterSchema, Filters, href, type Filter } from "./filters";
 import { StockRow } from "./stock-row";
 
-export const metadata: Metadata = { title: "Inventory - tcgmart" };
+export const metadata: Metadata = { title: "Inventory" };
 
 export default function InventoryPage({
   searchParams,
@@ -106,7 +106,7 @@ function Header(props: { count: number | null; synced: string | null }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-4">
       <div className="flex flex-col gap-2">
-        <h1 className="font-display flex items-baseline gap-3 text-[3.5rem] leading-[0.82] font-black">
+        <h1 className="font-display flex items-baseline gap-3 text-4xl font-black">
           Inventory
           {count !== null && (
             <small className="num font-sans text-base font-semibold text-muted-foreground">
