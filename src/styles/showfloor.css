@@ -189,6 +189,34 @@
     }
   }
 
+  /* ---------- A tapped link still loading: a lamp line that breathes ---------- */
+  .link-pending {
+    position: absolute;
+    inset: auto 0 0;
+    height: 3px;
+    background: var(--brand);
+    opacity: 0;
+    pointer-events: none;
+  }
+  /* The delay keeps a quick answer from flashing it. */
+  .link-pending[data-pending] {
+    animation: link-pending 0.7s ease-in-out 150ms infinite alternate;
+  }
+  @keyframes link-pending {
+    from {
+      opacity: 0.35;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .link-pending[data-pending] {
+      animation: none;
+      opacity: 1;
+    }
+  }
+
   /* ---------- Film grain on photographs, never on the page ---------- */
   .grain {
     position: relative;

@@ -62,6 +62,20 @@ test("an online buyer picks delivery and bank transfer, then sees where to pay",
   await expect(buyer.getByText("Delivery · Bank transfer")).toBeVisible();
   await expect(buyer.getByTestId("bank-details")).toHaveText(BANK);
   await expect(buyer.getByText(`Use ${code} as the reference.`)).toBeVisible();
+  // Both go into a banking app, so both copy, and the label says it worked.
+  await buyer.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  // Windows hands line breaks back as CRLF.
+  const clipboard = async () =>
+    (await buyer.evaluate(() => navigator.clipboard.readText())).replace(
+      /\r\n/g,
+      "\n",
+    );
+  await buyer.getByRole("button", { name: "Copy bank details" }).click();
+  await expect(buyer.getByRole("button", { name: "Copied" })).toBeVisible();
+  expect(await clipboard()).toBe(BANK);
+  await buyer.getByRole("button", { name: "Copy code" }).click();
+  await expect(buyer.getByRole("button", { name: "Copied" })).toHaveCount(2);
+  expect(await clipboard()).toBe(code);
   // The buyer can send the slip; the first message names the order.
   const wa = await buyer
     .getByRole("link", { name: "Message the seller on WhatsApp" })

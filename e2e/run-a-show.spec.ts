@@ -291,9 +291,9 @@ test("a vendor runs a whole show", async ({ page, browser }) => {
     await setStore(page, { pause: "Until I reopen" });
     await a.goto(`/${slug}`);
     await expect(a.getByText("Browsing only.")).toBeVisible();
-    await expect(a.getByRole("button", { name: /to your cart/ })).toHaveCount(
-      0,
-    );
+    await expect(
+      a.getByRole("button", { name: /(to|from) your cart/ }),
+    ).toHaveCount(0);
     await expect(a.getByRole("link", { name: "Review cart" })).toHaveCount(0);
   });
 });

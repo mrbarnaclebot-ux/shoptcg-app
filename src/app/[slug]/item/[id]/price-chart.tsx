@@ -21,6 +21,8 @@ export function PriceChart(props: {
   points: Point[];
   days: number;
   price: number | null;
+  /** "TCGplayer": the same name the market line and recent sales give. */
+  source: string;
 }) {
   const { points, days, price } = props;
   if (points.length < 3)
@@ -110,14 +112,14 @@ export function PriceChart(props: {
         </div>
       </div>
       <figcaption className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span>Market price, daily. Source: public sales data.</span>
+        <span>Market price, daily, from {props.source}.</span>
         {price !== null && (
           <span className="flex items-center gap-1.5">
             <span
               aria-hidden
               className="w-5 border-t-2 border-dashed border-brand"
             />
-            This table {usd(price)}
+            This table {usdTag(price)}
           </span>
         )}
       </figcaption>

@@ -51,7 +51,9 @@ test("the vendor sees who is on the page and the lists they are building", async
   await sent(a);
   await expect(listA).toHaveCount(0);
   await expect(page.getByText("Maya Robinson")).toBeVisible();
-  await b.getByRole("button", { name: `Add ${CARD} to your cart` }).click();
+  await b
+    .getByRole("button", { name: `Remove ${CARD} from your cart` })
+    .click();
   await expect(page.getByText("No open carts.")).toBeVisible();
 });
 

@@ -86,12 +86,7 @@ function StoreTitle(props: {
         />
       )}
       <p className="text-sm leading-snug text-muted-foreground">
-        <span
-          className={`inline-flex items-center gap-1.5 font-semibold ${store.isOpen ? "text-success" : "text-text"}`}
-        >
-          <span aria-hidden className="size-[7px] rounded-full bg-current" />
-          {STATUS[store.state]}
-        </span>
+        <Status store={store} />
         {props.items !== undefined && (
           <>
             <br />
@@ -103,5 +98,41 @@ function StoreTitle(props: {
         )}
       </p>
     </header>
+  );
+}
+
+function Status({ store }: { store: PublicStore }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 font-semibold ${store.isOpen ? "text-success" : "text-text"}`}
+    >
+      <span aria-hidden className="size-[7px] rounded-full bg-current" />
+      {STATUS[store.state]}
+    </span>
+  );
+}
+
+/** Whose item this is: a shared link lands cold on the item page. */
+export function SellerLine({ store }: { store: PublicStore }) {
+  const table = modeCopy(store.sellingMode).showTable && store.tableLabel;
+  return (
+    <p className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground lg:col-span-2">
+      {store.avatarUrl && (
+        // Stored at 400 px already, so no optimiser pass.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={store.avatarUrl}
+          alt=""
+          width={32}
+          height={32}
+          className="size-8 bg-surface object-cover"
+        />
+      )}
+      <span className="font-semibold break-words text-text">{store.name}</span>
+      <Status store={store} />
+      {table && (
+        <span className="num font-semibold text-text">Table {table}</span>
+      )}
+    </p>
   );
 }
