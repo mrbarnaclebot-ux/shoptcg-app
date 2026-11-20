@@ -2,14 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { lineButton } from "@/components/ticket-button";
-import { useLive } from "@/lib/use-live";
 import { blockAction, endEventAction, releaseAction } from "../actions";
-
-/** Re-reads the page on every claim, release and sale in the store. */
-export function EventLive() {
-  useLive("/api/live/store");
-  return null;
-}
 
 /** An action that asks once before it runs. */
 function Confirmed(props: {
@@ -21,15 +14,27 @@ function Confirmed(props: {
   const [asking, setAsking] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // The question closes on a failure, so the error shows either way.
+  const alert = error && (
+    <p role="alert" className="w-full text-sm font-semibold text-danger">
+      {error}
+    </p>
+  );
   if (!asking)
     return (
-      <button
-        type="button"
-        onClick={() => setAsking(true)}
-        className="min-h-11 text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
-      >
-        {props.label}
-      </button>
+      <>
+        <button
+          type="button"
+          onClick={() => {
+            setError(null);
+            setAsking(true);
+          }}
+          className="min-h-11 text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+        >
+          {props.label}
+        </button>
+        {alert}
+      </>
     );
   return (
     <div className="flex flex-wrap items-center gap-2" role="group">
@@ -55,11 +60,6 @@ function Confirmed(props: {
       >
         Keep
       </button>
-      {error && (
-        <p role="alert" className="w-full text-sm font-semibold text-danger">
-          {error}
-        </p>
-      )}
     </div>
   );
 }

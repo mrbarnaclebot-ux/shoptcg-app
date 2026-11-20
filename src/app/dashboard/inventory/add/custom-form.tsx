@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { CONDITIONS } from "@/lib/condition";
 import { toast } from "@/lib/toast";
 import { addCustomAction, type CustomState } from "../actions";
-import { Added, StockFields } from "./add-panel";
+import { Added, OFFLINE, StockFields } from "./add-panel";
 
 type Kind = "raw" | "graded" | "sealed" | "other";
 
@@ -46,7 +46,12 @@ export function CustomForm() {
   const [kind, setKind] = useState<Kind>("raw");
   const other = kind === "other";
   const [state, action, pending] = useActionState<CustomState, FormData>(
-    addCustomAction,
+    // Offline, the call itself fails: say so and keep what was typed (same n).
+    (prev, form) =>
+      addCustomAction(prev, form).catch(() => ({
+        n: prev.n,
+        errors: { form: OFFLINE },
+      })),
     {},
   );
   const e = state.errors ?? {};

@@ -204,8 +204,8 @@ const pricingFields = z.object({
   priceRulePct: z.coerce
     .number({ error: "Enter a whole number" })
     .int("Enter a whole number")
-    .min(-90, "Between -90 and 500")
-    .max(500, "Between -90 and 500"),
+    .min(-90, "Up to 90% under market")
+    .max(500, "Up to 500% over market"),
   rounding: z.enum(["0", "0.5", "1"]),
   secondCurrency: z.preprocess(
     (v) => (typeof v === "string" ? v.trim().toUpperCase() || null : v),

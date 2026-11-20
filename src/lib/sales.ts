@@ -320,6 +320,8 @@ export async function saleDraft(db: Db, storeId: string, requestId: string) {
       code: request.code,
       buyerName: request.buyerName,
       isTest: request.isTest,
+      // Whether a receipt will be emailed; the address stays on the server.
+      emailed: sql<boolean>`${request.buyerEmail} is not null`,
       expiresAt: request.expiresAt,
       fulfil: request.fulfil,
       payWith: request.payWith,

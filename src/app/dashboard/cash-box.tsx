@@ -149,7 +149,10 @@ export function CashBox(props: { till: OpenTill | null; closing: boolean }) {
               {till.float === null ? "Not set" : usd(Number(till.float))}
             </Row>
             <Row k="Cash sales">{usd(Number(till.cashSales))}</Row>
-            <Row k="Cash paid for buys">−{usd(Number(till.cashBuys))}</Row>
+            <Row k="Cash paid for buys">
+              {Number(till.cashBuys) ? "−" : ""}
+              {usd(Number(till.cashBuys))}
+            </Row>
             <Row k="Should be in the box" big>
               {usd(Number(till.expected))}
             </Row>

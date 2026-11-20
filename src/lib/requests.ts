@@ -16,8 +16,8 @@ import { storeState } from "@/lib/store-state";
 import { uniqueViolation } from "@/lib/stores";
 import { vendorPrice } from "@/lib/vendor-price";
 
-/** Bumped when the buyer consent wording or the Terms change. */
-export const TERMS_VERSION = "2026-11-17";
+/** Bumped when the buyer consent wording or the Terms change; /terms shows it as the date. */
+export const TERMS_VERSION = "2026-11-19";
 /** A table hold: the vendor's own table sale and test requests use it. */
 export const HOLD_MS = MODE_HOLD_MS.table;
 export const MAX_LINES = 30;

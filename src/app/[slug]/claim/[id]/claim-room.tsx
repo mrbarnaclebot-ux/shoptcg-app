@@ -202,7 +202,10 @@ export function ClaimRoom(props: {
       </section>
 
       {units > 0 && room.mine && (
-        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-surface px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div
+          data-bottom-bar
+          className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-surface px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        >
           <div className="mx-auto flex max-w-[1200px] flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
             <p className="font-semibold">
               Your claims: <span className="num">{units}</span>{" "}

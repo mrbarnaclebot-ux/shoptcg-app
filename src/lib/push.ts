@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import webpush from "web-push";
 import type { Db } from "@/db/open";
-import { pushSubscription, store } from "@/db/schema";
+import { pushSubscription, request, store } from "@/db/schema";
 import { usd } from "@/lib/format";
 import { shortName } from "@/lib/requests";
 
@@ -126,6 +126,13 @@ export async function pushToUser(
       .where(inArray(pushSubscription.endpoint, gone));
 }
 
+/** "15 min", "24 hours": a hold as the notification says it. */
+export function holdText(min: number) {
+  if (min < 60) return `${Math.max(1, min)} min`;
+  const h = Math.round(min / 60);
+  return `${h} ${h === 1 ? "hour" : "hours"}`;
+}
+
 /** "New request: Maya R." to the store owner. No email in the payload. */
 export async function pushNewRequest(
   db: Db,
@@ -134,18 +141,23 @@ export async function pushNewRequest(
   send?: Sender | null,
 ) {
   const [s] = await db
-    .select({ userId: store.ownerUserId })
-    .from(store)
-    .where(eq(store.id, storeId));
+    .select({
+      userId: store.ownerUserId,
+      // The hold this request was given (HOLD_MS by mode, 15 min for a test).
+      holdMin: sql<number>`round(extract(epoch from ${request.expiresAt} - ${request.createdAt}) / 60)::int`,
+    })
+    .from(request)
+    .innerJoin(store, eq(store.id, request.storeId))
+    .where(and(eq(request.id, r.id), eq(request.storeId, storeId)));
   if (!s) return;
   await pushToUser(
     db,
     s.userId,
     {
       title: `New request: ${shortName(r.name)}`,
-      body: `${r.items} ${r.items === 1 ? "item" : "items"}, ${usd(r.total)}. Hold ends in 15 min.`,
+      body: `${r.items} ${r.items === 1 ? "item" : "items"}, ${usd(r.total)}. Hold ends in ${holdText(s.holdMin)}.`,
       tag: r.id,
-      url: `/dashboard?r=${r.id}`,
+      url: `/dashboard/requests/${r.id}`,
     },
     send,
   );

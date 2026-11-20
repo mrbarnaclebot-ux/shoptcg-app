@@ -77,8 +77,9 @@ async function Dashboard({
         <NewStore />
       </main>
     );
-  // Desktop: the store and its requests on the left, the boxes you glance at
-  // on the right. A phone keeps one stack in the order below (order-*).
+  // Requests come first (UI-SPEC): only the store switch sits above them.
+  // Desktop: the switch and the queue on the left, the boxes you glance at on
+  // the right. A phone keeps one stack in the order below (order-*).
   return (
     <main
       className={`mx-auto flex w-full max-w-xl flex-1 flex-col gap-10 px-4 pt-8 pb-16 lg:max-w-[1280px] lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:px-8 ${bentoPage}`}
@@ -96,19 +97,22 @@ async function Dashboard({
             waiting={await waitingCount(getDb(), store.id)}
           />
         </div>
-        <div className="order-4 lg:order-none">
+        <div className="order-2 lg:order-none">
           <RequestQueue storeId={store.id} mode={store.sellingMode} />
         </div>
       </div>
       <div className={`${bentoColumn} ${bentoRight}`}>
-        <div className="order-3 lg:order-none">
+        <div className="order-4 lg:order-none">
+          <PublicLink slug={store.slug} />
+        </div>
+        <div className="order-6 lg:order-none">
           <Till storeId={store.id} closing={store.live === "off"} />
         </div>
-        <div className="order-5 lg:order-none">
+        <div className="order-3 lg:order-none">
           <Floor slug={store.slug} />
         </div>
         {!store.tipsDismissedAt && (
-          <div className="order-2 lg:order-none">
+          <div className="order-5 lg:order-none">
             <GettingStarted store={store} />
           </div>
         )}
@@ -173,15 +177,15 @@ function StoreSummary({
   store: NonNullable<Awaited<ReturnType<typeof getStoreByOwner>>>;
   waiting: number;
 }) {
-  const origin = appUrl().origin;
   const initials = store.name
     .split(/\s+/)
     .map((w) => w[0])
     .join("")
     .slice(0, 2)
     .toUpperCase();
+  // Kept short so the queue starts high: on desktop the switch sits beside the name.
   return (
-    <section className="flex flex-col gap-5">
+    <section className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:items-start lg:gap-x-8">
       <div className="grid grid-cols-[1fr_auto] items-start gap-x-4">
         <div className="min-w-0">
           <h1 className="font-display text-[2.75rem] leading-[0.88] font-black break-words">
@@ -212,24 +216,30 @@ function StoreSummary({
         />
       )}
       <RefreshAt inMs={store.changesInMs} />
-      <div className="flex flex-col gap-1 border-t border-border pt-4">
-        <p className="text-sm text-muted-foreground">Your public page</p>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          {/* Shown like the table sign: no protocol, in the poster face. */}
-          <Link
-            href={`/${store.slug}`}
-            className="font-display inline-flex min-h-11 items-center text-2xl font-extrabold break-all underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
-          >
-            {origin.replace(/^https?:\/\//, "")}/{store.slug}
-          </Link>
-          <CopyLink url={`${origin}/${store.slug}`} />
-          <Link
-            href="/dashboard/preview"
-            className="inline-flex min-h-11 items-center text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
-          >
-            Preview
-          </Link>
-        </div>
+    </section>
+  );
+}
+
+function PublicLink({ slug }: { slug: string }) {
+  const origin = appUrl().origin;
+  return (
+    <section className="flex flex-col gap-1">
+      <p className="text-sm text-muted-foreground">Your public page</p>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {/* Shown like the table sign: no protocol, in the poster face. */}
+        <Link
+          href={`/${slug}`}
+          className="font-display inline-flex min-h-11 items-center text-2xl font-extrabold break-all underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+        >
+          {origin.replace(/^https?:\/\//, "")}/{slug}
+        </Link>
+        <CopyLink url={`${origin}/${slug}`} />
+        <Link
+          href="/dashboard/preview"
+          className="inline-flex min-h-11 items-center text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+        >
+          Preview
+        </Link>
       </div>
     </section>
   );

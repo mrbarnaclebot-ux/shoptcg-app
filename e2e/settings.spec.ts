@@ -34,6 +34,34 @@ test("each settings page saves on its own, and the store can be renamed", async 
   ).toBeVisible();
 });
 
+test("the price rule is a side and a size, so a phone needs no minus key", async ({
+  page,
+}) => {
+  await newVendor(page);
+  await page.goto("/dashboard/settings/pricing");
+  await page.getByText("Under market", { exact: true }).click();
+  const under = page.getByLabel("Percent under market");
+  await expect(under).toHaveAttribute("inputmode", "numeric");
+  await under.fill("10");
+  // The worked example follows as you type: $48.10 less 10%.
+  await expect(page.getByText("$43.29").first()).toBeVisible();
+  await page.getByText("Over market", { exact: true }).click();
+  await page.getByLabel("Percent over market").fill("25");
+  await expect(page.getByText("$60.13").first()).toBeVisible();
+  const save = page.getByRole("button", { name: "Save", exact: true });
+  await save.click();
+  await expect(page.getByText("Saved.", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("radio", { name: "Over market" })).toBeChecked();
+  await expect(page.getByLabel("Percent over market")).toHaveValue("25");
+
+  await page.getByLabel("Percent over market").fill("600");
+  await save.click();
+  await expect(
+    page.locator("main").getByText("Up to 500% over market"),
+  ).toBeVisible();
+});
+
 test("a new store link takes over, and the old one still lands", async ({
   page,
 }) => {

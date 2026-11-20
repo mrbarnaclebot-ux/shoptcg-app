@@ -68,7 +68,8 @@ export default async function RequestPage({
             as="div"
             stub={<HoldClock at={r.expiresAt.getTime()} soon={soon} />}
           >
-            <h1 className="font-display text-[2.5rem] leading-[0.9] font-black text-balance [overflow-wrap:anywhere]">
+            {/* break-words, not anywhere: a long name wraps between words. */}
+            <h1 className="font-display text-[clamp(1.75rem,8vw,2.5rem)] leading-[0.9] font-black text-balance break-words">
               Sent to {store.name}
             </h1>
             <p className="mt-2 mb-4 text-muted-foreground">{copy.sentNext}</p>
