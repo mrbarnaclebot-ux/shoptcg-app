@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Db } from "@/db/open";
 import {
@@ -12,7 +12,7 @@ import {
 } from "@/db/schema";
 import { stockReason } from "@/lib/ledger";
 import { customListingSchema, priceSchema } from "@/lib/listing-input";
-import { addCustomListing } from "@/lib/listings";
+import { addCustomListing, blendCost } from "@/lib/listings";
 import { fromCents, toCents } from "@/lib/money";
 import { localDate } from "@/lib/reports";
 
@@ -97,7 +97,13 @@ export function recordBuy(
       ? await tx
           .select({ id: listing.id, qty: listing.qty })
           .from(listing)
-          .where(and(inArray(listing.id, ids), eq(listing.storeId, storeId)))
+          .where(
+            and(
+              inArray(listing.id, ids),
+              eq(listing.storeId, storeId),
+              isNull(listing.removedAt),
+            ),
+          )
           .orderBy(listing.id)
           .for("update")
       : [];
@@ -145,10 +151,7 @@ export function recordBuy(
         await tx
           .update(listing)
           .set({
-            // Both sides read the old row, so this is the cost before the buy.
-            cost: sql`case when ${listing.cost} is not null and ${listing.qty} > 0
-              then greatest(0.01, round((${listing.qty} * ${listing.cost} + ${l.qty} * ${l.unitPrice}::numeric) / (${listing.qty} + ${l.qty}), 2))
-              else ${l.unitPrice}::numeric end`,
+            cost: blendCost(l.qty, l.unitPrice),
             qty: sql`${listing.qty} + ${l.qty}`,
             updatedAt: sql`now()`,
           })

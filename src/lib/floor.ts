@@ -163,6 +163,46 @@ export async function floor(db: Db, s: PublicStore, timeZone: string) {
   return { onNow: counts?.onNow ?? 0, today: counts?.today ?? 0, baskets };
 }
 
+const hasLine = (listingId: string) =>
+  sql`${basket.lines} @> ${JSON.stringify([{ id: listingId }])}::jsonb`;
+
+/** Open lists, the ones the vendor sees, that have this listing on them. */
+export async function cartsWith(db: Db, storeId: string, listingId: string) {
+  const [{ n }] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(basket)
+    .where(
+      and(
+        eq(basket.storeId, storeId),
+        gt(basket.seenAt, sql`now() - ${BASKET_KEPT}`),
+        hasLine(listingId),
+      ),
+    );
+  return n;
+}
+
+/** Takes a removed listing off every list; true when one had it. */
+export async function dropFromCarts(
+  db: Db,
+  storeId: string,
+  listingId: string,
+) {
+  const mine = and(eq(basket.storeId, storeId), hasLine(listingId));
+  const left = sql`(select coalesce(jsonb_agg(l), '[]'::jsonb)
+    from jsonb_array_elements(${basket.lines}) l where l->>'id' <> ${listingId})`;
+  const changed = await db
+    .update(basket)
+    .set({ lines: left })
+    .where(mine)
+    .returning({ deviceId: basket.deviceId });
+  await db
+    .delete(basket)
+    .where(
+      and(eq(basket.storeId, storeId), sql`${basket.lines} = '[]'::jsonb`),
+    );
+  return changed.length > 0;
+}
+
 /** Drops lists long gone and visits past the 30 days we keep buyer details. */
 export async function sweepFloor(db: Db) {
   await db

@@ -110,6 +110,10 @@ export type CustomListingInput = z.infer<typeof customListingSchema>;
 
 export const listingPatchSchema = z.object({
   id: z.uuid(),
+  // A custom item's own description (updateListing refuses them on catalog cards).
+  name: z.string().trim().min(1, "Enter a name").max(120).optional(),
+  setName: optText(120).optional(),
+  number: optText(20).optional(),
   qty: qtySchema.optional(),
   condition: conditionSchema.optional(),
   overridePrice: priceSchema.optional(),

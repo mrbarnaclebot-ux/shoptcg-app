@@ -33,6 +33,8 @@ const REASON: Record<StockReason, string> = {
   sold: "Sold",
   voided: "Sale voided",
   bought: "Bought",
+  removed: "Removed",
+  restored: "Restored",
 };
 const PAID_WITH: Record<BuyMethod, string> = {
   cash: "Cash",

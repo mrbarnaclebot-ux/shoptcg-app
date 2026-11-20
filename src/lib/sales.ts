@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { and, desc, eq, inArray, ne, sql, sum } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne, sql, sum } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import {
   activeHold,
@@ -354,7 +354,8 @@ export type VoidResult = { ok: true; already?: true } | { gone: true };
 
 /**
  * Takes a whole sale back. With `restock` each line's units go back on its
- * listing, labelled "voided" in the ledger; a listing deleted since is skipped.
+ * listing, labelled "voided" in the ledger; a listing deleted or removed
+ * since is skipped.
  * Safe to repeat: the second void changes nothing.
  */
 export function voidSale(
@@ -410,7 +411,11 @@ export function voidSale(
             updatedAt: sql`now()`,
           })
           .where(
-            and(eq(listing.id, l.listingId), eq(listing.storeId, storeId)),
+            and(
+              eq(listing.id, l.listingId),
+              eq(listing.storeId, storeId),
+              isNull(listing.removedAt),
+            ),
           );
     }
     await notifyLive(tx, { s: storeId, r: s.requestId, t: "voided" });

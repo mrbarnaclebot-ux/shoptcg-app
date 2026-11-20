@@ -7,11 +7,13 @@ import {
   gt,
   gte,
   inArray,
+  isNotNull,
+  isNull,
   max,
   sql,
 } from "drizzle-orm";
 import type { Db } from "@/db/open";
-import { listing, pricePoint, store } from "@/db/schema";
+import { catalogItem, listing, pricePoint, store } from "@/db/schema";
 import { altPrice } from "@/lib/fx";
 import { inOpenEvent, listStock, type StockRow } from "@/lib/listings";
 import { heldByListing, type Held } from "@/lib/request-reads";
@@ -140,7 +142,11 @@ export async function listPublicStock(
 
 /** Header numbers: active items and the newest market price date. */
 export async function storeSummary(db: Db, storeId: string) {
-  const active = and(eq(listing.storeId, storeId), eq(listing.active, true));
+  const active = and(
+    eq(listing.storeId, storeId),
+    eq(listing.active, true),
+    isNull(listing.removedAt),
+  );
   const [[{ items }], [{ updatedOn }]] = await Promise.all([
     db.select({ items: count() }).from(listing).where(active),
     db
@@ -180,11 +186,32 @@ export async function publicItemExists(db: Db, storeId: string, id: string) {
         eq(listing.id, id),
         eq(listing.storeId, storeId),
         eq(listing.active, true),
+        isNull(listing.removedAt),
         sql`not ${inOpenEvent}`,
       ),
     )
     .limit(1);
   return Boolean(row);
+}
+
+/** Of these ids on a buyer's cart, the ones the vendor removed, with their names. */
+export async function removedItems(db: Db, storeId: string, ids: string[]) {
+  const ok = ids.filter((id) => UUID.test(id));
+  if (!ok.length) return [];
+  return db
+    .select({
+      id: listing.id,
+      name: sql<string>`coalesce(${listing.name}, ${catalogItem.name})`,
+    })
+    .from(listing)
+    .leftJoin(catalogItem, eq(catalogItem.id, listing.catalogItemId))
+    .where(
+      and(
+        eq(listing.storeId, storeId),
+        inArray(listing.id, ok),
+        isNotNull(listing.removedAt),
+      ),
+    );
 }
 
 /** These listings as buyers see them, for the list review. */

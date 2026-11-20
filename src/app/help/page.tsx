@@ -239,7 +239,17 @@ export default function HelpPage() {
                 <strong>Cost:</strong> add what you paid for an item and the
                 ledger works out your profit.
               </li>
+              <li>
+                Adding a card you already have, in the same condition, adds to
+                that item instead of making a second one.
+              </li>
               <li>Hide an item to keep it in your stock but off your store.</li>
+              <li>
+                <strong>Remove from inventory</strong> (in Edit) takes an item
+                off your stock and store. Buyers holding it are told. It waits
+                under <strong>Removed</strong>, where Restore brings it back
+                with its quantity.
+              </li>
             </ul>
           </Section>
 

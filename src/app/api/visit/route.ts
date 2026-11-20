@@ -8,7 +8,7 @@ import { notifyLive } from "@/lib/live";
 import { MAX_LINES } from "@/lib/requests";
 import { storeOrNull } from "@/lib/session";
 import { slugSchema } from "@/lib/slug";
-import { getPublicStore } from "@/lib/storefront";
+import { getPublicStore, removedItems } from "@/lib/storefront";
 
 const MAX_BODY = 4096;
 
@@ -44,7 +44,16 @@ export async function POST(req: Request) {
   // A vendor looking at their own page, preview or not, is not a visitor.
   if (getSessionCookie(req) && (await storeOrNull())?.id === store.id)
     return answer(204);
-  const { device, lines } = body.data;
+  const { device } = body.data;
+  // What the vendor removed comes back so the phone drops it and says so.
+  const removed = await removedItems(
+    db,
+    store.id,
+    body.data.lines.map((l) => l.id),
+  );
+  const lines = body.data.lines.filter(
+    (l) => !removed.some((r) => r.id === l.id),
+  );
   const arrived = await recordVisit(db, store.id, device);
   // Lists only exist while buyers can send them.
   const changed = await syncBasket(
@@ -55,5 +64,5 @@ export async function POST(req: Request) {
   );
   if (arrived || changed)
     await notifyLive(db, { s: store.id, r: "", t: "floor" });
-  return answer(204);
+  return removed.length ? Response.json({ removed }) : answer(204);
 }

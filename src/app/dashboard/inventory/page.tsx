@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { lineButton, TicketButton } from "@/components/ticket-button";
 import { shortDate, usd } from "@/lib/format";
 import { getDb } from "@/db";
-import { listStock } from "@/lib/listings";
+import { countListings, listStock } from "@/lib/listings";
 import { tableSale } from "@/lib/requests";
 import { requireStore } from "@/lib/session";
 import { awaitingPrice, vendorPrice } from "@/lib/vendor-price";
@@ -31,9 +31,10 @@ async function Inventory({
 }: Pick<PageProps<"/dashboard/inventory">, "searchParams">) {
   const { store } = await requireStore();
   const filter = filterSchema.parse(await searchParams);
-  const [rows, selling] = await Promise.all([
+  const [rows, selling, all] = await Promise.all([
     listStock(getDb(), store.id, filter),
     tableSale(getDb(), store.id),
+    countListings(getDb(), store.id),
   ]);
   const today = new Date().toISOString().slice(0, 10);
   const filtered = Boolean(filter.q || filter.kind || filter.language);
@@ -45,7 +46,8 @@ async function Inventory({
   return (
     <>
       <Header count={filtered ? null : rows.length} synced={synced} />
-      {rows.length || filtered ? <Filters filter={filter} /> : null}
+      {/* Also with only hidden or removed stock, so those tabs stay reachable. */}
+      {all || filtered ? <Filters filter={filter} /> : null}
       {selling && (
         <Link
           href={`/dashboard/requests/${selling.id}`}

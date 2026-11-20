@@ -5,6 +5,7 @@ import {
   eq,
   ilike,
   inArray,
+  isNotNull,
   isNull,
   or,
   sql,
@@ -17,9 +18,16 @@ import {
   claimEventItem,
   listing,
   pricePoint,
+  request,
+  requestLine,
+  stockMove,
   store,
 } from "@/db/schema";
 import { gradedItem } from "@/lib/catalog";
+import { cartsWith, dropFromCarts } from "@/lib/floor";
+import { stockReason } from "@/lib/ledger";
+import { notifyLive } from "@/lib/live";
+import { effectiveStatus } from "@/lib/request-reads";
 import type {
   CatalogListingInput,
   CustomListingInput,
@@ -31,7 +39,7 @@ import type {
 
 export type StockFilter = {
   q?: string;
-  kind?: "raw" | "graded" | "sealed" | "other" | "hidden";
+  kind?: "raw" | "graded" | "sealed" | "other" | "hidden" | "removed";
   language?: "en" | "ja" | "zh";
   /** Any of these languages (the public page's multi-select chips). */
   languages?: ("en" | "ja" | "zh")[];
@@ -75,11 +83,16 @@ function latestPrices(db: Db, storeId: string) {
 
 function filterConds(storeId: string, f: StockFilter) {
   const name = pick<string>(listing.name, catalogItem.name);
-  const conds = [
-    eq(listing.storeId, storeId),
-    eq(listing.active, f.kind !== "hidden"),
-  ];
-  if (f.kind && f.kind !== "hidden") conds.push(eq(listing.kind, f.kind));
+  const conds = [eq(listing.storeId, storeId)];
+  // Removed stock shows in its own view only; the rest never sees it.
+  if (f.kind === "removed") conds.push(isNotNull(listing.removedAt));
+  else
+    conds.push(
+      isNull(listing.removedAt),
+      eq(listing.active, f.kind !== "hidden"),
+    );
+  if (f.kind && f.kind !== "hidden" && f.kind !== "removed")
+    conds.push(eq(listing.kind, f.kind));
   if (f.language) conds.push(eq(listing.language, f.language));
   if (f.languages?.length) conds.push(inArray(listing.language, f.languages));
   if (f.id) conds.push(eq(listing.id, f.id));
@@ -125,6 +138,7 @@ function columns(latest: ReturnType<typeof latestPrices>) {
     overridePrice: listing.overridePrice,
     cost: listing.cost,
     active: listing.active,
+    removedAt: listing.removedAt,
     inEvent: inOpenEvent,
     createdAt: listing.createdAt,
     // At this listing's condition; nmMarket is the provider's Near Mint price.
@@ -164,16 +178,97 @@ export class ListingError extends Error {}
 
 export const MAX_ACTIVE_LISTINGS = 5000;
 
-// ponytail: count-then-insert can overshoot under concurrent adds; a trigger if that matters.
+// Hidden and removed items don't count, so hiding or removing makes room.
+// ponytail: count-then-insert can overshoot when custom adds race; catalog
+// adds, imports and restores lock the store first.
 async function assertRoom(db: Db, storeId: string, adding: number) {
   const [{ n }] = await db
     .select({ n: count() })
     .from(listing)
-    .where(and(eq(listing.storeId, storeId), eq(listing.active, true)));
+    .where(
+      and(
+        eq(listing.storeId, storeId),
+        eq(listing.active, true),
+        isNull(listing.removedAt),
+      ),
+    );
   if (n + adding > MAX_ACTIVE_LISTINGS)
     throw new ListingError(
-      `Your shop can list ${MAX_ACTIVE_LISTINGS} items. Hide or remove some first.`,
+      `Your store can show ${MAX_ACTIVE_LISTINGS.toLocaleString("en-US")} items at once. Hide or remove some first.`,
     );
+}
+
+/** The store row, locked: sends, sales and buys take it first too, so stock changes queue. */
+async function lockStore(tx: Db, storeId: string) {
+  const [s] = await tx
+    .select({ id: store.id })
+    .from(store)
+    .where(eq(store.id, storeId))
+    .for("no key update");
+  return Boolean(s);
+}
+
+/**
+ * A listing's cost after `qty` more at `cost` each: averaged with the units on
+ * hand when their cost is known, else this cost. It reads the old row, so it
+ * belongs in the same SET as the qty change.
+ */
+export const blendCost = (qty: number, cost: string) =>
+  sql`case when ${listing.cost} is not null and ${listing.qty} > 0
+    then greatest(0.01, round((${listing.qty} * ${listing.cost} + ${qty} * ${cost}::numeric) / (${listing.qty} + ${qty}), 2))
+    else ${cost}::numeric end`;
+
+const cardKey = (catalogItemId: string, condition: string | null) =>
+  `${catalogItemId}:${condition ?? ""}`;
+
+/**
+ * The listing an add of these cards tops up, by card and condition: the oldest
+ * one on show. Hidden, removed and claim-event stock get a new row instead.
+ */
+async function sameCards(tx: Db, storeId: string, catalogItemIds: string[]) {
+  const rows = await tx
+    .select({
+      id: listing.id,
+      catalogItemId: listing.catalogItemId,
+      condition: listing.condition,
+    })
+    .from(listing)
+    .where(
+      and(
+        eq(listing.storeId, storeId),
+        inArray(listing.catalogItemId, catalogItemIds),
+        eq(listing.active, true),
+        isNull(listing.removedAt),
+        sql`not ${inOpenEvent}`,
+      ),
+    )
+    // Newest first, so the oldest is set last and wins.
+    .orderBy(desc(listing.createdAt))
+    .for("update");
+  return new Map(
+    rows.map((r) => [cardKey(r.catalogItemId!, r.condition), r.id]),
+  );
+}
+
+type Units = { qty: number; cost: string | null; overridePrice: string | null };
+
+/** More of a card the store has: the cost blends in, a fixed price replaces. */
+async function topUp(tx: Db, id: string, add: Units) {
+  const [row] = await tx
+    .update(listing)
+    .set({
+      qty: sql`${listing.qty} + ${add.qty}`,
+      ...(add.cost && { cost: blendCost(add.qty, add.cost) }),
+      ...(add.overridePrice && { overridePrice: add.overridePrice }),
+      updatedAt: sql`now()`,
+    })
+    .where(and(eq(listing.id, id), sql`${listing.qty} + ${add.qty} <= 9999`))
+    .returning();
+  if (!row)
+    throw new ListingError(
+      "That would put more than 9999 of one card in stock.",
+    );
+  return row;
 }
 
 /** A raw card picked with a grader and grade becomes its graded catalog row. */
@@ -187,7 +282,11 @@ async function resolveGraded(
   return { ...input, catalogItemId: item.id };
 }
 
-/** Lists a catalog item; kind and language come from the catalog row, not the client. */
+/**
+ * Lists a catalog item; kind and language come from the catalog row, not the
+ * client. A card the store already shows in that condition gets the units
+ * instead of a second row, and `merged` has its quantity before and after.
+ */
 export async function addCatalogListing(
   db: Db,
   storeId: string,
@@ -201,18 +300,32 @@ export async function addCatalogListing(
   if (!item) throw new ListingError("That card is no longer in the catalog");
   if (item.kind === "raw" && !input.condition)
     throw new ListingError("Pick a condition");
-  await assertRoom(db, storeId, 1);
-  const [row] = await db
-    .insert(listing)
-    .values({
-      ...input,
-      storeId,
-      kind: item.kind,
-      language: item.language,
-      condition: item.kind === "raw" ? input.condition : null,
-    })
-    .returning();
-  return row;
+  const condition = item.kind === "raw" ? input.condition : null;
+  return db.transaction(async (t) => {
+    const tx = t as Db;
+    // Store first: two quick adds of one card make one row, not two.
+    await lockStore(tx, storeId);
+    await stockReason(tx, "added");
+    const same = (await sameCards(tx, storeId, [input.catalogItemId])).get(
+      cardKey(input.catalogItemId, condition),
+    );
+    if (same) {
+      const row = await topUp(tx, same, input);
+      return { ...row, merged: { from: row.qty - input.qty, to: row.qty } };
+    }
+    await assertRoom(tx, storeId, 1);
+    const [row] = await tx
+      .insert(listing)
+      .values({
+        ...input,
+        storeId,
+        kind: item.kind,
+        language: item.language,
+        condition,
+      })
+      .returning();
+    return { ...row, merged: null };
+  });
 }
 
 function customValues(storeId: string, input: CustomListingInput) {
@@ -242,7 +355,12 @@ export type ImportRow =
   | { kind: "catalog"; input: CatalogListingInput }
   | { kind: "custom"; input: CustomListingInput };
 
-/** The new listings' ids. Inserts every row or none (one INSERT is atomic), so a failed import never leaves half a shelf. */
+/**
+ * The listings the rows went to. All rows or none, so a failed import never
+ * leaves half a shelf. Catalog rows follow the add rule: a card the store
+ * shows in that condition, or a second row of one card, tops up one listing.
+ * Custom rows are always new.
+ */
 export async function importListings(
   db: Db,
   storeId: string,
@@ -271,32 +389,85 @@ export async function importListings(
     : [];
   const byId = new Map(items.map((i) => [i.id, i]));
   const values = rows.map((r) => {
-    if (r.kind === "custom") return customValues(storeId, r.input);
+    if (r.kind === "custom")
+      return { key: null, value: customValues(storeId, r.input) };
     const item = byId.get(r.input.catalogItemId);
     if (!item) throw new ListingError("A matched card left the catalog");
     const condition = item.kind === "raw" ? (r.input.condition ?? "NM") : null;
     const { kind, language } = item;
-    return { ...r.input, storeId, kind, language, condition };
+    return {
+      key: cardKey(r.input.catalogItemId, condition),
+      value: { ...r.input, storeId, kind, language, condition },
+    };
   });
   if (!values.length) return [];
-  await assertRoom(db, storeId, values.length);
-  // 1000 rows x 18 columns stays under the 65535 bind-parameter cap.
-  return db
-    .insert(listing)
-    .values(values)
-    .returning({ id: listing.id, catalogItemId: listing.catalogItemId });
+  return db.transaction(async (t) => {
+    const tx = t as Db;
+    await lockStore(tx, storeId);
+    await stockReason(tx, "added");
+    const target = ids.length
+      ? await sameCards(tx, storeId, ids)
+      : new Map<string, string>();
+    const fresh = [];
+    const later = [];
+    for (const v of values) {
+      if (v.key && target.has(v.key)) later.push(v);
+      else {
+        // Claimed now; the new row's id lands after the insert.
+        if (v.key) target.set(v.key, "");
+        fresh.push(v);
+      }
+    }
+    await assertRoom(tx, storeId, fresh.length);
+    // 1000 rows x 18 columns stays under the 65535 bind-parameter cap.
+    const added = fresh.length
+      ? await tx
+          .insert(listing)
+          .values(fresh.map((v) => v.value))
+          .returning({
+            id: listing.id,
+            catalogItemId: listing.catalogItemId,
+            condition: listing.condition,
+          })
+      : [];
+    const out = added.map((r) => {
+      if (r.catalogItemId)
+        target.set(cardKey(r.catalogItemId, r.condition), r.id);
+      return { id: r.id, catalogItemId: r.catalogItemId };
+    });
+    // ponytail: one UPDATE per topped-up row; batch them if whole-shelf re-imports get slow.
+    for (const v of later) {
+      const row = await topUp(tx, target.get(v.key!)!, v.value);
+      out.push({ id: row.id, catalogItemId: row.catalogItemId });
+    }
+    return out;
+  });
 }
 
-/** Applies a patch to one of the store's listings; false when it is not theirs. */
+/**
+ * Applies a patch to one of the store's listings; false when it is not theirs
+ * or removed. Name, set and number are a custom item's own: catalog cards
+ * take theirs from the catalog.
+ */
 export async function updateListing(
   db: Db,
   storeId: string,
   { id, ...patch }: ListingPatch,
 ) {
+  const own = [patch.name, patch.setName, patch.number].some(
+    (v) => v !== undefined,
+  );
   const rows = await db
     .update(listing)
     .set({ ...patch, updatedAt: sql`now()` })
-    .where(and(eq(listing.id, id), eq(listing.storeId, storeId)))
+    .where(
+      and(
+        eq(listing.id, id),
+        eq(listing.storeId, storeId),
+        isNull(listing.removedAt),
+        own ? isNull(listing.catalogItemId) : undefined,
+      ),
+    )
     .returning({ id: listing.id });
   return rows.length > 0;
 }
@@ -337,7 +508,7 @@ export async function setListingPhoto(
   });
 }
 
-/** Moves qty by delta within 0 to 9999; null when the listing is not theirs. */
+/** Moves qty by delta within 0 to 9999; null when the listing is not theirs or removed. */
 export async function stepQty(
   db: Db,
   storeId: string,
@@ -350,9 +521,167 @@ export async function stepQty(
       qty: sql`least(9999, greatest(0, ${listing.qty} + ${delta}))`,
       updatedAt: sql`now()`,
     })
-    .where(and(eq(listing.id, id), eq(listing.storeId, storeId)))
+    .where(
+      and(
+        eq(listing.id, id),
+        eq(listing.storeId, storeId),
+        isNull(listing.removedAt),
+      ),
+    )
     .returning({ qty: listing.qty });
   return rows[0]?.qty ?? null;
+}
+
+export type RemoveResult =
+  | { ok: true; name: string }
+  /** Buyers hold it on this many requests and carts; nothing changed yet. */
+  | { held: number }
+  /** In a claim event that hasn't ended: its claims would vanish. */
+  | { event: string }
+  /** Not this store's, or already removed. */
+  | { gone: true };
+
+/**
+ * Takes a listing out of the inventory, the store and every unsent cart, with
+ * its quantity to 0 as a "removed" stock move; restoreListing undoes it. Each
+ * buyer holding it loses that line and is told, and a request left with
+ * nothing is declined. Without `force` it stops at { held } so the vendor can
+ * be asked first.
+ */
+export async function removeListing(
+  db: Db,
+  storeId: string,
+  id: string,
+  force: boolean,
+): Promise<RemoveResult> {
+  return db.transaction(async (t) => {
+    const tx = t as Db;
+    // Store first, like a send or a sale, so none lands halfway through.
+    if (!(await lockStore(tx, storeId))) return { gone: true };
+    const [row] = await tx
+      .select({ name: pick<string>(listing.name, catalogItem.name) })
+      .from(listing)
+      .leftJoin(catalogItem, eq(catalogItem.id, listing.catalogItemId))
+      .where(
+        and(
+          eq(listing.id, id),
+          eq(listing.storeId, storeId),
+          isNull(listing.removedAt),
+        ),
+      )
+      .for("update", { of: listing });
+    if (!row) return { gone: true };
+    const [event] = await tx
+      .select({ title: claimEvent.title })
+      .from(claimEventItem)
+      .innerJoin(claimEvent, eq(claimEvent.id, claimEventItem.eventId))
+      .where(
+        and(
+          eq(claimEventItem.listingId, id),
+          isNull(claimEvent.endedAt),
+          sql`${claimEvent.endsAt} > now()`,
+        ),
+      )
+      .limit(1);
+    if (event) return { event: event.title };
+    const holding = await tx
+      .select({ id: request.id })
+      .from(request)
+      .innerJoin(requestLine, eq(requestLine.requestId, request.id))
+      .where(
+        and(
+          eq(request.storeId, storeId),
+          eq(requestLine.listingId, id),
+          sql`${effectiveStatus} = 'pending'`,
+        ),
+      );
+    const carts = await cartsWith(tx, storeId, id);
+    if (!force && holding.length + carts)
+      return { held: holding.length + carts };
+
+    await stockReason(tx, "removed");
+    await tx
+      .update(listing)
+      .set({ removedAt: sql`now()`, qty: 0, updatedAt: sql`now()` })
+      .where(eq(listing.id, id));
+    const ids = holding.map((h) => h.id);
+    if (ids.length) {
+      await tx
+        .delete(requestLine)
+        .where(
+          and(
+            eq(requestLine.listingId, id),
+            inArray(requestLine.requestId, ids),
+          ),
+        );
+      await tx
+        .update(request)
+        .set({
+          removedItems: sql`array_append(${request.removedItems}, ${row.name})`,
+        })
+        .where(inArray(request.id, ids));
+      // Nothing left to sell: closed the way a seller's decline closes it.
+      const closed = await tx
+        .update(request)
+        .set({ status: "declined", decidedAt: sql`now()` })
+        .where(
+          and(
+            inArray(request.id, ids),
+            sql`not exists (select 1 from ${requestLine} where ${requestLine.requestId} = ${request.id})`,
+          ),
+        )
+        .returning({ id: request.id });
+      const done = new Set(closed.map((c) => c.id));
+      for (const r of ids)
+        await notifyLive(tx, {
+          s: storeId,
+          r,
+          t: done.has(r) ? "declined" : "removed",
+        });
+    }
+    if (await dropFromCarts(tx, storeId, id))
+      await notifyLive(tx, { s: storeId, r: "", t: "floor" });
+    return { ok: true, name: row.name };
+  });
+}
+
+/**
+ * Brings a removed listing back with the quantity it had, as a "restored"
+ * move. False when it is not this store's or not removed.
+ */
+export async function restoreListing(db: Db, storeId: string, id: string) {
+  return db.transaction(async (t) => {
+    const tx = t as Db;
+    if (!(await lockStore(tx, storeId))) return false;
+    const [row] = await tx
+      .select({ active: listing.active })
+      .from(listing)
+      .where(
+        and(
+          eq(listing.id, id),
+          eq(listing.storeId, storeId),
+          isNotNull(listing.removedAt),
+        ),
+      )
+      .for("update");
+    if (!row) return false;
+    if (row.active) await assertRoom(tx, storeId, 1);
+    await stockReason(tx, "restored");
+    // This removal's own move: an older one may predate a sale since.
+    const had = sql`(select -${stockMove.delta} from ${stockMove}
+      where ${stockMove.listingId} = ${listing.id} and ${stockMove.reason} = 'removed'
+        and ${stockMove.at} >= ${listing.removedAt}
+      order by ${stockMove.at} desc limit 1)`;
+    await tx
+      .update(listing)
+      .set({
+        qty: sql`least(9999, ${listing.qty} + coalesce(${had}, 0))`,
+        removedAt: null,
+        updatedAt: sql`now()`,
+      })
+      .where(eq(listing.id, id));
+    return true;
+  });
 }
 
 /** Every listing the store has, hidden ones included; 1 right after the first add. */
