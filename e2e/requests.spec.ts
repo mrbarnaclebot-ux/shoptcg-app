@@ -441,7 +441,7 @@ test.describe("signing out", () => {
     const endpoint = `https://fcm.googleapis.com/${randomUUID()}`;
     await addPushRow(`e2e-${id}@example.test`, endpoint);
     await stubPush(page, false, endpoint);
-    await page.goto("/dashboard/settings");
+    await page.goto("/dashboard/settings/account");
     // The endpoint is read on load; a tap before that signs out without it.
     await expect(page.locator("input[name=endpoint]")).toHaveValue(endpoint);
     await page.getByRole("button", { name: "Sign out" }).click();
@@ -455,7 +455,7 @@ test.describe("signing out", () => {
   test("still works when the push service never answers", async ({ page }) => {
     await newVendor(page);
     await stubPush(page, true, "https://fcm.googleapis.com/hang");
-    await page.goto("/dashboard/settings");
+    await page.goto("/dashboard/settings/account");
     await page.getByRole("button", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/$/);
     await page.goto("/dashboard");

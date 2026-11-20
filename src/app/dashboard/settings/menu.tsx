@@ -11,6 +11,7 @@ import {
   Eye,
   LifeBuoy,
   type LucideIcon,
+  QrCode,
   ShieldCheck,
   ShoppingBag,
   Store,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { SellingMode } from "@/lib/selling-mode";
 
 const HOME = "/dashboard/settings";
 
@@ -28,53 +30,48 @@ type Row = {
   label: string;
   hint: string;
   icon: LucideIcon;
-  wide?: true;
 };
 
-const STORE: Row[] = [
-  {
-    href: "/dashboard/preview",
-    label: "Preview store",
-    icon: Eye,
-    hint: "Your page as buyers see it",
-  },
-  {
-    href: "/dashboard/events",
-    label: "Claim events",
-    icon: CalendarClock,
-    hint: "Timed claim sales for online stores",
-  },
+// Settings: forms that change how the store works. Each saves on its own.
+const SETTINGS: Row[] = [
   {
     href: `${HOME}/store`,
     label: "Store profile",
     icon: Store,
-    hint: "Name, banner and profile image",
+    hint: "Name, link, banner and profile image",
   },
   {
     href: `${HOME}/pricing`,
     label: "Pricing",
     icon: Tag,
-    hint: "Price rule, rounding, second currency",
+    hint: "Price rule, played cards, second currency",
   },
   {
     href: `${HOME}/table`,
     label: "How you sell",
     icon: ShoppingBag,
-    hint: "At a table or online, table number, sign",
+    hint: "At a table or online, table number, NFC",
   },
   {
     href: `${HOME}/alerts`,
     label: "Alerts",
     icon: BellRing,
-    hint: "Sound and locked-phone alerts",
+    hint: "Chime and locked-phone alerts",
   },
 ];
-const RECORDS: Row[] = [
+// Work: pages you use at and after a show. Full width, with a back link.
+const work = (mode: SellingMode): Row[] => [
+  {
+    href: "/dashboard/reports",
+    label: "Report",
+    icon: ChartColumn,
+    hint: "Takings by day, weekend or month, CSV",
+  },
   {
     href: "/dashboard/ledger",
     label: "Ledger",
     icon: BookOpen,
-    hint: "Profit, stock value, stock in and out",
+    hint: "Profit, stock value, every stock move, CSV",
   },
   {
     href: "/dashboard/customers",
@@ -83,10 +80,29 @@ const RECORDS: Row[] = [
     hint: "Buyers and who takes your emails",
   },
   {
-    href: "/dashboard/reports",
-    label: "Sales report",
-    icon: ChartColumn,
-    hint: "Totals by day or weekend, CSV export",
+    href: "/dashboard/events",
+    label: "Claim events",
+    icon: CalendarClock,
+    hint:
+      mode === "online"
+        ? "Timed claim sales on their own page"
+        : "For online stores: switch under How you sell",
+  },
+  ...(mode === "table"
+    ? [
+        {
+          href: "/dashboard/sign",
+          label: "Table sign",
+          icon: QrCode,
+          hint: "Print the QR sign for your table",
+        },
+      ]
+    : []),
+  {
+    href: "/dashboard/preview",
+    label: "Preview store",
+    icon: Eye,
+    hint: "Your page as buyers see it",
   },
 ];
 const ADMIN: Row = {
@@ -101,27 +117,28 @@ const HELP: Row = {
   icon: LifeBuoy,
   hint: "How everything works",
 };
-// On a phone the account block sits under the menu, so the row is desktop only.
 const ACCOUNT: Row = {
-  href: HOME,
+  href: `${HOME}/account`,
   label: "Account",
   icon: CircleUser,
-  hint: "Sign out",
-  wide: true,
+  hint: "Sign out, password, email",
 };
 
 /**
  * The "More" tab. On a phone it is the whole screen at /dashboard/settings and
  * a back link on the pages under it; from lg up it is a list beside the page.
  */
-export function SettingsMenu(props: { hasStore: boolean; admin: boolean }) {
+export function SettingsMenu(props: {
+  mode: SellingMode | null;
+  admin: boolean;
+}) {
   const path = usePathname();
   const home = path === HOME;
   const groups = [
-    ...(props.hasStore
+    ...(props.mode
       ? [
-          { title: "Your store", rows: STORE },
-          { title: "Records", rows: RECORDS },
+          { title: "Settings", rows: SETTINGS },
+          { title: "Work", rows: work(props.mode) },
         ]
       : []),
     { title: "You", rows: [HELP, ...(props.admin ? [ADMIN] : []), ACCOUNT] },
@@ -145,20 +162,11 @@ export function SettingsMenu(props: { hasStore: boolean; admin: boolean }) {
           More
         </p>
         {groups.map((g) => (
-          <div
-            key={g.title}
-            className={cn(g.rows.every((r) => r.wide) && "hidden lg:block")}
-          >
+          <div key={g.title}>
             <p className="pb-1 text-sm text-muted-foreground">{g.title}</p>
             <ul className="border-b border-border">
               {g.rows.map((r) => (
-                <li
-                  key={r.href}
-                  className={cn(
-                    "border-t border-border",
-                    r.wide && "hidden lg:block",
-                  )}
-                >
+                <li key={r.href} className="border-t border-border">
                   <Link
                     href={r.href}
                     aria-current={path === r.href ? "page" : undefined}

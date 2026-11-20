@@ -45,6 +45,11 @@
   html {
     @apply font-sans;
   }
+  /* The native empty box is near-invisible on the hall (WCAG 1.4.11). */
+  input[type="checkbox"]:not(:checked, :indeterminate) {
+    box-shadow: 0 0 0 1.5px var(--muted-text);
+    border-radius: 2px;
+  }
   /*
     Fixed bottom bars would cover whatever focus or an anchor scrolls to
     (WCAG 2.4.11), so the page scrolls clear of them: the dashboard tab bar,

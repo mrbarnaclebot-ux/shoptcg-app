@@ -18,6 +18,7 @@ import {
   customListingSchema,
   fieldErrors,
   listingPatchSchema,
+  priceSchema,
 } from "@/lib/listing-input";
 import {
   addCatalogListing,
@@ -29,6 +30,7 @@ import {
   removeListings,
   restoreListings,
   setActive,
+  setPrices,
   stepQty,
   setListingPhoto,
   updateListing,
@@ -146,6 +148,24 @@ export async function showAction(
   } catch (err) {
     if (err instanceof ListingError) return { error: err.message };
     console.error("[inventory] show failed", err);
+    return { error: SAVE_FAILED };
+  }
+  refresh();
+  return {};
+}
+
+/** One fixed price on the ticked rows, or blank to follow the market again. */
+export async function setPriceAction(
+  ids: string[],
+  price: string,
+): Promise<Result> {
+  const { store } = await requireStore();
+  const parsed = priceSchema.safeParse(price);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  try {
+    await setPrices(getDb(), store.id, idsSchema.parse(ids), parsed.data);
+  } catch (err) {
+    console.error("[inventory] set price failed", err);
     return { error: SAVE_FAILED };
   }
   refresh();

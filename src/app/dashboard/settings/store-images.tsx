@@ -52,16 +52,30 @@ function Slot({ kind, url }: { kind: Kind; url: string | null }) {
   const [error, setError] = useState<string>();
   const [busy, start] = useTransition();
 
-  const send = (method: "POST" | "DELETE", file?: File) =>
+  const send = (method: "POST" | "DELETE", file?: Blob) =>
     start(async () => {
       setError(undefined);
       let why = OFFLINE;
       try {
+        // Kept before a remove, so Undo can upload the same picture again.
+        const copy =
+          method === "DELETE" && url
+            ? await fetch(url)
+                .then((r) => (r.ok ? r.blob() : null))
+                .catch(() => null)
+            : null;
         const res = await fetch(`/api/store-image?kind=${kind}`, {
           method,
           body: file,
         });
-        if (res.ok) return router.refresh();
+        if (res.ok) {
+          if (method === "DELETE")
+            toast.imageRemoved(
+              slot.title.toLowerCase(),
+              copy ? () => send("POST", copy) : undefined,
+            );
+          return router.refresh();
+        }
         why = ((await res.json()) as { error?: string }).error ?? OFFLINE;
       } catch {}
       setError(why);

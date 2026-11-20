@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "cn";
 import { Coins, Layers, Percent } from "lucide-react";
 import {
   startTransition,
@@ -45,8 +46,9 @@ const SIDES = [
   ["over", "Over market"],
 ] as const;
 
+// Short, so the three fit one row in a desktop tile.
 const ROUNDING = [
-  ["0", "Exact cents"],
+  ["0", "Exact"],
   ["0.5", "Nearest $0.50"],
   ["1", "Nearest $1"],
 ] as const;
@@ -62,7 +64,8 @@ function Err({ id, msg }: { id: string; msg?: string }) {
 /**
  * One settings page's form: its own action, its own Save. Submitted by hand,
  * because a form action would reset the fields after saving and desync the
- * controlled inputs.
+ * controlled inputs. Any edit marks it unsaved: "Saved." goes, the Save row
+ * sticks to the bottom of the screen, and leaving asks first.
  */
 function SettingsShell(props: {
   action: (prev: SettingsState, form: FormData) => Promise<SettingsState>;
@@ -72,14 +75,20 @@ function SettingsShell(props: {
     props.action,
     {},
   );
+  // The result that was current at the last edit: a newer one means it was
+  // saved since, unless that save came back with errors.
+  const [edited, setEdited] = useState<SettingsState | null>(null);
+  const dirty = edited === state || Boolean(edited && state.errors);
   const e = state.errors ?? {};
   useEffect(() => {
     // A save shows the inline "Saved." instead of a toast.
     if (state.errors) toast.notSaved(saveError(state.errors));
   }, [state]);
+  useLeaveGuard(dirty);
   return (
     <form
       className="flex flex-col gap-10"
+      onChange={() => setEdited(state)}
       onSubmit={(ev) => {
         ev.preventDefault();
         const data = new FormData(ev.currentTarget);
@@ -88,16 +97,61 @@ function SettingsShell(props: {
     >
       {props.children(e)}
       <Err id="form-error" msg={e.form} />
-      <div className="flex items-center gap-4">
+      {/* Above the phone tab bar while unsaved, like the inventory's bulk bar. */}
+      <div
+        data-toast-clear={dirty || undefined}
+        className={cn(
+          "flex items-center gap-4",
+          dirty &&
+            "sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 -mx-4 border-t border-border bg-bg px-4 py-3 lg:bottom-0 lg:mx-0 lg:px-0",
+        )}
+      >
         <TicketButton type="submit" disabled={pending} aria-busy={pending}>
           {pending ? "Saving" : "Save"}
         </TicketButton>
-        <p role="status" className="text-sm font-semibold text-success">
-          {state.saved && !pending ? "Saved." : ""}
+        <p
+          role="status"
+          className={cn(
+            "text-sm font-semibold",
+            dirty ? "text-muted-foreground" : "text-success",
+          )}
+        >
+          {pending
+            ? ""
+            : dirty
+              ? "Unsaved changes"
+              : state.saved
+                ? "Saved."
+                : ""}
         </p>
       </div>
     </form>
   );
+}
+
+const LEAVE = "Leave without saving? Your changes will be lost.";
+
+/** Asks before a reload, a tab close or a link click drops unsaved edits. */
+function useLeaveGuard(on: boolean) {
+  useEffect(() => {
+    if (!on) return;
+    const unload = (ev: BeforeUnloadEvent) => ev.preventDefault();
+    // Client navigations fire no beforeunload, so links are caught here.
+    const click = (ev: MouseEvent) => {
+      const a = (ev.target as Element).closest?.("a[href]");
+      if (!a || a.getAttribute("target") === "_blank") return;
+      if (!confirm(LEAVE)) {
+        ev.preventDefault();
+        ev.stopPropagation();
+      }
+    };
+    addEventListener("beforeunload", unload);
+    document.addEventListener("click", click, true);
+    return () => {
+      removeEventListener("beforeunload", unload);
+      document.removeEventListener("click", click, true);
+    };
+  }, [on]);
 }
 
 export function PricingForm({ values }: { values: PricingValues }) {
@@ -166,7 +220,7 @@ export function TableForm(props: {
                 name="tableLabel"
                 defaultValue={props.tableLabel}
                 maxLength={8}
-                placeholder="B14"
+                placeholder="e.g. B14"
                 autoCapitalize="characters"
                 aria-invalid={e.tableLabel ? true : undefined}
                 aria-describedby="table-hint table-error"
@@ -266,7 +320,7 @@ function CheckoutFields(props: {
           rows={3}
           maxLength={300}
           defaultValue={v.checkoutNote}
-          placeholder="Delivery by PickMe Flash or Uber parcel, fee paid on arrival. Pickup in Nugegoda."
+          placeholder="e.g. Delivery by PickMe Flash or Uber parcel, fee paid on arrival. Pickup in Nugegoda."
           aria-invalid={e.checkoutNote ? true : undefined}
           aria-describedby="note-hint note-error"
         />
@@ -285,7 +339,7 @@ function CheckoutFields(props: {
           autoComplete="tel"
           maxLength={20}
           defaultValue={v.whatsapp}
-          placeholder="+94 77 123 4567"
+          placeholder="e.g. +94 77 123 4567"
           aria-invalid={e.whatsapp ? true : undefined}
           aria-describedby="whatsapp-hint whatsapp-error"
         />
@@ -487,7 +541,8 @@ function ConditionFields({ values, errors: e }: FieldsProps) {
         Market prices are for Near Mint. A played single is priced at this share
         of it, then your price rule and rounding apply.
       </p>
-      <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
+      {/* Two a row in a desktop tile: four squeezed the labels onto two lines. */}
+      <div className="grid grid-cols-2 items-end gap-3 sm:grid-cols-4 lg:grid-cols-2">
         {CONDITION_FIELDS.map(([code, field]) => (
           <div key={field} className="flex flex-col gap-2">
             <Label htmlFor={field}>
@@ -527,7 +582,7 @@ function CurrencyFields({ values, errors: e }: FieldsProps) {
             name="secondCurrency"
             defaultValue={values.secondCurrency}
             maxLength={3}
-            placeholder="AUD"
+            placeholder="e.g. AUD"
             autoCapitalize="characters"
             aria-invalid={e.secondCurrency ? true : undefined}
             aria-describedby="currency-error"
@@ -541,7 +596,7 @@ function CurrencyFields({ values, errors: e }: FieldsProps) {
             name="fxRate"
             inputMode="decimal"
             defaultValue={values.fxRate}
-            placeholder="1.52"
+            placeholder="e.g. 1.52"
             aria-invalid={e.fxRate ? true : undefined}
             aria-describedby="fx-error"
           />

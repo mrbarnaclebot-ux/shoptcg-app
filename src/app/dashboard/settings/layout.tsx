@@ -23,6 +23,9 @@ async function Menu() {
   const user = await requireUser();
   const store = await getStoreByOwner(getDb(), user.id);
   return (
-    <SettingsMenu hasStore={Boolean(store)} admin={isAdminEmail(user.email)} />
+    <SettingsMenu
+      mode={store?.sellingMode ?? null}
+      admin={isAdminEmail(user.email)}
+    />
   );
 }

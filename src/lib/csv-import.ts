@@ -49,6 +49,8 @@ function toInput(cells: Record<string, string>) {
     qty: cells.qty?.trim() || 1,
     overridePrice: cells.price,
     cost: cells.cost,
+    // The export writes "yes" for hidden stock, so a round trip keeps it hidden.
+    active: !/^(yes|y|true|1|x|hidden)$/i.test(cells.hidden?.trim() ?? ""),
   });
 }
 
@@ -116,7 +118,7 @@ export function toImportRow(
   match: CatalogItem | null,
 ): ImportRow {
   if (!match) return { kind: "custom", input };
-  const { qty, condition, overridePrice, cost } = input;
+  const { qty, condition, overridePrice, cost, active } = input;
   const { grader, grade } = slab(input) ?? { grader: null, grade: null };
   return {
     kind: "catalog",
@@ -128,6 +130,7 @@ export function toImportRow(
       condition,
       overridePrice,
       cost,
+      active,
     },
   };
 }

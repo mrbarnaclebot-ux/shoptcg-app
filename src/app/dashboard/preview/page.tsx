@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { requireStore } from "@/lib/session";
+import { BackToMore } from "../back-to-more";
 import { PreviewFrame } from "./preview-frame";
 
 export const metadata: Metadata = { title: "Preview - tcgmart" };
@@ -14,7 +15,8 @@ const NOW = {
 
 export default function PreviewPage() {
   return (
-    <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-4 px-4 pt-6 pb-6 md:px-6 lg:px-8 lg:pt-8">
+    <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-4 px-4 pt-4 pb-6 md:px-6 lg:px-8">
+      <BackToMore />
       <Suspense
         fallback={<div className="h-[70dvh] animate-pulse bg-surface" />}
       >
