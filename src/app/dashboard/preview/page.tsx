@@ -4,7 +4,7 @@ import { requireStore } from "@/lib/session";
 import { BackToMore } from "../back-to-more";
 import { PreviewFrame } from "./preview-frame";
 
-export const metadata: Metadata = { title: "Preview - tcgmart" };
+export const metadata: Metadata = { title: "Preview" };
 
 const NOW = {
   open: "Your store is open, so this is what buyers see right now.",
@@ -31,7 +31,7 @@ async function Preview() {
   return (
     <>
       <div className="flex flex-col gap-3">
-        <h1 className="font-display text-[2.5rem] leading-[0.88] font-black lg:text-[3.5rem] lg:leading-[0.82]">
+        <h1 className="font-display text-3xl leading-[0.88] font-black lg:text-[3.5rem] lg:leading-[0.82]">
           Preview
         </h1>
         <p className="max-w-[60ch] text-sm text-muted-foreground">

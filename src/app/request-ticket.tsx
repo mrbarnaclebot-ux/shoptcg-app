@@ -20,12 +20,12 @@ const LINES = [
   },
 ];
 
-export function RequestTicket() {
+export function RequestTicket({ className = "w-[430px]" }) {
   return (
     <Ticket
       as="div"
       no="0187"
-      className="w-[430px]"
+      className={className}
       stub={
         <>
           <StubValue k="Table" v="B14" />
@@ -34,9 +34,7 @@ export function RequestTicket() {
       }
     >
       <div className="flex items-baseline justify-between">
-        <span className="font-display text-[1.875rem] leading-none font-extrabold">
-          Maya R.
-        </span>
+        <span className="font-display text-2xl font-extrabold">Maya R.</span>
         <span className="text-[0.8125rem] text-muted-foreground">just now</span>
       </div>
       <ul className="mt-3.5 mb-3 text-sm">
@@ -63,9 +61,7 @@ export function RequestTicket() {
       </ul>
       <div className="flex items-baseline justify-between border-t-[1.5px] border-text pt-2 font-semibold">
         <span>3 items</span>
-        <span className="font-display num text-[1.875rem] leading-none font-extrabold">
-          $86.00
-        </span>
+        <span className="font-display num text-2xl font-extrabold">$86.00</span>
       </div>
     </Ticket>
   );

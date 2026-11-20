@@ -247,7 +247,7 @@ function CashGiven(props: {
       {given !== null && (
         <p
           role="status"
-          className={`font-display num text-[1.875rem] leading-none font-extrabold ${given < total ? "text-danger" : ""}`}
+          className={`font-display num text-2xl font-extrabold ${given < total ? "text-danger" : ""}`}
         >
           {given < total
             ? `${money(total - given)} short`
@@ -675,7 +675,7 @@ export function SaleForm(props: {
         )}
         <div className="flex items-baseline justify-between font-semibold">
           <dt>Total</dt>
-          <dd className="font-display num text-[2.5rem] leading-none font-extrabold">
+          <dd className="font-display num text-3xl leading-none font-extrabold">
             {priced ? money(priced.total) : "-"}
           </dd>
         </div>

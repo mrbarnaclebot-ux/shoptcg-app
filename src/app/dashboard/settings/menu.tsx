@@ -155,10 +155,7 @@ export function SettingsMenu(props: {
         </Link>
       )}
       <div className={cn("flex-col gap-6", home ? "flex" : "hidden lg:flex")}>
-        <p
-          aria-hidden
-          className="font-display text-[3.5rem] leading-[0.82] font-black lg:hidden"
-        >
+        <p aria-hidden className="font-display text-4xl font-black lg:hidden">
           More
         </p>
         {groups.map((g) => (

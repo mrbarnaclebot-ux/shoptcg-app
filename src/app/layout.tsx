@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Big_Shoulders, Schibsted_Grotesk } from "next/font/google";
+import { appUrl } from "@/lib/deployed";
 import "./globals.css";
 
 // Poster face for numbers, prices and names you read from three metres away.
@@ -27,9 +28,20 @@ const body = Schibsted_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "tcgmart",
+  // Without it, opengraph-image.jpg's URL is built from localhost on Railway.
+  // appUrl() is BETTER_AUTH_URL, which the boot check holds to CANONICAL_HOST.
+  metadataBase: appUrl(),
+  title: {
+    default: "tcgmart – live-priced Pokemon card store for vendors",
+    // Pages give only their own name.
+    template: "%s – tcgmart",
+  },
   description:
     "Run your Pokemon card business online and at shows: one live-priced store, carts that ping your phone, and a ledger that keeps the books.",
+  // No og:title here, so each page's title becomes its own. Store and item
+  // pages set their own image; every other page shares opengraph-image.jpg.
+  openGraph: { siteName: "tcgmart", type: "website" },
+  twitter: { card: "summary_large_image" },
 };
 
 // cover: the page runs under the notch and home bar, so the bars' existing

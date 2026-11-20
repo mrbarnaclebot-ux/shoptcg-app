@@ -12,7 +12,7 @@ import { requireStore } from "@/lib/session";
 import { vendorPrice } from "@/lib/vendor-price";
 import { NewEventForm } from "./new-event-form";
 
-export const metadata: Metadata = { title: "New claim event - tcgmart" };
+export const metadata: Metadata = { title: "New claim event" };
 
 export default function NewEventPage() {
   return (
@@ -24,9 +24,7 @@ export default function NewEventPage() {
         <ChevronLeft aria-hidden className="size-4" />
         Claim events
       </Link>
-      <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
-        New event
-      </h1>
+      <h1 className="font-display text-4xl font-black">New event</h1>
       <Suspense fallback={<TicketLoading>Counting stock</TicketLoading>}>
         <Form />
       </Suspense>

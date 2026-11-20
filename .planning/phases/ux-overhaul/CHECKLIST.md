@@ -36,7 +36,7 @@ Decisions by the owner:
 - [x] Getting started ticks (alerts; first buyer as the share/sign signal)
 - [x] Help copy (store link changeable; step order); Terms updated, version 2026-11-19
 
-## C. Selling loop (PR pending)
+## C. Selling loop (PR #65)
 - [x] Back to the queue after confirm, with "View receipt" in the toast
 - [x] Cash given and change
 - [x] Confirm offline, sync on reconnect, never drop a sale
@@ -49,19 +49,19 @@ Decisions by the owner:
 - [x] "Add item" on the sale screen
 - [x] Buy picker past 1,000 items
 
-## D. Store page (in progress)
-- [ ] A way back to a sent request (stub on store and cart; Back to store)
-- [ ] Item page: Add to cart above the fold on desktop; seller line; Set links to set search; condition explained
-- [ ] Phone chip-row fade
-- [ ] Graded tiles show set and number
-- [ ] Slow-wifi feedback (`useLinkStatus`, item `loading.tsx`, `next/form` search); cart skeleton
-- [ ] Copy buttons for bank details and order code
-- [ ] Prefill buyer details (shared with the claim room)
-- [ ] Market price source and date; one price format
-- [ ] Table number on the waiting ticket from the start
-- [ ] Feedback when a second tap removes from the cart
-- [ ] Fieldset error wiring; heading levels; hide the stepper for last-one items
-- [ ] Image `sizes`; store grid paging past 1,000; sold-out items last
+## D. Store page (PR #64)
+- [x] A way back to a sent request (stub on store and cart; Back to store)
+- [x] Item page: Add to cart above the fold on desktop; seller line; Set links to set search; condition explained
+- [x] Phone chip-row fade
+- [x] Graded tiles show set and number
+- [x] Slow-wifi feedback (`useLinkStatus`, item `loading.tsx`, `next/form` search); cart skeleton
+- [x] Copy buttons for bank details and order code
+- [x] Prefill buyer details (shared with the claim room)
+- [x] Market price source and date; one price format
+- [x] Table number on the waiting ticket from the start
+- [x] Feedback when a second tap removes from the cart
+- [x] Fieldset error wiring; heading levels; hide the stepper for last-one items
+- [x] Image `sizes`; store grid paging past 1,000; sold-out items last
 
 ## E. Settings and back office (PR #67)
 - [x] More menu: settings vs work pages (Ledger, Report, Customers, Events, Sign, Preview); consistent layout and back links
@@ -81,18 +81,18 @@ Decisions by the owner:
 - [x] Admin: back link at the top; account search
 - [x] Inventory leftovers from A: hidden column, stock-lowering reason, bulk fixed price
 
-## F. Landing and foundations (not started)
-- [ ] OG image, `metadataBase`, title template (drop hand-typed suffixes)
-- [ ] Invite path: landing primary "Get an invite"; `/join` single ticket with Segmented
-- [ ] Phone hero height so the main button is on the first screen; the product shown below 1280
-- [ ] Hero headline wraps at text-only zoom (WCAG 1.4.4)
-- [ ] Toast button focus ring contrast on paper (WCAG 1.4.11)
-- [ ] Login: intro copy under the form; password show/hide; "Send again" / "Use a different email"
-- [ ] Maskable app icon
-- [ ] Shared public header and footer landmarks
-- [ ] Help screenshots `alt=""` where the caption repeats it
-- [ ] Delete unused `components/ui/button.tsx` and `card.tsx`
-- [ ] Type scale: replace one-off sizes that equal tokens; add tokens for the common ones
+## F. Landing and foundations (PR open)
+- [x] OG image, `metadataBase`, title template (drop hand-typed suffixes)
+- [x] Invite path: landing primary "Get an invite"; `/join` single ticket with Segmented
+- [x] Phone hero height so the main button is on the first screen; the product shown below 1280
+- [x] Hero headline wraps at text-only zoom (WCAG 1.4.4)
+- [x] Toast button focus ring contrast on paper (WCAG 1.4.11)
+- [x] Login: intro copy under the form; password show/hide; "Send again" / "Use a different email"
+- [x] Maskable app icon
+- [x] Shared public header and footer landmarks
+- [x] Help screenshots `alt=""` where the caption repeats it
+- [x] Delete unused `components/ui/button.tsx` and `card.tsx`
+- [x] Type scale: replace one-off sizes that equal tokens; add tokens for the common ones
 
 ## Considered, not planned (owner can pull in)
 - Storefront bottom-sheet filters with "Show N results" and multi-select (Baymard); the chip rows stay for now.

@@ -26,7 +26,7 @@ import { Floor } from "./requests/floor";
 import { RequestQueue } from "./requests/queue";
 import { StoreCreated } from "./store-created";
 
-export const metadata: Metadata = { title: "Dashboard - tcgmart" };
+export const metadata: Metadata = { title: "Dashboard" };
 
 export default function DashboardPage({
   searchParams,
@@ -155,9 +155,7 @@ function NewStore() {
   return (
     <>
       <div className="flex flex-col gap-3">
-        <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
-          Name your store
-        </h1>
+        <h1 className="font-display text-4xl font-black">Name your store</h1>
         <p className="text-muted-foreground">
           Your store&apos;s address: the link you share online and the QR on
           your table sign.

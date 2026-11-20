@@ -1,10 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode, useActionState, useSyncExternalStore } from "react";
-import { TicketButton } from "@/components/ticket-button";
+import {
+  type ReactNode,
+  useActionState,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { lineButton, TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { signInAction, type LoginState } from "./actions";
 import { authLink } from "./auth-shell";
 
@@ -55,10 +61,9 @@ export function LoginForm() {
             Forgot password?
           </Link>
         </div>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
           aria-invalid={error ? true : undefined}
@@ -94,10 +99,9 @@ export function NewPasswordFields({
     <>
       <div className="flex flex-col gap-2">
         <Label htmlFor="password">{label}</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="new-password"
           minLength={8}
           maxLength={128}
@@ -111,10 +115,9 @@ export function NewPasswordFields({
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="confirm">Type it again</Label>
-        <Input
+        <PasswordInput
           id="confirm"
           name="confirm"
-          type="password"
           autoComplete="new-password"
           required
           aria-invalid={error ? true : undefined}
@@ -130,16 +133,54 @@ export function NewPasswordFields({
   );
 }
 
-export function Sent({ children }: { children: ReactNode }) {
+/**
+ * "Check your email". Send again posts what was sent through the same action,
+ * so the same sign-in limits apply; Use a different email goes back to the form.
+ */
+export function Sent(props: {
+  children: ReactNode;
+  action: (form: FormData) => void;
+  pending: boolean;
+  resend: Record<string, string>;
+  onReset: () => void;
+}) {
+  const [again, setAgain] = useState(false);
   return (
-    <div role="status" className="flex flex-col gap-3">
-      <p className="font-display text-[2.25rem] leading-[0.9] font-black">
-        Check your email.
-      </p>
-      <p className="text-muted-foreground">{children}</p>
-      <p className="border-t border-dashed border-border pt-3 text-sm text-muted-foreground">
-        Didn&apos;t get it? Check spam, or reload this page to send again.
-      </p>
+    <div className="flex flex-col gap-3">
+      <div role="status" className="flex flex-col gap-3">
+        <p className="font-display text-[2.25rem] leading-[0.9] font-black">
+          Check your email.
+        </p>
+        <p className="text-muted-foreground">{props.children}</p>
+        {again && !props.pending && (
+          <p className="text-sm font-semibold">Sent again.</p>
+        )}
+      </div>
+      <form
+        action={props.action}
+        onSubmit={() => setAgain(true)}
+        className="flex flex-col gap-3 border-t border-dashed border-border pt-3"
+      >
+        {Object.entries(props.resend).map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
+        <p className="text-sm text-muted-foreground">
+          Didn&apos;t get it? Check spam, or send it again.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="submit"
+            disabled={props.pending}
+            aria-busy={props.pending}
+            className={lineButton}
+          >
+            {props.pending ? "Sending" : "Send again"}
+          </button>
+          <button type="button" onClick={props.onReset} className={lineButton}>
+            Use a different email
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

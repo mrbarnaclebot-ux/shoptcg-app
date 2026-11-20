@@ -1,8 +1,8 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
+import { PublicFooter, PublicHeader } from "@/components/public-chrome";
 import { lineButton } from "@/components/ticket-button";
-import { Wordmark } from "@/components/wordmark";
 import { getDb } from "@/db";
 import { getPublicStore, MISSING_HEADER, type Missing } from "@/lib/storefront";
 
@@ -27,14 +27,13 @@ const SAYS: Record<Missing, [title: string, hint: string]> = {
 export default function NotFound() {
   return (
     <div className="flex flex-1 flex-col">
-      <header className="px-4 py-2 md:px-14 md:py-6">
-        <Wordmark />
-      </header>
+      <PublicHeader />
       <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col items-start gap-5 px-4 pt-12 md:px-6 lg:px-8">
         <Suspense>
           <Says />
         </Suspense>
       </main>
+      <PublicFooter />
     </div>
   );
 }
@@ -53,7 +52,7 @@ async function Says() {
       : ["We can't find that page.", null];
   return (
     <>
-      <h1 className="font-display text-[2.5rem] leading-[0.9] font-black md:text-[4rem]">
+      <h1 className="font-display text-3xl font-black md:text-[4rem]">
         {title}
       </h1>
       {hint && (

@@ -49,8 +49,8 @@ export async function generateMetadata({
   const { slug, id } = await params;
   const { store, item } = await itemOr404(slug, id);
   if (store.state === "off")
-    return { title: `${store.name} - tcgmart`, robots: { index: false } };
-  const title = `${item.name} - ${store.name}`;
+    return { title: store.name, robots: { index: false } };
+  const title = `${item.name} – ${store.name}`;
   const price = item.qty && item.price !== null ? `${usd(item.price)}. ` : "";
   const description = `${price}${metaLine(item)}. ${stockLine(item)}.`;
   // A shared link shows the card, else the store's banner. Data URLs (local
@@ -59,7 +59,7 @@ export async function generateMetadata({
     u?.startsWith("https://"),
   );
   return {
-    title: `${title} - tcgmart`,
+    title,
     description,
     openGraph: {
       title,
@@ -155,7 +155,7 @@ function Details({ item, store }: { item: PublicItem; store: PublicStore }) {
       <div>
         <h1
           lang={HTML_LANG[item.language]}
-          className="font-display text-[2.5rem] leading-[0.9] font-black text-balance md:text-[3.25rem]"
+          className="font-display text-3xl font-black text-balance md:text-[3.25rem]"
         >
           {item.name}
         </h1>

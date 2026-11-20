@@ -1,7 +1,7 @@
 import { getImageProps } from "next/image";
-import Link from "next/link";
 import handoff from "../../public/media/handoff.jpg";
 import scan from "../../public/media/scan.jpg";
+import { RequestTicket } from "./request-ticket";
 
 const STEPS = [
   {
@@ -84,6 +84,16 @@ export function HowItWorks() {
                 <p className="mt-1 max-w-[46ch] text-muted-foreground">
                   {s.body}
                 </p>
+                {/* The hero drops this ticket on the photo from 1280 up;
+                    narrower, it lies here under the step it shows. */}
+                {i === 2 && (
+                  <div
+                    aria-hidden
+                    className="mt-6 drop-shadow-[0_14px_28px_oklch(0_0_0/0.22)] xl:hidden"
+                  >
+                    <RequestTicket className="w-full max-w-[430px]" />
+                  </div>
+                )}
               </div>
             </li>
           ))}
@@ -103,24 +113,6 @@ export function HowItWorks() {
             <span className="text-brand-text">and</span> at the table.
           </p>
         </div>
-        <footer className="flex flex-wrap gap-x-7 gap-y-1 border-t border-border pt-5 text-[0.84rem] text-muted-foreground md:col-span-12 md:mt-18">
-          <Link
-            href="/help"
-            className="inline-flex min-h-11 items-center underline-offset-4 hover:underline"
-          >
-            Help
-          </Link>
-          <Link
-            href="/terms"
-            className="inline-flex min-h-11 items-center underline-offset-4 hover:underline"
-          >
-            Terms
-          </Link>
-          <p className="self-center md:ml-auto">
-            Not affiliated with Nintendo, Creatures, GAME FREAK or The Pokemon
-            Company.
-          </p>
-        </footer>
       </div>
     </section>
   );

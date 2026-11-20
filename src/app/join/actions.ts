@@ -30,6 +30,8 @@ import { sendInviteLink } from "@/lib/sign-in-link";
 
 export type JoinState = {
   sent?: string;
+  /** As typed, for Send again and Use a different email. */
+  code?: string;
   error?: string;
   field?: "code" | "email";
 };
@@ -77,7 +79,7 @@ export async function requestInvite(
     console.error("[join] request failed", (err as Error).name);
     return { error: "Something went wrong. Try again in a minute." };
   }
-  return { sent: email };
+  return { sent: email, code };
 }
 
 export type AskState = { sent?: true; error?: string; field?: string };

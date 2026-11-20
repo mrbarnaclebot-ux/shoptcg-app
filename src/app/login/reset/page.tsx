@@ -3,7 +3,7 @@ import { AuthShell } from "../auth-shell";
 import { ResetForm } from "./reset-form";
 
 export const metadata: Metadata = {
-  title: "New password - tcgmart",
+  title: "New password",
   robots: { index: false },
   // The token is in the URL: never pass it on as a referrer.
   referrer: "no-referrer",

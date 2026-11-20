@@ -131,12 +131,12 @@ function PriceTag({
     <div className="col-start-3 row-start-1 flex flex-col items-end gap-1 lg:col-start-5">
       {price === null && awaiting ? (
         // Not a task yet: price on add usually lands within a minute.
-        <span className="inline-flex min-h-9 items-center text-[0.9375rem] font-semibold text-muted-foreground">
+        <span className="inline-flex min-h-9 items-center text-md font-semibold text-muted-foreground">
           No price yet
         </span>
       ) : price === null ? (
         // A task, not a price: outline only, so it never reads as one.
-        <span className="inline-flex min-h-9 items-center px-3 text-[0.9375rem] font-semibold text-brand-text shadow-[inset_0_0_0_1.5px_var(--brand)]">
+        <span className="inline-flex min-h-9 items-center px-3 text-md font-semibold text-brand-text shadow-[inset_0_0_0_1.5px_var(--brand)]">
           Set a price
         </span>
       ) : (

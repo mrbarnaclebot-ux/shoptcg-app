@@ -6,7 +6,7 @@
 import { useLayoutEffect, useRef } from "react";
 
 const chipBox =
-  "flex min-h-11 min-w-12 cursor-pointer items-center justify-center px-3.5 text-[0.9375rem] font-medium text-muted-foreground shadow-[inset_0_0_0_1px_var(--border-strong)] transition-colors hover:text-text";
+  "flex min-h-11 min-w-12 cursor-pointer items-center justify-center px-3.5 text-md font-medium text-muted-foreground shadow-[inset_0_0_0_1px_var(--border-strong)] transition-colors hover:text-text";
 
 /** The same box as a button that fills a field (cash given, an offer); pressed is filled. */
 export const chip = `${chipBox} aria-pressed:bg-text aria-pressed:font-semibold aria-pressed:text-bg aria-pressed:shadow-none`;

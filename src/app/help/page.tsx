@@ -18,10 +18,10 @@ import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { bento } from "@/components/bento";
-import { Wordmark } from "@/components/wordmark";
+import { PublicFooter, PublicHeader } from "@/components/public-chrome";
 
 export const metadata: Metadata = {
-  title: "Help - tcgmart",
+  title: "Help",
   description:
     "How to set up and run your tcgmart store: stock, pricing, selling online or at a table, claim events, carts, sales, buys and the ledger.",
 };
@@ -89,11 +89,12 @@ function Shots({ names }: { names: Shot[] }) {
         const [w, h, alt] = SHOT[n];
         return (
           <figure key={n} className="w-[min(100%,15rem)]">
+            {/* The caption says what it shows; an alt as well is read twice. */}
             <Image
               src={`/help/${n}.jpg`}
               width={w}
               height={h}
-              alt={alt}
+              alt=""
               sizes="15rem"
               className="h-auto w-full bg-[#090911] shadow-[0_0_0_1.5px_var(--border-strong)]"
             />
@@ -146,13 +147,11 @@ const link =
 export default function HelpPage() {
   return (
     <div className="flex flex-1 flex-col">
-      <header className="px-4 py-2 md:px-14 md:py-6">
-        <Wordmark />
-      </header>
+      <PublicHeader />
       {/* Desktop: contents down the left, topics as ruled tiles on the right. */}
       <main className="paper mx-auto mb-16 w-full max-w-[72ch] flex-1 px-5 pt-10 pb-12 md:px-12 lg:grid lg:max-w-[1280px] lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-x-12">
         <div className="flex flex-col gap-4 text-muted-foreground lg:sticky lg:top-8">
-          <h1 className="font-display text-[4rem] leading-[0.82] font-black text-foreground">
+          <h1 className="font-display text-display font-black text-foreground">
             Help
           </h1>
           <p>
@@ -523,6 +522,7 @@ export default function HelpPage() {
           </Section>
         </article>
       </main>
+      <PublicFooter />
     </div>
   );
 }

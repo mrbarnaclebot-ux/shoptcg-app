@@ -9,7 +9,7 @@ import { PrintButton } from "./print-button";
 import "./sign.css";
 import { TableSign, type SignSize } from "./table-sign";
 
-export const metadata: Metadata = { title: "Table sign - tcgmart" };
+export const metadata: Metadata = { title: "Table sign" };
 
 // Printed signs are permanent, so the source tag is baked in now even though
 // nothing reads it yet.
@@ -27,9 +27,7 @@ export default function SignPage({
   return (
     <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-8 px-4 pt-4 pb-16 md:px-6 lg:px-8">
       <BackToMore />
-      <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
-        Table sign
-      </h1>
+      <h1 className="font-display text-4xl font-black">Table sign</h1>
       <Suspense
         fallback={<div className="h-[600px] animate-pulse bg-surface" />}
       >

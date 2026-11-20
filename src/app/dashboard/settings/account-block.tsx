@@ -10,9 +10,7 @@ import { SignOut } from "./sign-out";
 export function AccountBlock({ className = "flex" }: { className?: string }) {
   return (
     <main className={`${className} flex-col gap-8`}>
-      <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
-        Account
-      </h1>
+      <h1 className="font-display text-4xl font-black">Account</h1>
       <div className={bento}>
         <div className="flex flex-col gap-4">
           <Suspense fallback={<div className="h-6 animate-pulse bg-surface" />}>
