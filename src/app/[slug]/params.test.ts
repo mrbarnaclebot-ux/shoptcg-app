@@ -26,4 +26,14 @@ describe("store params", () => {
     expect(parseRange({ range: "90" })).toBe(90);
     expect(parseRange({ range: "7" })).toBe(30);
   });
+
+  it("keeps a page past the first with the filters", () => {
+    expect(parseFilter({ page: "3" }).page).toBe(3);
+    expect(parseFilter({ page: "1" }).page).toBeUndefined();
+    expect(parseFilter({ page: "x" }).page).toBeUndefined();
+    expect(filterHref("ridge", { sort: "name", page: 2 })).toBe(
+      "/ridge?sort=name&page=2",
+    );
+    expect(filterHref("ridge", { page: 1 })).toBe("/ridge");
+  });
 });

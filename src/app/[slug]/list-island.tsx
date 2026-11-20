@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowLeft, Check, Plus, Share } from "lucide-react";
+import { ArrowLeft, Check, Copy, Plus, Share } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Stepper } from "@/components/stepper";
 import { basketTag, DEVICE_ID } from "@/lib/basket-tag";
+import { usdTag } from "@/lib/fx";
 
 // The buyer's list lives on this phone only, per store, for 24 hours
 // (SCREENS 7). It is the one client island on the public pages.
@@ -87,7 +88,10 @@ export function useLines(slug: string) {
   return parse(raw);
 }
 
-/** A 44px add toggle on tiles. Pressed, it turns lamp orange with a check. */
+/**
+ * A 44px add toggle on tiles. In the cart it turns lamp orange with a check,
+ * and its name says a tap removes it; either change is read out.
+ */
 export function AddButton(props: {
   slug: string;
   id: string;
@@ -96,23 +100,34 @@ export function AddButton(props: {
 }) {
   const lines = useLines(props.slug);
   const on = Boolean(lines[props.id]);
+  const [said, setSaid] = useState("");
   const toggle = () => {
     const next = { ...lines };
     if (on) delete next[props.id];
     else next[props.id] = { qty: 1, price: props.price, name: props.name };
     writeList(props.slug, next);
+    setSaid(on ? "Removed from cart" : "Added to cart");
   };
   const Icon = on ? Check : Plus;
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-pressed={on}
-      aria-label={`Add ${props.name} to your cart`}
-      className={`grid size-11 shrink-0 place-items-center ${on ? "bg-brand text-on-brand" : "bg-surface text-text shadow-[inset_0_0_0_1px_var(--border-strong)]"}`}
-    >
-      <Icon aria-hidden className="size-5" strokeWidth={2.3} />
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={
+          on
+            ? `Remove ${props.name} from your cart`
+            : `Add ${props.name} to your cart`
+        }
+        title={on ? "In your cart. Tap to remove." : undefined}
+        className={`grid size-11 shrink-0 place-items-center ${on ? "bg-brand text-on-brand" : "bg-surface text-text shadow-[inset_0_0_0_1px_var(--border-strong)]"}`}
+      >
+        <Icon aria-hidden className="size-5" strokeWidth={2.3} />
+      </button>
+      <span role="status" className="sr-only">
+        {said}
+      </span>
+    </>
   );
 }
 
@@ -250,6 +265,18 @@ export function BackToStore({ slug }: { slug: string }) {
 }
 const noop = () => () => {};
 
+// Some in-app browsers have no clipboard at all, so a refusal is an answer too.
+const copyText = (text: string) =>
+  Promise.resolve()
+    .then(() => navigator.clipboard.writeText(text))
+    .then(
+      () => true,
+      () => false,
+    );
+
+const linkButton =
+  "inline-flex min-h-11 items-center gap-2 self-start text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]";
+
 /** The phone's share sheet, or a copied link where there is none. */
 export function ShareItem(props: { title: string }) {
   const [copied, setCopied] = useState(false);
@@ -257,19 +284,29 @@ export function ShareItem(props: { title: string }) {
     const url = location.href.split("?")[0];
     if (navigator.share)
       return navigator.share({ title: props.title, url }).catch(() => {});
-    await navigator.clipboard.writeText(url).then(
-      () => setCopied(true),
-      () => setCopied(false),
-    );
+    setCopied(await copyText(url));
   };
+  return (
+    <button type="button" onClick={share} className={linkButton}>
+      <Share aria-hidden className="size-4" />
+      <span aria-live="polite">{copied ? "Link copied" : "Share"}</span>
+    </button>
+  );
+}
+
+/** Copies one value; the label itself confirms. */
+export function CopyButton(props: { text: string; label: string }) {
+  const [done, setDone] = useState<boolean | null>(null);
   return (
     <button
       type="button"
-      onClick={share}
-      className="inline-flex min-h-11 items-center gap-2 self-start text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+      onClick={async () => setDone(await copyText(props.text))}
+      className={linkButton}
     >
-      <Share aria-hidden className="size-4" />
-      <span aria-live="polite">{copied ? "Link copied" : "Share"}</span>
+      <Copy aria-hidden className="size-4" />
+      <span aria-live="polite">
+        {done ? "Copied" : done === false ? "Couldn't copy" : props.label}
+      </span>
     </button>
   );
 }
@@ -297,11 +334,7 @@ export function ListBar({ slug }: { slug: string }) {
             Your cart{tag && `, ${tag}. The seller can see it.`}
           </span>
           <span className="font-display num text-[1.625rem] leading-none font-extrabold">
-            {n} {n === 1 ? "item" : "items"},{" "}
-            {total.toLocaleString("en-US", {
-              style: "currency",
-              currency: "USD",
-            })}
+            {n} {n === 1 ? "item" : "items"}, {usdTag(total)}
           </span>
         </p>
         <Link

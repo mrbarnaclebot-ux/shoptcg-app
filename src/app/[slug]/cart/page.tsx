@@ -5,7 +5,9 @@ import { RefreshAt } from "@/components/refresh-at";
 import { getDb } from "@/db";
 import { fulfilOptions, payOptions, storeOffer } from "@/lib/checkout";
 import { MAX_LINES } from "@/lib/requests";
+import { modeCopy } from "@/lib/selling-mode";
 import { getPublicItems } from "@/lib/storefront";
+import { SentStub } from "../sent-stub";
 import { NotVending } from "../store-header";
 import { storeOr404 } from "../store-lookup";
 import { metaLine } from "../tile";
@@ -56,6 +58,11 @@ export default async function CartPage({
         <ArrowLeft aria-hidden className="size-5" />
         Back to store
       </Link>
+      <SentStub
+        slug={store.slug}
+        word={modeCopy(store.sellingMode).sentWord}
+        className="mt-3"
+      />
       <h1 className="font-display mt-4 mb-5 text-[3rem] leading-[0.85] font-black">
         Your cart
       </h1>

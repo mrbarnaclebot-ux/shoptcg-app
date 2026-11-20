@@ -1,3 +1,4 @@
+import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -5,7 +6,7 @@ import type { ReactNode } from "react";
 import { ReceiptSummary } from "@/components/receipt-summary";
 import { RequestLines } from "@/components/request-lines";
 import { ShowMoment } from "@/components/show-moment";
-import { Ticket } from "@/components/ticket";
+import { StubValue, Ticket } from "@/components/ticket";
 import { lineButton } from "@/components/ticket-button";
 import { receiptTime } from "@/lib/format";
 import { getDb } from "@/db";
@@ -16,6 +17,7 @@ import { saleForRequest } from "@/lib/sales";
 import { modeCopy } from "@/lib/selling-mode";
 import { UUID } from "@/lib/storefront";
 import { goneText } from "@/lib/toast";
+import { CopyButton } from "../../list-island";
 import { storeOr404 } from "../../store-lookup";
 import {
   CancelRequest,
@@ -70,6 +72,16 @@ export default async function RequestPage({
         lines={r.lines}
         removed={r.removedItems}
       />
+      {/* Still waiting or lapsed: the store is one tap away; the rest end on a button. */}
+      {(r.status === "pending" || r.status === "expired") && (
+        <Link
+          href={`/${slug}`}
+          className="-mb-2 flex min-h-11 items-center gap-2 self-start font-semibold break-words"
+        >
+          <ArrowLeft aria-hidden className="size-5 shrink-0" />
+          Back to {store.name}
+        </Link>
+      )}
       {r.status === "declined" && gone && !r.lines.length ? (
         // Removing its last item closed it; that, not a decline, is the news.
         <Ended
@@ -85,7 +97,15 @@ export default async function RequestPage({
         <>
           <Ticket
             as="div"
-            stub={<HoldClock at={r.expiresAt.getTime()} soon={soon} />}
+            stub={
+              <>
+                {/* Where to walk to, from the first minute, not the last three. */}
+                {copy.showTable && r.tableLabel && (
+                  <StubValue k="Table" v={r.tableLabel} testId="stub-table" />
+                )}
+                <HoldClock at={r.expiresAt.getTime()} soon={soon} />
+              </>
+            }
           >
             {/* break-words, not anywhere: a long name wraps between words. */}
             <h1 className="font-display text-[clamp(1.75rem,8vw,2.5rem)] leading-[0.9] font-black text-balance break-words">
@@ -95,10 +115,14 @@ export default async function RequestPage({
             <p className="text-sm font-semibold">{copy.codeLabel}</p>
             <p
               data-testid="request-code"
-              className="font-display num text-[4.5rem] leading-none font-black"
+              className="font-display num text-[4.5rem] leading-none font-black select-all"
             >
               {r.code}
             </p>
+            {/* A table buyer shows the screen; an online one pastes it somewhere. */}
+            {r.sellingMode === "online" && (
+              <CopyButton text={r.code} label="Copy code" />
+            )}
             <HoldWarning at={r.expiresAt.getTime()} soon={soon} />
             {gone && (
               <p className="mt-4 font-semibold text-brand-text">{gone}</p>
@@ -205,12 +229,14 @@ function Checkout({
           <h2 id="bank-h" className="font-semibold">
             Pay by bank transfer
           </h2>
+          {/* select-all: one press selects it where the clipboard is refused. */}
           <p
             data-testid="bank-details"
-            className="num whitespace-pre-line [overflow-wrap:anywhere]"
+            className="num whitespace-pre-line select-all [overflow-wrap:anywhere]"
           >
             {r.bankDetails}
           </p>
+          <CopyButton text={r.bankDetails} label="Copy bank details" />
           <p className="text-sm text-muted-foreground">
             Use {r.code} as the reference. The seller confirms your order once
             the money arrives.
