@@ -29,7 +29,7 @@ export function LabeledProgressIndicator(props: {
       {/* Visual only: the progressbar's aria-valuetext carries the same step. */}
       <p
         aria-hidden
-        className="relative h-6 overflow-hidden text-[0.9375rem] font-semibold"
+        className="relative h-6 overflow-hidden text-md font-semibold"
       >
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.span

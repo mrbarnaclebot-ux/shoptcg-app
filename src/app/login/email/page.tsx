@@ -3,7 +3,7 @@ import { AuthShell } from "../auth-shell";
 import { ConfirmEmail } from "./confirm-email";
 
 export const metadata: Metadata = {
-  title: "Confirm email - tcgmart",
+  title: "Confirm email",
   robots: { index: false },
   // The token is in the URL: never pass it on as a referrer.
   referrer: "no-referrer",

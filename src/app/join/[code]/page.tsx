@@ -6,7 +6,7 @@ import { JoinPage } from "../join-page";
 export const instant = false;
 
 export const metadata: Metadata = {
-  title: "Join - tcgmart",
+  title: "Join",
   robots: { index: false },
 };
 

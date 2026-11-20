@@ -431,7 +431,7 @@ export function SaleForm(props: {
         )}
         <div className="flex items-baseline justify-between font-semibold">
           <dt>Total</dt>
-          <dd className="font-display num text-[2.5rem] leading-none font-extrabold">
+          <dd className="font-display num text-3xl leading-none font-extrabold">
             {priced ? money(priced.total) : "-"}
           </dd>
         </div>

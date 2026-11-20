@@ -3,7 +3,7 @@ import { requireStore } from "@/lib/session";
 import { SettingsPage } from "../section";
 import { PricingForm } from "../settings-form";
 
-export const metadata: Metadata = { title: "Pricing - tcgmart" };
+export const metadata: Metadata = { title: "Pricing" };
 
 export default function PricingPage() {
   return (

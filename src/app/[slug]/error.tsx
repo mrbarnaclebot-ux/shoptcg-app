@@ -13,7 +13,7 @@ export default function StoreError({
   useReportError(error);
   return (
     <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col items-start gap-5 px-4 pt-16 md:px-6 lg:px-8">
-      <h1 className="font-display text-[2.5rem] leading-[0.9] font-black">
+      <h1 className="font-display text-3xl font-black">
         This page didn&apos;t load.
       </h1>
       <p className="max-w-[44ch] text-muted-foreground">

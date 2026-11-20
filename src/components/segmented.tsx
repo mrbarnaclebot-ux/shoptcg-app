@@ -29,7 +29,7 @@ export function Segmented<T extends string>(props: {
         {props.options.map(([value, text]) => (
           <label
             key={value}
-            className="flex min-h-11 min-w-12 cursor-pointer items-center justify-center px-3.5 text-[0.9375rem] font-medium text-muted-foreground shadow-[inset_0_0_0_1px_var(--border-strong)] transition-colors hover:text-text has-checked:bg-text has-checked:font-semibold has-checked:text-bg has-checked:shadow-none has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus"
+            className="flex min-h-11 min-w-12 cursor-pointer items-center justify-center px-3.5 text-md font-medium text-muted-foreground shadow-[inset_0_0_0_1px_var(--border-strong)] transition-colors hover:text-text has-checked:bg-text has-checked:font-semibold has-checked:text-bg has-checked:shadow-none has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus"
           >
             <input
               type="radio"

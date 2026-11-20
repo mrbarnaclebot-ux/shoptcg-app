@@ -119,7 +119,7 @@ test("someone asks for an invite, the admin invites them, and they set up", asyn
   const email = fresh();
   const asker = await browser.newPage();
   await asker.goto("/");
-  await asker.getByRole("link", { name: "Ask for an invite" }).click();
+  await asker.getByRole("link", { name: "Get an invite" }).click();
   await asker.getByLabel("Your name").fill(name);
   await asker.getByLabel("Email").last().fill(email);
   await asker.getByLabel("How do you sell? (optional)").fill("Weekend shows");

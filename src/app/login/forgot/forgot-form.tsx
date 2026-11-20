@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,9 +12,16 @@ export function ForgotForm() {
     forgotAction,
     {},
   );
-  if (state.sent)
+  // "Use a different email" sets aside this answer; the next one shows.
+  const [dismissed, setDismissed] = useState<ForgotState>();
+  if (state.sent && state !== dismissed)
     return (
-      <Sent>
+      <Sent
+        action={action}
+        pending={pending}
+        resend={{ email: state.sent }}
+        onReset={() => setDismissed(state)}
+      >
         If this address has a vendor account, we sent a link to set your
         password. It works once, for 1 hour.
       </Sent>
@@ -30,6 +37,8 @@ export function ForgotForm() {
           inputMode="email"
           autoComplete="email"
           required
+          // Back from "Use a different email": the button that had focus is gone.
+          autoFocus={dismissed !== undefined}
           aria-invalid={state.error ? true : undefined}
           aria-describedby={state.error ? "forgot-error" : undefined}
         />

@@ -8,7 +8,7 @@ import { SettingsPage } from "../section";
 import { NameForm, SlugForm } from "../settings-form";
 import { StoreImages } from "../store-images";
 
-export const metadata: Metadata = { title: "Store profile - tcgmart" };
+export const metadata: Metadata = { title: "Store profile" };
 
 export default function StoreProfilePage() {
   return (

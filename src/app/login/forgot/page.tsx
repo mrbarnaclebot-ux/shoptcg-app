@@ -4,7 +4,7 @@ import { AuthShell, authLink } from "../auth-shell";
 import { ForgotForm } from "./forgot-form";
 
 export const metadata: Metadata = {
-  title: "Set a password - tcgmart",
+  title: "Set a password",
   robots: { index: false },
 };
 

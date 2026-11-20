@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { Wordmark } from "@/components/wordmark";
+import { PublicFooter, PublicHeader } from "@/components/public-chrome";
 import { TERMS_VERSION } from "@/lib/requests";
 
-export const metadata: Metadata = { title: "Terms - tcgmart" };
+export const metadata: Metadata = { title: "Terms" };
 
 // Each request stores the version its buyer agreed to, so the date can't drift.
 const updated = new Intl.DateTimeFormat("en-GB", {
@@ -13,13 +13,11 @@ const updated = new Intl.DateTimeFormat("en-GB", {
 export default function TermsPage() {
   return (
     <div className="flex flex-1 flex-col">
-      <header className="px-4 py-2 md:px-14 md:py-6">
-        <Wordmark />
-      </header>
+      <PublicHeader />
       {/* The terms are a printed handout: one sheet of paper on the hall. */}
       <main className="paper mx-auto mb-16 w-full max-w-[72ch] flex-1 px-5 pt-10 pb-12 md:px-12">
         <article className="flex flex-col gap-4 text-muted-foreground [&_h2]:mt-6 [&_h2]:border-t-[1.5px] [&_h2]:border-text [&_h2]:pt-3 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-foreground">
-          <h1 className="font-display text-[4rem] leading-[0.82] font-black text-foreground">
+          <h1 className="font-display text-display font-black text-foreground">
             Terms
           </h1>
           <p className="text-sm">Last updated {updated}.</p>
@@ -135,6 +133,7 @@ export default function TermsPage() {
           </p>
         </article>
       </main>
+      <PublicFooter />
     </div>
   );
 }

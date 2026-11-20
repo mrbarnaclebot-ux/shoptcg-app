@@ -20,16 +20,14 @@ import {
 import { requireStore, sellerTimeZone } from "@/lib/session";
 import { shortName } from "@/lib/short-name";
 
-export const metadata: Metadata = { title: "Report - tcgmart" };
+export const metadata: Metadata = { title: "Report" };
 
 type Search = Pick<PageProps<"/dashboard/reports">, "searchParams">;
 
 export default function ReportPage({ searchParams }: Search) {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-start gap-4 px-4 pt-8 pb-16 lg:max-w-[1280px] lg:px-8">
-      <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
-        Report
-      </h1>
+      <h1 className="font-display text-4xl font-black">Report</h1>
       <Suspense fallback={<TicketLoading>Adding up the sales</TicketLoading>}>
         <Report searchParams={searchParams} />
       </Suspense>
@@ -59,7 +57,7 @@ function Row(props: { k: string; children: React.ReactNode; big?: boolean }) {
       <dd
         className={
           props.big
-            ? "font-display num text-[1.875rem] leading-none font-extrabold"
+            ? "font-display num text-2xl font-extrabold"
             : "num font-semibold"
         }
       >

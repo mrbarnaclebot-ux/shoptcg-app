@@ -8,7 +8,7 @@ import { listStock } from "@/lib/listings";
 import { requireStore } from "@/lib/session";
 import { BuyForm } from "./buy-form";
 
-export const metadata: Metadata = { title: "Buy - tcgmart" };
+export const metadata: Metadata = { title: "Buy" };
 
 export default function BuyPage() {
   return (
@@ -20,9 +20,7 @@ export default function BuyPage() {
         <ChevronLeft aria-hidden className="size-4" />
         Inventory
       </Link>
-      <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
-        Buy
-      </h1>
+      <h1 className="font-display text-4xl font-black">Buy</h1>
       <p className="text-muted-foreground">
         Cards you bought or took in trade. They go into stock, and what you paid
         becomes their cost.

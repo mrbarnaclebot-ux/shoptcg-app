@@ -31,7 +31,7 @@ import { VendorControls } from "./vendor-controls";
 const LIVE = { open: "Open", paused: "Paused", off: "Not vending" } as const;
 
 export const metadata: Metadata = {
-  title: "Admin - tcgmart",
+  title: "Admin",
   robots: { index: false },
 };
 
@@ -41,7 +41,7 @@ export default function AdminPage() {
     <main
       className={`mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 pt-8 pb-16 lg:max-w-[1280px] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:px-8 ${bentoPage}`}
     >
-      <h1 className="font-display text-[3.5rem] leading-[0.82] font-black lg:col-span-2 lg:mb-8">
+      <h1 className="font-display text-4xl font-black lg:col-span-2 lg:mb-8">
         Admin
       </h1>
       <Suspense fallback={<TicketLoading>Checking who you are</TicketLoading>}>

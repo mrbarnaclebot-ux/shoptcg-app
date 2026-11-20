@@ -7,7 +7,7 @@ import { ChangeEmail, DeleteAccount } from "./account-forms";
 import { ChangePassword } from "./change-password";
 import { SignOut } from "./sign-out";
 
-export const metadata: Metadata = { title: "More - tcgmart" };
+export const metadata: Metadata = { title: "More" };
 
 // The menu comes from the layout; this page is the account block under it.
 export default function AccountPage() {

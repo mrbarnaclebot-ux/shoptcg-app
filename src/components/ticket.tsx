@@ -63,7 +63,7 @@ export function StubValue(props: {
       </div>
       <div
         data-testid={props.testId}
-        className={`font-display num text-[1.875rem] leading-none font-extrabold ${props.hold ? "text-brand-text" : ""}`}
+        className={`font-display num text-2xl font-extrabold ${props.hold ? "text-brand-text" : ""}`}
       >
         {props.v}
       </div>

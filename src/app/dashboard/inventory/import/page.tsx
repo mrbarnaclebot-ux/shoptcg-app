@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CSV_COLUMNS, MAX_ROWS } from "@/lib/csv-import";
 import { ImportFlow } from "./import-flow";
 
-export const metadata: Metadata = { title: "Import CSV - tcgmart" };
+export const metadata: Metadata = { title: "Import CSV" };
 
 const COLUMN_HELP: Record<(typeof CSV_COLUMNS)[number], string> = {
   name: "Required. Card or product name.",
@@ -30,9 +30,7 @@ export default function ImportPage() {
         Inventory
       </Link>
       <div className="flex max-w-[68ch] flex-col gap-3">
-        <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
-          Import CSV
-        </h1>
+        <h1 className="font-display text-4xl font-black">Import CSV</h1>
         <p className="text-muted-foreground">
           Upload a spreadsheet of your stock, up to {MAX_ROWS} rows. You will
           see every row before anything is saved.

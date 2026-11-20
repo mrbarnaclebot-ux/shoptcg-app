@@ -128,12 +128,36 @@ test("a used code, an expired code and a wrong code each say so", async ({
   await expect(other.locator("#join-error")).toHaveText(/has expired/);
 
   await other.goto("/join");
+  // /join opens on asking; a code holder switches.
+  await other.getByText("I have a code").click();
   await other.getByLabel("Invite code").fill("AAAA-BBBB-CCCC-DDDD");
-  // /join also has the "No code yet?" form; the first Email is the code's.
-  await other.getByLabel("Email").first().fill(fresh());
+  await other.getByLabel("Email").fill(fresh());
   await other.getByRole("button", { name: "Email me a link" }).click();
   await expect(other.locator("#join-error")).toHaveText(/isn't right/);
   await ctx.close();
+});
+
+test("Check your email can send again or go back for a different address", async ({
+  page,
+}) => {
+  test.skip(!hasDb, "needs DATABASE_URL");
+  const { code } = await mintInvite(page);
+  const typo = fresh();
+  const right = fresh();
+  await join(page, code, typo);
+  await newLink(typo, () =>
+    page.getByRole("button", { name: "Send again" }).click(),
+  );
+  await expect(page.getByText("Sent again.")).toBeVisible();
+  await page.getByRole("button", { name: "Use a different email" }).click();
+  // The code is kept; the email field has focus for the fix.
+  await expect(page.getByLabel("Invite code")).toHaveValue(code);
+  await expect(page.getByLabel("Email")).toBeFocused();
+  await newLink(right, async () => {
+    await page.getByLabel("Email").fill(right);
+    await page.getByRole("button", { name: "Email me a link" }).click();
+  });
+  await expect(page.getByText(right)).toBeVisible();
 });
 
 test("a mistyped email can be corrected; the old link then makes nothing", async ({

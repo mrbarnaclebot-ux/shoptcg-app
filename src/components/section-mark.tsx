@@ -27,7 +27,7 @@ export function SectionMark(props: {
     >
       <span
         aria-hidden
-        className="font-display num text-[2.5rem] leading-[0.8] font-extrabold text-brand-text"
+        className="font-display num text-3xl leading-[0.8] font-extrabold text-brand-text"
       >
         {String(props.n).padStart(2, "0")}
       </span>

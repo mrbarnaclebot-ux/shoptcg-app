@@ -37,7 +37,7 @@ export function RequestLines({ lines }: { lines: Line[] }) {
         <span>
           {items} {items === 1 ? "item" : "items"}
         </span>
-        <span className="font-display num text-[1.875rem] leading-none font-extrabold">
+        <span className="font-display num text-2xl font-extrabold">
           {usd(total)}
         </span>
       </div>

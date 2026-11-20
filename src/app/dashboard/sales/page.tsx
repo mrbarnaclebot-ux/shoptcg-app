@@ -12,15 +12,13 @@ import { salesToday } from "@/lib/sales";
 import { requireStore, sellerTimeZone } from "@/lib/session";
 import { shortName } from "@/lib/short-name";
 
-export const metadata: Metadata = { title: "Sales - tcgmart" };
+export const metadata: Metadata = { title: "Sales" };
 
 export default function SalesPage() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-start gap-3 px-4 pt-8 pb-16 lg:max-w-[1280px] lg:px-8">
       <div className="flex w-full flex-wrap items-end justify-between gap-3">
-        <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
-          Sales
-        </h1>
+        <h1 className="font-display text-4xl font-black">Sales</h1>
         <div className="flex flex-wrap gap-2">
           <Link href="/dashboard/ledger" className={lineButton}>
             <BookOpen aria-hidden className="size-5" />
@@ -97,7 +95,7 @@ async function Today() {
                 </small>
               </span>
               <span
-                className={`font-display num text-[1.875rem] leading-none font-extrabold ${s.voided ? "text-muted-foreground line-through" : ""}`}
+                className={`font-display num text-2xl font-extrabold ${s.voided ? "text-muted-foreground line-through" : ""}`}
               >
                 {usd(Number(s.total))}
               </span>
