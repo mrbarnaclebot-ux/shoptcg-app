@@ -21,7 +21,7 @@ import { altPrice, formatAlt } from "@/lib/fx";
 import { fromCents, PRICE_RE, priceSale, toCents } from "@/lib/money";
 import { shortName } from "@/lib/short-name";
 import { toast } from "@/lib/toast";
-import { clock, useLive, useNow } from "@/lib/use-live";
+import { clock, useNow } from "@/lib/use-live";
 import { declineAction } from "../actions";
 import { confirmSaleAction } from "./actions";
 
@@ -181,8 +181,12 @@ function DeclineRequest({ id }: { id: string }) {
           disabled={pending}
           onClick={() =>
             start(async () => {
-              await declineAction(id).catch(() => false);
-              router.push("/dashboard");
+              const done = await declineAction(id).catch(() => false);
+              if (done) return router.push("/dashboard");
+              // As the queue does: say so and stay; a closed one shows its page.
+              toast.notSaved("That request is no longer open.");
+              setAsking(false);
+              router.refresh();
             })
           }
         >
@@ -202,6 +206,8 @@ export function SaleForm(props: {
     code: string;
     buyerName: string;
     isTest: boolean;
+    /** A receipt goes out on confirm; a table sale has no email. */
+    emailed: boolean;
     expiresAt: number;
     fulfil: Fulfil | null;
     payWith: PayWith | null;
@@ -215,8 +221,8 @@ export function SaleForm(props: {
   const { request: r, lines } = props;
   const router = useRouter();
   const now = useNow();
-  // A cancel or a rival sale while the seller is editing shows up here.
-  useLive("/api/live/store");
+  // A cancel or a rival sale while the seller is editing shows up through the
+  // layout's stream, which re-reads this page.
   const [edits, setEdits] = useState<Record<string, Edit>>(() =>
     Object.fromEntries(
       lines.map((l) => [
@@ -293,7 +299,12 @@ export function SaleForm(props: {
         note: method === "other" ? note.trim() : undefined,
       }).catch(() => null);
       if (res && "ok" in res) {
-        toast.saleRecorded(id, res.receiptNo, usd(Number(res.total)));
+        toast.saleRecorded(
+          id,
+          res.receiptNo,
+          usd(Number(res.total)),
+          r.emailed,
+        );
         router.push(`/dashboard/sales/${res.saleId}`);
         return;
       }

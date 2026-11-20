@@ -305,9 +305,11 @@ export function CartReview(props: {
             time.
           </label>
           <p className="text-sm text-muted-foreground">
-            By sending, you share your name, email
-            {store.fulfils.length ? " and contact details" : ""} with{" "}
-            {store.name} for this request and your receipt. See{" "}
+            By sending, you share your name
+            {store.fulfils.length
+              ? ", email and contact details"
+              : " and email"}{" "}
+            with {store.name} for this request and your receipt. See{" "}
             <Link
               href="/terms"
               className="text-text underline decoration-brand-text decoration-[1.5px] underline-offset-4"

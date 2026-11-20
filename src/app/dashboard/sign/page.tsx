@@ -97,7 +97,7 @@ async function Sign({
               "No NFC line on the sign."
             )}{" "}
             <Link
-              href="/dashboard/settings"
+              href="/dashboard/settings/table"
               className="font-semibold text-text underline"
             >
               {store.nfcEnabled ? "Change in settings" : "I have a tag"}

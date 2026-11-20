@@ -14,12 +14,18 @@ self.addEventListener("push", (e) => {
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
   const url = e.notification.data?.url ?? "/dashboard";
+  const path = (c) => new URL(c.url).pathname;
   e.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((open) => {
-        const tab = open.find((c) =>
-          new URL(c.url).pathname.startsWith("/dashboard"),
+        const same = open.find((c) => path(c) === new URL(url, c.url).pathname);
+        if (same) return same.focus();
+        // A sale screen holds the vendor's edits: open the request beside it.
+        const tab = open.find(
+          (c) =>
+            path(c).startsWith("/dashboard") &&
+            !path(c).startsWith("/dashboard/requests/"),
         );
         if (!tab) return self.clients.openWindow(url);
         tab.navigate(url);

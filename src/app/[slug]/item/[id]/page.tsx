@@ -79,7 +79,7 @@ export default async function ItemPage({
     />
   );
   return (
-    <main className="mx-auto grid w-full max-w-[1200px] flex-1 content-start gap-x-12 px-4 pt-4 pb-32 md:px-6 lg:grid-cols-[minmax(0,420px)_1fr] lg:px-8 lg:pt-8">
+    <main className="mx-auto grid w-full max-w-[1200px] flex-1 content-start gap-x-12 px-4 pt-4 pb-[calc(8rem+env(safe-area-inset-bottom))] md:px-6 lg:grid-cols-[minmax(0,420px)_1fr] lg:px-8 lg:pt-8">
       {/* Re-reads when a timer flips the state; closed pages also poll. */}
       <RefreshAt
         inMs={store.changesInMs}
@@ -339,7 +339,10 @@ function Action({ store, item }: { store: PublicStore; item: PublicItem }) {
       />
     );
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:static lg:col-start-2 lg:mt-8 lg:border-0 lg:bg-transparent lg:p-0">
+    <div
+      data-bottom-bar="item"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:static lg:col-start-2 lg:mt-8 lg:border-0 lg:bg-transparent lg:p-0"
+    >
       <div className="mx-auto max-w-[560px] lg:mx-0 lg:max-w-sm">{body}</div>
     </div>
   );
