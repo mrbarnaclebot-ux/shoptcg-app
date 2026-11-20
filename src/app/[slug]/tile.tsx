@@ -7,6 +7,7 @@ import { formatAlt, usdTag } from "@/lib/fx";
 import { isCardArt } from "@/lib/pricing/images";
 import { gradeLabel, LANGUAGE_LABEL } from "@/lib/format";
 import type { PublicItem } from "@/lib/storefront";
+import { LinkPending } from "./link-pending";
 import { AddButton } from "./list-island";
 
 // One card-shaped box for every kind, so a row of tiles lines up. A catalog
@@ -25,7 +26,7 @@ const PLACEHOLDER = {
 // Japanese and Chinese names get their own lang so the right glyphs render.
 export const HTML_LANG = { en: undefined, ja: "ja", zh: "zh" } as const;
 
-/** "Base Set 4/102. NM", "Graded. PSA 10", "Sealed" or an other item's category. */
+/** "Base Set 4/102. NM", "PSA 10 · Base Set 4/102", "Sealed" or an other item's category. */
 export function metaLine(
   it: Pick<
     PublicItem,
@@ -34,9 +35,11 @@ export function metaLine(
 ) {
   if (it.kind === "other") return it.setName || "Other";
   const grade = gradeLabel(it);
-  if (it.kind !== "raw")
-    return it.kind === "graded" ? `Graded. ${grade}` : grade;
+  if (it.kind === "sealed") return grade;
   const where = [it.setName, it.number].filter(Boolean).join(" ");
+  // Two slabs at one grade differ by card, so the grade leads and the card follows.
+  if (it.kind === "graded")
+    return [grade || "Graded", where].filter(Boolean).join(" · ");
   return where ? `${where}. ${grade}` : grade;
 }
 
@@ -135,7 +138,8 @@ export function Tile(props: {
     <Art
       it={it}
       eager={props.eager}
-      sizes="(min-width:1024px) 180px, 45vw"
+      // The grid: 2 columns, then 3 from md, then auto-fill near 220px from lg.
+      sizes="(min-width:1024px) 220px, (min-width:768px) 30vw, 45vw"
       dim={soldOut}
     >
       {it.underPct !== null && !soldOut && (
@@ -143,6 +147,7 @@ export function Tile(props: {
           {it.underPct}% under market
         </Stamp>
       )}
+      <LinkPending />
     </Art>
   );
   // Every row has a fixed height, so the add buttons line up across a row.
@@ -163,12 +168,12 @@ export function Tile(props: {
           art
         )}
         {/* Two lines kept whether the name needs them or not. */}
-        <h3
+        <h2
           lang={HTML_LANG[it.language]}
           className="mt-2 line-clamp-2 h-[2lh] text-[0.96875rem] leading-tight font-semibold group-hover:underline"
         >
           {it.name}
-        </h3>
+        </h2>
       </Link>
       <p className="num mt-0.5 truncate text-xs text-muted-foreground">
         {metaLine(it)}

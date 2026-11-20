@@ -5,8 +5,10 @@ import { RefreshAt } from "@/components/refresh-at";
 import { lineButton } from "@/components/ticket-button";
 import { getDb } from "@/db";
 import { storeEvent } from "@/lib/claim-events";
+import { PAGE_ROWS } from "@/lib/listings";
 import { modeCopy } from "@/lib/selling-mode";
 import {
+  countPublicStock,
   listPublicStock,
   storeSummary,
   type PublicFilter,
@@ -15,6 +17,7 @@ import {
 import { Controls, StoreSort } from "./controls";
 import { ListBar, RememberStore } from "./list-island";
 import { filterHref, parseFilter } from "./params";
+import { SentStub } from "./sent-stub";
 import { storeOr404 } from "./store-lookup";
 import { NotVending, StoreHeader } from "./store-header";
 import { Tile, TileSkeleton } from "./tile";
@@ -65,6 +68,11 @@ export default async function StorePage({
       <RefreshAt
         inMs={store.changesInMs}
         everyMs={store.isOpen ? undefined : 60_000}
+      />
+      <SentStub
+        slug={store.slug}
+        word={modeCopy(store.sellingMode).sentWord}
+        className="-mx-4 mb-3 md:mx-0"
       />
       {!store.isOpen && (
         <p className="-mx-4 mb-3 bg-surface-2 px-4 py-3 text-sm md:mx-0">
@@ -125,14 +133,22 @@ function GridSkeleton() {
 
 async function Grid({ store, f }: { store: PublicStore; f: PublicFilter }) {
   const items = await listPublicStock(getDb(), store, f);
-  const filtered = Boolean(f.type || f.langs?.length || f.q);
+  const page = f.page ?? 1;
+  // Only a full page needs counting; a short one is the last.
+  const total =
+    items.length < PAGE_ROWS
+      ? (page - 1) * PAGE_ROWS + items.length
+      : await countPublicStock(getDb(), store, f);
+  const filtered = Boolean(f.type || f.langs?.length || f.q || f.page);
   if (!items.length) return <Empty store={store} f={f} filtered={filtered} />;
   return (
     <section aria-label="Stock">
       <div className="flex items-center justify-between py-2 text-sm text-muted-foreground">
         <p>
-          <span className="num font-semibold text-text">{items.length}</span>{" "}
-          {items.length === 1 ? "item" : "items"}
+          <span className="num font-semibold text-text">
+            {total.toLocaleString("en-US")}
+          </span>{" "}
+          {total === 1 ? "item" : "items"}
         </p>
         <StoreSort slug={store.slug} f={f} />
       </div>
@@ -150,6 +166,7 @@ async function Grid({ store, f }: { store: PublicStore; f: PublicFilter }) {
           />
         ))}
       </div>
+      <Pages slug={store.slug} f={f} total={total} />
       {store.secondCurrency && store.fxRate !== null && (
         <p className="mt-10 text-xs text-muted-foreground">
           {store.secondCurrency} shown at the seller&apos;s rate: 1 USD ={" "}
@@ -158,6 +175,33 @@ async function Grid({ store, f }: { store: PublicStore; f: PublicFilter }) {
         </p>
       )}
     </section>
+  );
+}
+
+/** Previous and Next past PAGE_ROWS, kept in the URL with the filters, as on Inventory. */
+function Pages(props: { slug: string; f: PublicFilter; total: number }) {
+  const { f, total } = props;
+  const page = f.page ?? 1;
+  if (total <= PAGE_ROWS && page === 1) return null;
+  const n = (v: number) => v.toLocaleString("en-US");
+  const to = (p: number) => filterHref(props.slug, { ...f, page: p });
+  return (
+    <nav aria-label="Pages" className="mt-10 flex flex-wrap items-center gap-3">
+      <p className="num mr-auto text-muted-foreground">
+        {n((page - 1) * PAGE_ROWS + 1)} to{" "}
+        {n(Math.min(total, page * PAGE_ROWS))} of {n(total)}
+      </p>
+      {page > 1 && (
+        <Link href={to(page - 1)} className={lineButton}>
+          Previous
+        </Link>
+      )}
+      {page * PAGE_ROWS < total && (
+        <Link href={to(page + 1)} className={lineButton}>
+          Next
+        </Link>
+      )}
+    </nav>
   );
 }
 

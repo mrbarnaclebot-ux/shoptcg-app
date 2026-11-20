@@ -21,6 +21,10 @@ const tagFmt = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 0,
 });
 
-/** "$42" or "$18.50": tag prices drop the cents only when there are none. */
+/**
+ * "$42" or "$18.50": the store's one price format (tiles, tag, market line,
+ * cart). Cents go only when there are none; tables and receipts keep them so
+ * columns line up. Rounded to the cent first, so a summed total still drops them.
+ */
 export const usdTag = (n: number) =>
-  Number.isInteger(n) ? tagFmt.format(n) : usd(n);
+  Math.round(n * 100) % 100 === 0 ? tagFmt.format(n) : usd(n);

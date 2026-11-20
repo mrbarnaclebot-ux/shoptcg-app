@@ -15,7 +15,12 @@ import {
 import type { Db } from "@/db/open";
 import { catalogItem, listing, pricePoint, store } from "@/db/schema";
 import { altPrice } from "@/lib/fx";
-import { inOpenEvent, listStock, type StockRow } from "@/lib/listings";
+import {
+  countStock,
+  inOpenEvent,
+  listStock,
+  type StockRow,
+} from "@/lib/listings";
 import { heldByListing, type Held } from "@/lib/request-reads";
 import { ownPhotoUrl, safeImageUrl } from "@/lib/pricing/images";
 import { changesInMs, resumesInMin, storeState } from "@/lib/store-state";
@@ -71,6 +76,8 @@ export type PublicFilter = {
   langs?: ("en" | "ja" | "zh")[];
   q?: string;
   sort?: Sort;
+  /** 1-based, PAGE_ROWS a page. */
+  page?: number;
 };
 
 function toPublic(s: PublicStore, held: Held) {
@@ -95,6 +102,8 @@ function toPublic(s: PublicStore, held: Held) {
       grade: r.grade,
       imageUrl: safeImageUrl(r.imageUrl) ?? ownPhotoUrl(r.imageUrl),
       market: r.market,
+      // The day that market price is from.
+      asOf: r.asOf,
       // Played singles are priced off Near Mint; the chart scales by this.
       conditionPct: r.conditionPct,
       price,
@@ -112,33 +121,35 @@ function toPublic(s: PublicStore, held: Held) {
 
 export type PublicItem = ReturnType<ReturnType<typeof toPublic>>;
 
-const BY: Record<Sort, (a: PublicItem, b: PublicItem) => number> = {
-  // Unpriced items sort after priced ones either way.
-  "price-desc": (a, b) => (b.price ?? -1) - (a.price ?? -1),
-  "price-asc": (a, b) => (a.price ?? Infinity) - (b.price ?? Infinity),
-  name: (a, b) => a.name.localeCompare(b.name),
-  // listStock already returns newest first, and sort is stable.
-  new: () => 0,
-};
+// Sorted in SQL, so the order holds from one page to the next.
+const stockFilter = (f: PublicFilter) => ({
+  kind: f.type,
+  languages: f.langs,
+  q: f.q,
+  forSale: true as const,
+});
 
-/** Active stock as buyers see it: priced, filtered, sold out last. */
+/** One page of active stock as buyers see it: priced, filtered, sold out last. */
 export async function listPublicStock(
   db: Db,
   s: PublicStore,
   f: PublicFilter = {},
 ) {
-  const rows = await listStock(db, s.id, {
-    kind: f.type,
-    languages: f.langs,
-    q: f.q,
-    forSale: true,
-  });
-  const by = BY[f.sort ?? "price-desc"];
-  const held = await heldByListing(db, s.id);
-  return rows
-    .map(toPublic(s, held))
-    .sort((a, b) => Number(!a.qty) - Number(!b.qty) || by(a, b));
+  const [rows, held] = await Promise.all([
+    listStock(db, s.id, {
+      ...stockFilter(f),
+      sort: f.sort ?? "price-desc",
+      soldOutLast: true,
+      page: f.page,
+    }),
+    heldByListing(db, s.id),
+  ]);
+  return rows.map(toPublic(s, held));
 }
+
+/** Every item listPublicStock pages through for this filter. */
+export const countPublicStock = (db: Db, s: PublicStore, f: PublicFilter) =>
+  countStock(db, s.id, stockFilter(f));
 
 /** Header numbers: active items and the newest market price date. */
 export async function storeSummary(db: Db, storeId: string) {
