@@ -19,7 +19,7 @@ Decisions by the owner:
 - [x] Sort; bulk hide/show/remove/restore; CSV export; paging past 1,000 with a real count
 - [x] Phone filter-row fade; accurate limit message
 - [ ] Ledger stock valuation past 1,000 items → E
-- [ ] Buy picker past 1,000 items → C
+- [x] Buy picker past 1,000 items → C
 - [ ] Export/import round-trip keeps hidden items hidden (a `hidden` column) → E
 - [ ] Reason picker when lowering stock by hand (Correction, Count, Damaged, Lost) → E
 - [ ] Bulk "set fixed price / follow market" → E
@@ -36,18 +36,18 @@ Decisions by the owner:
 - [x] Getting started ticks (alerts; first buyer as the share/sign signal)
 - [x] Help copy (store link changeable; step order); Terms updated, version 2026-11-19
 
-## C. Selling loop (in progress)
-- [ ] Back to the queue after confirm, with "View receipt" in the toast
-- [ ] Cash given and change
-- [ ] Confirm offline, sync on reconnect, never drop a sale
-- [ ] +15 min hold; "Ending" words on the hold warning; warning colour for Offline
-- [ ] Buy: catalog search, market price, offer % chips
-- [ ] Add panel: market → your price preview; remember last condition
-- [ ] CSV header aliases (TCGplayer, Collectr); `cost` in help and template
-- [ ] Sales: previous/next day
-- [ ] Add-stock search placeholder fits at 390
-- [ ] "Add item" on the sale screen
-- [ ] Buy picker past 1,000 items
+## C. Selling loop (PR #65)
+- [x] Back to the queue after confirm, with "View receipt" in the toast
+- [x] Cash given and change
+- [x] Confirm offline, sync on reconnect, never drop a sale
+- [x] +15 min hold; "Ending" words on the hold warning; warning colour for Offline
+- [x] Buy: catalog search, market price, offer % chips
+- [x] Add panel: market → your price preview; remember last condition
+- [x] CSV header aliases (TCGplayer, Collectr); `cost` in help and template
+- [x] Sales: previous/next day
+- [x] Add-stock search placeholder fits at 390
+- [x] "Add item" on the sale screen
+- [x] Buy picker past 1,000 items
 
 ## D. Store page (PR #64)
 - [x] A way back to a sent request (stub on store and cart; Back to store)

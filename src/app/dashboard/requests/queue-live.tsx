@@ -15,6 +15,7 @@ import { lineButton, TicketButton } from "@/components/ticket-button";
 import type { Line } from "@/lib/request-reads";
 import { toast } from "@/lib/toast";
 import { clock, useNow } from "@/lib/use-live";
+import { PendingNote } from "../pending-sales";
 import { useStoreLive } from "../store-live";
 import { declineAction, sendTestRequest } from "./actions";
 
@@ -60,23 +61,30 @@ export function QueueLive({ pending }: { pending: number }) {
     };
   }, [pending]);
   return (
-    <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 text-sm">
-      <p role="status" className="inline-flex items-center gap-2 font-semibold">
-        <span
-          aria-hidden
-          className={`size-2 rounded-full ${up ? "bg-success" : "bg-brand"}`}
-        />
-        {up ? "Live" : online ? "Reconnecting" : "Offline"}
-      </p>
-      {!up && (
-        <button
-          type="button"
-          className={lineButton}
-          onClick={() => router.refresh()}
+    <div className="flex flex-col gap-1">
+      <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 text-sm">
+        <p
+          role="status"
+          className="inline-flex items-center gap-2 font-semibold"
         >
-          Check for requests
-        </button>
-      )}
+          {/* Warning, not the lamp: orange means "tap this". */}
+          <span
+            aria-hidden
+            className={`size-2 rounded-full ${up ? "bg-success" : "bg-warning"}`}
+          />
+          {up ? "Live" : online ? "Reconnecting" : "Offline"}
+        </p>
+        {!up && (
+          <button
+            type="button"
+            className={lineButton}
+            onClick={() => router.refresh()}
+          >
+            Check for requests
+          </button>
+        )}
+      </div>
+      <PendingNote />
     </div>
   );
 }

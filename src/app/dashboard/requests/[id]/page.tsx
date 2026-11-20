@@ -62,7 +62,21 @@ async function Review({
         payWith: draft.payWith,
         phone: draft.buyerPhone,
         address: draft.deliveryAddress,
+        // A table sale renews on each tap; a claim holds until its pay window.
+        canExtend:
+          draft.status === "pending" && !draft.walkUp && !draft.claimEventId,
+        holdAddedMin: draft.holdAddedMin,
+        // One more card at the table; a claim is paid at a distance.
+        canAdd:
+          draft.status === "pending" && !draft.isTest && !draft.claimEventId,
       }}
+      back={
+        draft.walkUp
+          ? "/dashboard/inventory"
+          : draft.claimEventId
+            ? `/dashboard/events/${draft.claimEventId}`
+            : "/dashboard"
+      }
       lines={lines.map((l) => ({
         listingId: l.listingId,
         name: l.name,

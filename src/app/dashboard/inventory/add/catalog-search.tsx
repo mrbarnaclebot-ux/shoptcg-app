@@ -6,8 +6,10 @@ import { CardThumb } from "@/components/card-thumb";
 import { Segmented } from "@/components/segmented";
 import { Input } from "@/components/ui/input";
 import type { SearchFailure, SearchItem } from "@/lib/catalog";
+import type { Condition } from "@/lib/condition";
 import { usd } from "@/lib/format";
 import { toast } from "@/lib/toast";
+import type { StorePricing } from "@/lib/vendor-price";
 import { AddPanel } from "./add-panel";
 
 type Kind = "raw" | "graded" | "sealed";
@@ -100,9 +102,10 @@ function useCatalogSearch() {
   return { items, problem, status, run, schedule };
 }
 
-// The last Type and Language picked, so a vendor listing JP slabs all
-// afternoon doesn't re-pick them each time.
+// The last Type, Language and Condition picked, so a vendor listing JP
+// slabs or LP singles all afternoon doesn't re-pick them each time.
 const PREFS_KEY = "tcgmart:add-search";
+type Prefs = { kind?: Kind; language?: Lang; condition?: Condition };
 const noop = () => () => {};
 function readPrefs() {
   try {
@@ -111,20 +114,34 @@ function readPrefs() {
     return null;
   }
 }
-function parsePrefs(raw: string | null): { kind?: Kind; language?: Lang } {
+function parsePrefs(raw: string | null): Prefs {
   try {
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
   }
 }
-function savePrefs(kind: Kind, language: Lang) {
+export function savePrefs(p: Prefs) {
   try {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ kind, language }));
+    localStorage.setItem(
+      PREFS_KEY,
+      JSON.stringify({ ...parsePrefs(readPrefs()), ...p }),
+    );
   } catch {}
 }
 
-export function CatalogSearch() {
+/** The remembered condition, read once a card is picked (client only). */
+export const savedCondition = () => parsePrefs(readPrefs()).condition ?? "NM";
+
+/**
+ * Search, then the add panel for the pick; with `onPick` (the buy screen)
+ * the pick goes to the caller instead.
+ */
+export function CatalogSearch(props: {
+  pricing: StorePricing;
+  onPick?: (item: SearchItem, graded: boolean) => void;
+  label?: string;
+}) {
   const [query, setQuery] = useState("");
   const saved = parsePrefs(useSyncExternalStore(noop, readPrefs, () => null));
   const [picked, setPicked] = useState<{ kind?: Kind; language?: Lang }>({});
@@ -134,15 +151,24 @@ export function CatalogSearch() {
   const search = useCatalogSearch();
   const choose = (k: Kind, l: Lang) => {
     setPicked({ kind: k, language: l });
-    savePrefs(k, l);
+    savePrefs({ kind: k, language: l });
     setItem(null);
     search.schedule(query, k, l);
+  };
+  const pick = (it: SearchItem) => {
+    if (!props.onPick) return setItem(it);
+    props.onPick(it, kind === "graded");
+    setQuery("");
+    search.schedule("", kind, language);
   };
   if (item)
     return (
       <AddPanel
         item={item}
         graded={kind === "graded"}
+        pricing={props.pricing}
+        condition={saved.condition}
+        onCondition={(condition) => savePrefs({ condition })}
         onClose={() => setItem(null)}
       />
     );
@@ -168,11 +194,11 @@ export function CatalogSearch() {
               search.items[0] &&
               search.status !== "idle"
             )
-              setItem(search.items[0]);
+              pick(search.items[0]);
           }}
           enterKeyHint="go"
-          placeholder="Name, set or number, e.g. charizard 199"
-          aria-label="Search the catalog"
+          placeholder="Name, set or number"
+          aria-label={props.label ?? "Search the catalog"}
           className="pl-11"
         />
       </div>
@@ -200,7 +226,7 @@ export function CatalogSearch() {
       </div>
       <Results
         {...search}
-        onPick={setItem}
+        onPick={pick}
         onRetry={() => search.run(query, kind, language)}
       />
     </div>

@@ -2,10 +2,8 @@ import { ChevronLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { getDb } from "@/db";
-import { gradeLabel } from "@/lib/format";
-import { listStock } from "@/lib/listings";
 import { requireStore } from "@/lib/session";
+import { storePricing } from "@/lib/vendor-price";
 import { BuyForm } from "./buy-form";
 
 export const metadata: Metadata = { title: "Buy" };
@@ -23,38 +21,23 @@ export default function BuyPage() {
       <h1 className="font-display text-4xl font-black">Buy</h1>
       <p className="text-muted-foreground">
         Cards you bought or took in trade. They go into stock, and what you paid
-        becomes their cost.
+        becomes their cost. Search the catalog to see the market price.
       </p>
       <Suspense
         fallback={
           <p role="status" className="py-10 font-semibold text-subtle">
-            Counting stock...
+            Loading...
           </p>
         }
       >
-        <Stock />
+        <Form />
       </Suspense>
     </main>
   );
 }
 
-async function Stock() {
+// The stock picker searches the server, so a big store finds any item.
+async function Form() {
   const { store } = await requireStore();
-  const db = getDb();
-  const rows = [
-    ...(await listStock(db, store.id)),
-    ...(await listStock(db, store.id, { kind: "hidden" })),
-  ];
-  return (
-    <BuyForm
-      stock={rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        meta: [gradeLabel(r), r.setName, r.number && `#${r.number}`]
-          .filter(Boolean)
-          .join(" · "),
-        qty: r.qty,
-      }))}
-    />
-  );
+  return <BuyForm pricing={storePricing(store)} />;
 }

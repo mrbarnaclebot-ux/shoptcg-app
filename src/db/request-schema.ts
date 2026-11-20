@@ -159,12 +159,15 @@ export const request = pgTable(
       .notNull()
       .default(sql`'{}'`),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    // Minutes the vendor added to a buyer's hold ("+15 min"); the check caps it.
+    holdAddedMin: integer("hold_added_min").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
     decidedAt: timestamp("decided_at", { withTimezone: true }),
   },
   (t) => [
+    check("request_hold_added_min", sql`${t.holdAddedMin} between 0 and 60`),
     check(
       "request_status",
       sql`${t.status} in ('pending', 'confirmed', 'declined', 'expired', 'cancelled')`,

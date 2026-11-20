@@ -1,0 +1,2 @@
+ALTER TABLE "request" ADD COLUMN "hold_added_min" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "request" ADD CONSTRAINT "request_hold_added_min" CHECK ("request"."hold_added_min" between 0 and 60);

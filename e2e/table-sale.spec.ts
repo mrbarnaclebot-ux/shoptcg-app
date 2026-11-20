@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { confirm, openVendor, pay } from "./buyer";
+import { confirmAndView, openVendor, pay } from "./buyer";
 
 test("a vendor sells to a buyer at the table without an email", async ({
   page,
@@ -17,7 +17,7 @@ test("a vendor sells to a buyer at the table without an email", async ({
     page.getByRole("heading", { name: "Sale for Walk-up" }),
   ).toBeVisible();
   await pay(page, "Cash");
-  await confirm(page).click();
+  await confirmAndView(page);
   await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
   await expect(
     page.getByText("Sold at the table. No receipt was emailed."),

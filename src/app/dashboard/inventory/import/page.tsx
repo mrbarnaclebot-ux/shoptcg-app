@@ -17,6 +17,7 @@ const COLUMN_HELP: Record<(typeof CSV_COLUMNS)[number], string> = {
   grade: "Graded only, e.g. 10 or 9.5.",
   qty: "Whole number. Default 1.",
   price: "Optional fixed price in USD. Blank follows the market.",
+  cost: "Optional. What you paid each, in USD. Only you see it.",
 };
 
 export default function ImportPage() {
@@ -37,7 +38,9 @@ export default function ImportPage() {
         </p>
         <p className="border-t border-dashed border-border-strong pt-3 text-sm text-muted-foreground">
           We match each row to the catalog; anything we can&apos;t match comes
-          in as a custom item you price.
+          in as a custom item you price. A TCGplayer or Collectr export works as
+          it is: we read its name, set, number, quantity and condition, and
+          leave its market prices out.
         </p>
       </div>
       <ImportFlow />

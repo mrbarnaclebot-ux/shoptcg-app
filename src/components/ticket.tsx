@@ -49,7 +49,7 @@ export function TicketLoading({ children }: { children: ReactNode }) {
   );
 }
 
-/** One labelled value on a ticket stub: table, code, hold timer. */
+/** One labelled value on a ticket stub: table, code, hold timer. `hold`: it's running out. */
 export function StubValue(props: {
   k: string;
   v: ReactNode;
@@ -60,10 +60,14 @@ export function StubValue(props: {
     <div>
       <div className="text-sm leading-tight text-muted-foreground">
         {props.k}
+        {/* In words too, not by colour alone (WCAG 1.4.1). */}
+        {props.hold && (
+          <span className="font-semibold text-warning"> · Ending</span>
+        )}
       </div>
       <div
         data-testid={props.testId}
-        className={`font-display num text-2xl font-extrabold ${props.hold ? "text-brand-text" : ""}`}
+        className={`font-display num text-2xl font-extrabold ${props.hold ? "text-warning" : ""}`}
       >
         {props.v}
       </div>

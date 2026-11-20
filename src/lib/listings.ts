@@ -3,6 +3,7 @@ import {
   count,
   desc,
   eq,
+  gt,
   inArray,
   isNotNull,
   isNull,
@@ -50,12 +51,16 @@ export type StockFilter = {
   ids?: string[];
   /** Leave out listings in a claim event that hasn't ended: they sell there only. */
   forSale?: true;
+  /** Only listings with stock on hand. */
+  inStock?: true;
   /** Newest first unless set. */
   sort?: StockSort;
   /** Sold-out and fully held rows after the rest, as the store page shows them. */
   soldOutLast?: true;
   /** 1-based, PAGE_ROWS a page. */
   page?: number;
+  /** Fewer rows than a page: a picker's first few matches. */
+  limit?: number;
 };
 
 export type StockSort = "new" | "name" | "price-desc" | "price-asc" | "qty";
@@ -67,7 +72,7 @@ export const inOpenEvent = sql<boolean>`exists (
     and ${claimEvent.endedAt} is null and ${claimEvent.endsAt} > now())`;
 
 // The inventory pages through with `page`; other callers read the first page.
-// ponytail: ledger valuation and the buy picker stop at this many rows; page them too if a store passes it.
+// ponytail: ledger valuation stops at this many rows; page it too if a store passes it.
 export const PAGE_ROWS = 1000;
 
 function latestPrices(db: Db, storeId: string) {
@@ -108,6 +113,7 @@ function filterConds(storeId: string, f: StockFilter) {
   if (f.id) conds.push(eq(listing.id, f.id));
   if (f.ids) conds.push(inArray(listing.id, f.ids));
   if (f.forSale) conds.push(sql`not ${inOpenEvent}`);
+  if (f.inStock) conds.push(gt(listing.qty, 0));
   if (f.q) {
     // Every word, any order, anywhere in the name, set or number.
     const number = pick(listing.number, catalogItem.number);
@@ -205,7 +211,7 @@ export async function listStock(db: Db, storeId: string, f: StockFilter = {}) {
         : []),
       ...orderBy(f.sort, name, cols.market),
     )
-    .limit(PAGE_ROWS)
+    .limit(f.limit ?? PAGE_ROWS)
     .offset(((f.page ?? 1) - 1) * PAGE_ROWS);
   const num = (v: string | null) => (v === null ? null : Number(v));
   return rows.map((r) => ({
@@ -220,8 +226,8 @@ export async function listStock(db: Db, storeId: string, f: StockFilter = {}) {
 export type StockRow = Awaited<ReturnType<typeof listStock>>[number];
 
 /**
- * Every listing not removed, oldest first, as CSV rows the import reads back:
- * CSV_COLUMNS plus cost, with price only when fixed (else it follows the market).
+ * Every listing not removed, oldest first, as CSV rows the import reads back
+ * (CSV_COLUMNS), with price only when fixed (else it follows the market).
  */
 export async function stockCsvRows(db: Db, storeId: string) {
   const rows = await db
@@ -242,8 +248,7 @@ export async function stockCsvRows(db: Db, storeId: string) {
     .leftJoin(catalogItem, eq(catalogItem.id, listing.catalogItemId))
     .where(and(eq(listing.storeId, storeId), isNull(listing.removedAt)))
     .orderBy(listing.createdAt, listing.id);
-  const head = [...CSV_COLUMNS, "cost"] as const;
-  return [[...head], ...rows.map((r) => head.map((c) => r[c]))];
+  return [[...CSV_COLUMNS], ...rows.map((r) => CSV_COLUMNS.map((c) => r[c]))];
 }
 
 /** Every row listStock pages through for this filter. */
@@ -365,49 +370,65 @@ async function resolveGraded(
   return { ...input, catalogItemId: item.id };
 }
 
-/**
- * Lists a catalog item; kind and language come from the catalog row, not the
- * client. A card the store already shows in that condition gets the units
- * instead of a second row, and `merged` has its quantity before and after.
- */
-export async function addCatalogListing(
-  db: Db,
-  storeId: string,
-  picked: CatalogListingInput,
-) {
+export type CatalogCard = Awaited<ReturnType<typeof catalogCard>>;
+
+/** A picked catalog card, checked: kind, language and name come from the catalog row, not the client. */
+export async function catalogCard(db: Db, picked: CatalogListingInput) {
   const input = await resolveGraded(db, picked);
   const [item] = await db
-    .select({ kind: catalogItem.kind, language: catalogItem.language })
+    .select({
+      kind: catalogItem.kind,
+      language: catalogItem.language,
+      name: catalogItem.name,
+    })
     .from(catalogItem)
     .where(eq(catalogItem.id, input.catalogItemId));
   if (!item) throw new ListingError("That card is no longer in the catalog");
   if (item.kind === "raw" && !input.condition)
     throw new ListingError("Pick a condition");
-  const condition = item.kind === "raw" ? input.condition : null;
+  const { kind, language } = item;
+  const condition = kind === "raw" ? input.condition : null;
+  return { name: item.name, values: { ...input, kind, language, condition } };
+}
+
+/**
+ * The add rule, in the caller's transaction once it has locked the store and
+ * labelled the change: a card the store already shows in that condition gets
+ * the units, and `merged` has its quantity before and after; else a new row.
+ */
+export async function stockCatalogCard(
+  tx: Db,
+  storeId: string,
+  { values: v }: CatalogCard,
+) {
+  const same = (await sameCards(tx, storeId, [v.catalogItemId])).get(
+    cardKey(v.catalogItemId, v.condition),
+  );
+  if (same) {
+    const row = await topUp(tx, same, v);
+    return { ...row, merged: { from: row.qty - v.qty, to: row.qty } };
+  }
+  await assertRoom(tx, storeId, 1);
+  const [row] = await tx
+    .insert(listing)
+    .values({ ...v, storeId })
+    .returning();
+  return { ...row, merged: null };
+}
+
+/** Lists a catalog item by the add rule (stockCatalogCard), labelled "added". */
+export async function addCatalogListing(
+  db: Db,
+  storeId: string,
+  picked: CatalogListingInput,
+) {
+  const card = await catalogCard(db, picked);
   return db.transaction(async (t) => {
     const tx = t as Db;
     // Store first: two quick adds of one card make one row, not two.
     await lockStore(tx, storeId);
     await stockReason(tx, "added");
-    const same = (await sameCards(tx, storeId, [input.catalogItemId])).get(
-      cardKey(input.catalogItemId, condition),
-    );
-    if (same) {
-      const row = await topUp(tx, same, input);
-      return { ...row, merged: { from: row.qty - input.qty, to: row.qty } };
-    }
-    await assertRoom(tx, storeId, 1);
-    const [row] = await tx
-      .insert(listing)
-      .values({
-        ...input,
-        storeId,
-        kind: item.kind,
-        language: item.language,
-        condition,
-      })
-      .returning();
-    return { ...row, merged: null };
+    return stockCatalogCard(tx, storeId, card);
   });
 }
 

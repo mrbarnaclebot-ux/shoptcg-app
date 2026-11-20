@@ -246,6 +246,13 @@
       "when": 1795108195037,
       "tag": "0034_listing_removed",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1795143378446,
+      "tag": "0035_hold_extension",
+      "breakpoints": true
     }
   ]
 }
