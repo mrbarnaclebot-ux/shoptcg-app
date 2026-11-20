@@ -15,6 +15,8 @@ export type LiveType =
   | "voided"
   // A claim added or given back in a claim event; r is the request (or event).
   | "claim"
+  // The vendor removed an item that was on this request; the rest stays held.
+  | "removed"
   | "floor";
 export type LiveEvent = { s: string; r: string; t: LiveType };
 

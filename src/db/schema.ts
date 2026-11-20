@@ -277,6 +277,9 @@ export const listing = pgTable(
     // What the vendor paid per unit. Private: it never reaches a buyer.
     cost: numeric("cost", { precision: 12, scale: 2 }),
     active: boolean("active").notNull().default(true),
+    // Removed from inventory: kept for the ledger and Restore, shown nowhere
+    // else. active is left as it was, so a restore brings back a hidden item hidden.
+    removedAt: timestamp("removed_at", { withTimezone: true }),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -324,6 +327,8 @@ export const STOCK_REASONS = [
   "sold",
   "voided",
   "bought",
+  "removed",
+  "restored",
 ] as const;
 
 // Every change to a listing's quantity, written by the listing_stock_move
@@ -350,7 +355,7 @@ export const stockMove = pgTable(
     index("stock_move_store_at_idx").on(t.storeId, t.at.desc()),
     check(
       "stock_move_reason",
-      sql`${t.reason} in ('opening', 'added', 'adjusted', 'sold', 'voided', 'bought')`,
+      sql`${t.reason} in ('opening', 'added', 'adjusted', 'sold', 'voided', 'bought', 'removed', 'restored')`,
     ),
   ],
 );

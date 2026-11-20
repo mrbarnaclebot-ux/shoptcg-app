@@ -152,6 +152,12 @@ export const request = pgTable(
     claimEventId: uuid("claim_event_id").references(() => claimEvent.id),
     // The buyer's last claim, for the once-a-second limit.
     lastClaimAt: timestamp("last_claim_at", { withTimezone: true }),
+    // Names of items the vendor removed from the store while they were on
+    // this request, so the buyer's page can say so whenever it is opened.
+    removedItems: text("removed_items")
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

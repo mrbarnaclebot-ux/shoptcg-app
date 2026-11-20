@@ -1,8 +1,14 @@
-import { eq, sql } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import postgres from "postgres";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "@/db/open";
 import * as schema from "@/db/schema";
 import { upsertHits } from "@/lib/catalog";
+import { createEvent, endEvent } from "@/lib/claim-events";
+import { syncBasket } from "@/lib/floor";
 import { customListingSchema } from "@/lib/listing-input";
 import {
   addCatalogListing,
@@ -11,9 +17,14 @@ import {
   listStock,
   ListingError,
   MAX_ACTIVE_LISTINGS,
+  removeListing,
+  restoreListing,
   stepQty,
   updateListing,
 } from "@/lib/listings";
+import { buyerRequest } from "@/lib/request-reads";
+import { createRequest } from "@/lib/requests";
+import { publicItemExists } from "@/lib/storefront";
 import { addStore, hit, migratedDb } from "@/lib/test-fixtures";
 
 let db: Db;
@@ -132,8 +143,12 @@ describe("listings", () => {
         select ${full}, 'raw', 'en', 'x', 'NM' from generate_series(1, ${MAX_ACTIVE_LISTINGS})`,
     );
     await expect(addCustomListing(db, full, custom())).rejects.toThrow(
-      /can list 5000/,
+      /can show 5,000 items/,
     );
+    // Removed and hidden items don't count.
+    const [one] = await listStock(db, full);
+    await removeListing(db, full, one.id, false);
+    expect(await addCustomListing(db, full, custom())).toBeTruthy();
   });
 
   it("lists a raw card as a slab, making one graded catalog row per grade", async () => {
@@ -152,7 +167,8 @@ describe("listings", () => {
       { kind: "catalog", input: slab },
     ]);
     expect(one.catalogItemId).not.toBe(card.id);
-    expect(two.catalogItemId).toBe(one.catalogItemId);
+    // The same slab again tops up the first listing.
+    expect(two).toEqual({ id: one.id, catalogItemId: one.catalogItemId });
     expect(one).toMatchObject({ kind: "graded", condition: null });
     const [row] = await listStock(db, a, { id: one.id });
     expect(row).toMatchObject({ grader: "PSA", grade: "10", name: card.name });
@@ -196,5 +212,291 @@ describe("listings", () => {
     await expect(
       db.insert(schema.listing).values({ ...base, ...over } as typeof base),
     ).rejects.toThrow();
+  });
+});
+
+const moves = (id: string) =>
+  db
+    .select({
+      reason: schema.stockMove.reason,
+      delta: schema.stockMove.delta,
+      qtyAfter: schema.stockMove.qtyAfter,
+    })
+    .from(schema.stockMove)
+    .where(eq(schema.stockMove.listingId, id))
+    .orderBy(schema.stockMove.at);
+
+const newStore = () => addStore(db, randomUUID().slice(0, 8));
+
+async function openStore(mode: "table" | "online" = "table") {
+  const id = await newStore();
+  await db
+    .update(schema.store)
+    .set({ state: "open", openedAt: new Date(), sellingMode: mode })
+    .where(eq(schema.store.id, id));
+  return id;
+}
+
+const item = (storeId: string, name: string, qty = 2) =>
+  addCustomListing(db, storeId, custom({ name, qty, overridePrice: "10.00" }));
+
+async function send(storeId: string, ids: string[]) {
+  const r = await createRequest(db, {
+    storeId,
+    lines: ids.map((listingId) => ({ listingId, qty: 1 })),
+    buyerName: "Maya Robinson",
+    buyerEmail: "maya@example.test",
+    promo: false,
+    sessionId: randomUUID(),
+    ipHash: null,
+    holdMs: 15 * 60_000,
+  });
+  if (!r.ok) throw new Error(JSON.stringify(r));
+  return r.id;
+}
+
+describe("remove and restore", () => {
+  it("takes the quantity to 0 and restore puts it back, both in the ledger", async () => {
+    const s = await newStore();
+    const l = await item(s, "Ledger card", 3);
+    expect(await removeListing(db, s, l.id, false)).toEqual({
+      ok: true,
+      name: "Ledger card",
+    });
+    expect((await listStock(db, s)).map((r) => r.id)).not.toContain(l.id);
+    expect(await listStock(db, s, { kind: "hidden" })).toHaveLength(0);
+    const [row] = await listStock(db, s, { kind: "removed" });
+    expect(row).toMatchObject({ id: l.id, qty: 0 });
+    // Removed stock can't be stepped, edited or removed again.
+    expect(await stepQty(db, s, l.id, 1)).toBeNull();
+    expect(await updateListing(db, s, { id: l.id, qty: 5 })).toBe(false);
+    expect(await removeListing(db, s, l.id, false)).toEqual({ gone: true });
+
+    expect(await restoreListing(db, s, l.id)).toBe(true);
+    expect(await restoreListing(db, s, l.id)).toBe(false);
+    expect((await listStock(db, s, { id: l.id }))[0]).toMatchObject({
+      qty: 3,
+      removedAt: null,
+    });
+    expect(await moves(l.id)).toEqual([
+      { reason: "added", delta: 3, qtyAfter: 3 },
+      { reason: "removed", delta: -3, qtyAfter: 0 },
+      { reason: "restored", delta: 3, qtyAfter: 3 },
+    ]);
+
+    // Sold out, then removed: a restore brings back none, not the older 3.
+    await updateListing(db, s, { id: l.id, qty: 0 });
+    await removeListing(db, s, l.id, false);
+    await restoreListing(db, s, l.id);
+    expect((await listStock(db, s, { id: l.id }))[0].qty).toBe(0);
+  });
+
+  it("brings a hidden item back hidden", async () => {
+    const s = await newStore();
+    const l = await item(s, "Hidden card");
+    await updateListing(db, s, { id: l.id, active: false });
+    await removeListing(db, s, l.id, false);
+    await restoreListing(db, s, l.id);
+    const hidden = await listStock(db, s, { kind: "hidden" });
+    expect(hidden.map((r) => r.id)).toEqual([l.id]);
+  });
+
+  it("takes it off buyers' requests and carts, closing a request left empty", async () => {
+    const s = await openStore();
+    const gone = await item(s, "Umbreon promo");
+    const kept = await item(s, "Espeon promo");
+    const both = await send(s, [gone.id, kept.id]);
+    const only = await send(s, [gone.id]);
+    const device = "d".repeat(32);
+    await syncBasket(db, s, device, [
+      { id: gone.id, qty: 1 },
+      { id: kept.id, qty: 1 },
+    ]);
+    // Asked first: two requests and a cart hold it, and nothing changed yet.
+    expect(await removeListing(db, s, gone.id, false)).toEqual({ held: 3 });
+    expect(await listStock(db, s, { kind: "removed" })).toHaveLength(0);
+
+    expect(await removeListing(db, s, gone.id, true)).toMatchObject({
+      ok: true,
+    });
+    const sid = async (id: string) =>
+      (
+        await db
+          .select({ sessionId: schema.request.sessionId })
+          .from(schema.request)
+          .where(eq(schema.request.id, id))
+      )[0].sessionId;
+    const left = await buyerRequest(db, both, await sid(both));
+    expect(left).toMatchObject({
+      status: "pending",
+      removedItems: ["Umbreon promo"],
+    });
+    expect(left!.lines.map((l) => l.listingId)).toEqual([kept.id]);
+    // Its only item gone: closed like a decline.
+    expect(await buyerRequest(db, only, await sid(only))).toMatchObject({
+      status: "declined",
+      removedItems: ["Umbreon promo"],
+      lines: [],
+    });
+    const [cart] = await db
+      .select({ lines: schema.basket.lines })
+      .from(schema.basket)
+      .where(
+        and(eq(schema.basket.storeId, s), eq(schema.basket.deviceId, device)),
+      );
+    expect(cart.lines).toEqual([{ id: kept.id, qty: 1 }]);
+    expect(await publicItemExists(db, s, gone.id)).toBe(false);
+    expect(await publicItemExists(db, s, kept.id)).toBe(true);
+  });
+
+  it("waits for a claim event to end", async () => {
+    const s = await openStore("online");
+    const l = await item(s, "Event box", 1);
+    const ev = await createEvent(db, s, {
+      title: "Friday drop",
+      startsAt: new Date(Date.now() + 60_000),
+      endsAt: new Date(Date.now() + 3_600_000),
+      priceMode: "market",
+      allowUnclaim: false,
+      payWithinHours: 24,
+      maxPerBuyer: 5,
+      items: [{ listingId: l.id, price: null, maxPerBuyer: 1 }],
+    });
+    if (!("ok" in ev)) throw new Error(ev.error);
+    expect(await removeListing(db, s, l.id, true)).toEqual({
+      event: "Friday drop",
+    });
+    // Hiding is still allowed.
+    expect(await updateListing(db, s, { id: l.id, active: false })).toBe(true);
+    await endEvent(db, s, ev.id);
+    expect(await removeListing(db, s, l.id, false)).toMatchObject({
+      ok: true,
+    });
+  });
+});
+
+describe("adding a card you already have", () => {
+  const add = (
+    storeId: string,
+    catalogItemId: string,
+    over: Partial<Parameters<typeof addCatalogListing>[2]> = {},
+  ) =>
+    addCatalogListing(db, storeId, {
+      catalogItemId,
+      grader: null,
+      grade: null,
+      condition: "NM",
+      qty: 1,
+      overridePrice: null,
+      cost: null,
+      ...over,
+    });
+  const card = async (providerId: string) =>
+    (await upsertHits(db, [hit({ providerId })]))[0];
+
+  it("tops up the same card and condition, blending the cost", async () => {
+    const s = await newStore();
+    const { id } = await card("merge-1");
+    const first = await add(s, id, { qty: 2, cost: "10.00" });
+    expect(first.merged).toBeNull();
+    expect(
+      await add(s, id, { qty: 2, cost: "20.00", overridePrice: "30.00" }),
+    ).toMatchObject({
+      id: first.id,
+      qty: 4,
+      cost: "15.00",
+      overridePrice: "30.00",
+      merged: { from: 2, to: 4 },
+    });
+    // No cost or price this time: both stay.
+    expect(await add(s, id)).toMatchObject({
+      id: first.id,
+      qty: 5,
+      cost: "15.00",
+      overridePrice: "30.00",
+    });
+    expect((await moves(first.id)).at(-1)).toEqual({
+      reason: "added",
+      delta: 1,
+      qtyAfter: 5,
+    });
+    // Another condition, or the card hidden, gets its own row.
+    expect((await add(s, id, { condition: "LP" })).id).not.toBe(first.id);
+    await updateListing(db, s, { id: first.id, active: false });
+    expect((await add(s, id)).id).not.toBe(first.id);
+  });
+
+  it("won't pass 9999 on one listing", async () => {
+    const s = await newStore();
+    const { id } = await card("merge-max");
+    await add(s, id, { qty: 9999 });
+    await expect(add(s, id)).rejects.toThrow(ListingError);
+  });
+
+  it("imports catalog rows onto cards in stock and onto each other, never custom rows", async () => {
+    const s = await newStore();
+    const [zard, mew] = [await card("merge-2"), await card("merge-3")];
+    const have = await add(s, zard.id);
+    const row = (catalogItemId: string, qty: number) => ({
+      kind: "catalog" as const,
+      input: {
+        catalogItemId,
+        grader: null,
+        grade: null,
+        condition: "NM" as const,
+        qty,
+        overridePrice: null,
+        cost: null,
+      },
+    });
+    const own = { kind: "custom" as const, input: custom() };
+    await importListings(db, s, [
+      row(zard.id, 2),
+      row(mew.id, 1),
+      row(mew.id, 3),
+      own,
+      own,
+    ]);
+    const stock = await listStock(db, s);
+    expect(stock).toHaveLength(4);
+    expect(stock.find((r) => r.id === have.id)!.qty).toBe(3);
+    expect(stock.find((r) => r.catalogItemId === mew.id)!.qty).toBe(4);
+    expect(stock.filter((r) => r.catalogItemId === null)).toHaveLength(2);
+  });
+});
+
+// CI sets DATABASE_URL to a real Postgres, where two adds truly overlap.
+const url = process.env.DATABASE_URL;
+describe.runIf(Boolean(url))("concurrent adds (Postgres)", () => {
+  it("two adds of one card at once make one row", async () => {
+    const pg = drizzle(postgres(url!, { max: 4, onnotice: () => {} }), {
+      schema,
+    });
+    await migrate(pg, { migrationsFolder: "drizzle" });
+    const conn = pg as unknown as Db;
+    const s = await addStore(conn, randomUUID().slice(0, 8));
+    const [c] = await upsertHits(conn, [
+      hit({ providerId: `race-${randomUUID()}` }),
+    ]);
+    const input = {
+      catalogItemId: c.id,
+      grader: null,
+      grade: null,
+      condition: "NM" as const,
+      qty: 1,
+      overridePrice: null,
+      cost: null,
+    };
+    const [x, y] = await Promise.all([
+      addCatalogListing(conn, s, input),
+      addCatalogListing(conn, s, input),
+    ]);
+    expect(x.id).toBe(y.id);
+    const rows = await conn
+      .select({ qty: schema.listing.qty })
+      .from(schema.listing)
+      .where(eq(schema.listing.storeId, s))
+      .orderBy(desc(schema.listing.createdAt));
+    expect(rows).toEqual([{ qty: 2 }]);
   });
 });

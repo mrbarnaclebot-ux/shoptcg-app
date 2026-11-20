@@ -52,19 +52,26 @@ export function RequestLive(props: {
   slug: string;
   status: RequestStatus;
   lines: Line[];
+  /** Items the vendor removed from the store while on this request. */
+  removed: string[];
 }) {
-  const { status, slug } = props;
+  const { status, slug, removed } = props;
   const router = useRouter();
   const sendAgain = useSendAgain(slug, props.lines);
   // The seller can still confirm a lapsed hold while the buyer is at the table.
   const open = status === "pending" || status === "expired";
   useLive(open ? `/api/live/request/${props.id}` : null);
   const last = useRef(status);
+  const told = useRef(removed.length);
   useEffect(() => {
+    const fresh = removed.slice(told.current);
+    told.current = removed.length;
+    if (fresh.length) toast.goneFromStore(fresh);
     if (last.current === status) return;
     last.current = status;
     if (status === "expired") toast.holdOver(sendAgain);
-    if (status === "declined")
+    // A removal that emptied it was just said; it isn't a "not this time".
+    if (status === "declined" && !fresh.length)
       toast.requestDeclined(() => router.push(`/${slug}`));
   });
   return null;

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 export const filterSchema = z.object({
   q: z.string().max(100).optional().catch(undefined),
   kind: z
-    .enum(["raw", "graded", "sealed", "other", "hidden"])
+    .enum(["raw", "graded", "sealed", "other", "hidden", "removed"])
     .optional()
     .catch(undefined),
   language: z.enum(["en", "ja", "zh"]).optional().catch(undefined),
@@ -21,6 +21,7 @@ const KINDS = [
   ["sealed", "Sealed"],
   ["other", "Other"],
   ["hidden", "Hidden"],
+  ["removed", "Removed"],
 ] as const;
 const LANGS = [
   [undefined, "Any language"],

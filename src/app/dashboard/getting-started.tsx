@@ -1,5 +1,5 @@
 import { headingIcon } from "@/components/bento";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, isNull } from "drizzle-orm";
 import { Check, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { getDb } from "@/db";
@@ -20,7 +20,13 @@ export async function GettingStarted({ store }: { store: Store }) {
     db
       .select({ n: count() })
       .from(listing)
-      .where(and(eq(listing.storeId, store.id), eq(listing.active, true))),
+      .where(
+        and(
+          eq(listing.storeId, store.id),
+          eq(listing.active, true),
+          isNull(listing.removedAt),
+        ),
+      ),
     // Sound on lives in one browser; a locked-phone alert is stored.
     db
       .select({ id: pushSubscription.endpoint })

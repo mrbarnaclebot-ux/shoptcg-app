@@ -25,9 +25,12 @@ import {
   countListings,
   importListings,
   ListingError,
+  removeListing,
+  restoreListing,
   stepQty,
   setListingPhoto,
   updateListing,
+  type RemoveResult,
 } from "@/lib/listings";
 import { photoAllowed } from "@/lib/export-limit";
 import { dropImage, putImage, type StoredImage } from "@/lib/image-store";
@@ -92,6 +95,41 @@ export async function updateListingAction(patch: unknown): Promise<Result> {
   return {};
 }
 
+/** Without `force`, stops at { held } when buyers have it, so the panel can ask first. */
+export async function removeAction(
+  id: string,
+  force: boolean,
+): Promise<RemoveResult | { error: string }> {
+  const { store } = await requireStore();
+  try {
+    const res = await removeListing(
+      getDb(),
+      store.id,
+      z.uuid().parse(id),
+      force === true,
+    );
+    if ("ok" in res) refresh();
+    return res;
+  } catch (err) {
+    console.error("[inventory] remove failed", err);
+    return { error: SAVE_FAILED };
+  }
+}
+
+export async function restoreAction(id: string): Promise<Result> {
+  const { store } = await requireStore();
+  try {
+    const ok = await restoreListing(getDb(), store.id, z.uuid().parse(id));
+    if (!ok) return { error: "That item is not in your removed stock." };
+  } catch (err) {
+    if (err instanceof ListingError) return { error: err.message };
+    console.error("[inventory] restore failed", err);
+    return { error: SAVE_FAILED };
+  }
+  refresh();
+  return {};
+}
+
 /**
  * The form's photo, re-encoded and stored: null when none was picked, or the
  * message to show when it can't be used.
@@ -139,13 +177,18 @@ export async function setPhotoAction(form: FormData): Promise<Result> {
 
 export async function addCatalogAction(
   input: unknown,
-): Promise<Result & Partial<Added>> {
+): Promise<
+  Result & Partial<Added> & { merged?: { from: number; to: number } | null }
+> {
   const { store } = await requireStore();
   const parsed = catalogListingSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   try {
     const db = getDb();
     const row = await addCatalogListing(db, store.id, parsed.data);
+    const { merged } = row;
+    // Topped up a card already on the shelf: priced, and not the first.
+    if (merged) return { id: row.id, first: false, merged };
     // After the response: the vendor doesn't wait on the price provider.
     // The row's own id: a picked grade made a new graded catalog row.
     after(() => priceNewListings(db, [row.catalogItemId!]));
@@ -244,7 +287,8 @@ export async function importCsvAction(
     // The listings' own ids: a slab row points at its graded catalog row.
     const ids = added.flatMap((r) => r.catalogItemId ?? []);
     after(() => priceNewListings(db, ids));
-    return { count: added.length };
+    // Rows, not listings: some may have topped up cards already in stock.
+    return { count: parsed.data.length };
   } catch (err) {
     if (err instanceof ListingError) return { error: err.message };
     console.error("[inventory] import failed", err);

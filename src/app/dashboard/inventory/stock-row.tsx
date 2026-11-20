@@ -17,7 +17,7 @@ import type { StockRow as Row } from "@/lib/listings";
 import { toast } from "@/lib/toast";
 import { underMarket } from "@/lib/vendor-price";
 import { sellAction, stepQtyAction, updateListingAction } from "./actions";
-import { EditPanel } from "./edit-panel";
+import { EditPanel, restore } from "./edit-panel";
 
 // Synced nightly, so two days without a new point means the sync is missing it.
 const STALE_DAYS = 2;
@@ -32,7 +32,14 @@ export function StockRow(props: {
 }) {
   const { row, price } = props;
   const [editing, setEditing] = useState(false);
-  const off = !row.active ? "Hidden" : row.qty === 0 ? "Sold out" : null;
+  const removed = row.removedAt !== null;
+  const off = removed
+    ? "Removed"
+    : !row.active
+      ? "Hidden"
+      : row.qty === 0
+        ? "Sold out"
+        : null;
   const thumb = (
     <CardThumb
       src={row.imageUrl}
@@ -50,22 +57,32 @@ export function StockRow(props: {
           {LANGUAGE_LABEL[row.language]}
         </span>
         <div className="col-start-2 row-start-2 flex items-center gap-3 lg:col-start-4 lg:row-start-1">
-          <Qty row={row} />
-          {row.active && row.qty > 0 && price !== null && !row.inEvent && (
-            <Sell row={row} />
+          {removed ? (
+            <Restore row={row} />
+          ) : (
+            <>
+              <Qty row={row} />
+              {row.active && row.qty > 0 && price !== null && !row.inEvent && (
+                <Sell row={row} />
+              )}
+            </>
           )}
         </div>
         <PriceTag {...props} />
-        <button
-          type="button"
-          aria-expanded={editing}
-          onClick={() => setEditing(!editing)}
-          className="col-start-3 row-start-2 inline-flex min-h-11 items-center justify-self-end px-2 font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px] lg:col-start-6 lg:row-start-1"
-        >
-          {editing ? "Close" : "Edit"}
-        </button>
+        {!removed && (
+          <button
+            type="button"
+            aria-expanded={editing}
+            onClick={() => setEditing(!editing)}
+            className="col-start-3 row-start-2 inline-flex min-h-11 items-center justify-self-end px-2 font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px] lg:col-start-6 lg:row-start-1"
+          >
+            {editing ? "Close" : "Edit"}
+          </button>
+        )}
       </div>
-      {editing && <EditPanel row={row} onDone={() => setEditing(false)} />}
+      {editing && !removed && (
+        <EditPanel row={row} onDone={() => setEditing(false)} />
+      )}
     </li>
   );
 }
@@ -86,7 +103,7 @@ function Name({ row, price }: { row: Row; price: number | null }) {
         {[set || "Custom item", gradeLabel(row) || "Raw"].join(". ")}
         <span className="lg:hidden">. {LANGUAGE_LABEL[row.language]}</span>
       </p>
-      {!row.active && <HatchTag>Hidden from buyers</HatchTag>}
+      {!row.active && !row.removedAt && <HatchTag>Hidden from buyers</HatchTag>}
       {row.inEvent && <HatchTag>In a claim event</HatchTag>}
     </div>
   );
@@ -134,6 +151,26 @@ function PriceTag({
         </span>
       )}
     </div>
+  );
+}
+
+/** Back into stock with the quantity it had; it leaves the Removed view. */
+function Restore({ row }: { row: Row }) {
+  const [pending, start] = useTransition();
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      aria-label={`Restore ${row.name}`}
+      onClick={() =>
+        start(async () => {
+          await restore(row.id, row.name);
+        })
+      }
+      className="inline-flex min-h-11 items-center px-3 font-semibold shadow-[inset_0_0_0_1.5px_var(--border-strong)] disabled:opacity-50"
+    >
+      Restore
+    </button>
   );
 }
 

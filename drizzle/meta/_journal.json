@@ -239,6 +239,13 @@
       "when": 1795101352664,
       "tag": "0033_store_old_slug",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1795108195037,
+      "tag": "0034_listing_removed",
+      "breakpoints": true
     }
   ]
 }

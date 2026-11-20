@@ -33,7 +33,7 @@ export function AddPanel({
   const [condition, setCondition] = useState<Condition>("NM");
   const [grader, setGrader] = useState<Grader>("PSA");
   const [error, setError] = useState<string>();
-  const [added, setAdded] = useState<{ first: boolean }>();
+  const [added, setAdded] = useState<{ first: boolean; merged?: Merged }>();
   const [pending, start] = useTransition();
   const submit = (form: FormData) =>
     start(async () => {
@@ -46,14 +46,21 @@ export function AddPanel({
         qty: form.get("qty"),
         overridePrice: fixed,
         cost: form.get("cost"),
-      }).catch(() => ({ error: OFFLINE, first: false }));
+      }).catch(() => ({ error: OFFLINE, first: false, merged: null }));
       setError(res.error);
       if (res.error) return void toast.notSaved(res.error);
       // The panel turns into the confirmation; no toast on top of it.
-      setAdded({ first: Boolean(res.first) });
+      setAdded({ first: Boolean(res.first), merged: res.merged ?? undefined });
     });
   if (added)
-    return <Added name={item.name} first={added.first} onAgain={onClose} />;
+    return (
+      <Added
+        name={item.name}
+        first={added.first}
+        merged={added.merged}
+        onAgain={onClose}
+      />
+    );
   return (
     <Ticket as="div" className="[--stub:2rem]">
       {/* By hand: a form action clears the fields even when the add fails. */}
@@ -160,10 +167,14 @@ export function StockFields({
   );
 }
 
+type Merged = { from: number; to: number };
+
 /** Inline confirmation; the store's first item gets the show-floor moment. */
 export function Added(props: {
   name: string;
   first: boolean;
+  /** Went onto a listing the store already had: its quantity before and after. */
+  merged?: Merged;
   onAgain?: () => void;
 }) {
   const actions = (
@@ -196,7 +207,9 @@ export function Added(props: {
     >
       <p role="status" className="flex items-center gap-2 font-semibold">
         <Check aria-hidden className="size-5 shrink-0 text-success" />
-        Added {props.name} to your stock.
+        {props.merged
+          ? `Added to your ${props.name}: ${props.merged.from} → ${props.merged.to}.`
+          : `Added ${props.name} to your stock.`}
       </p>
       {actions}
     </Ticket>

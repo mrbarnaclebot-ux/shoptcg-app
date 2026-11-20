@@ -2,14 +2,29 @@
 
 import { useState, useTransition } from "react";
 import { Ticket } from "@/components/ticket";
-import { TicketButton } from "@/components/ticket-button";
+import { lineButton, TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CONDITIONS } from "@/lib/condition";
 import type { StockRow } from "@/lib/listings";
 import { toast } from "@/lib/toast";
 import { PhotoField } from "./add/custom-form";
-import { setPhotoAction, updateListingAction } from "./actions";
+import {
+  removeAction,
+  restoreAction,
+  setPhotoAction,
+  updateListingAction,
+} from "./actions";
+
+const FAILED = "Couldn't save that. Try again.";
+
+/** Restores a removed item: the removal toast's Undo and the Removed view's button. */
+export async function restore(id: string, name: string) {
+  const res = await restoreAction(id).catch(() => ({ error: FAILED }));
+  if (res.error) toast.notSaved(res.error);
+  else toast.itemRestored(name);
+  return !res.error;
+}
 
 export function EditPanel({
   row,
@@ -19,13 +34,36 @@ export function EditPanel({
   onDone: () => void;
 }) {
   const [error, setError] = useState<string>();
+  // Buyers holding it, once the server has said so: the panel asks first.
+  const [held, setHeld] = useState(0);
   const [pending, start] = useTransition();
+  const custom = row.catalogItemId === null;
   const save = (patch: Record<string, unknown>, done: () => void) =>
     start(async () => {
       const res = await updateListingAction({ id: row.id, ...patch });
       setError(res.error);
       if (res.error) return void toast.notSaved(res.error);
       done();
+      onDone();
+    });
+  const remove = (force: boolean) =>
+    start(async () => {
+      const res = await removeAction(row.id, force).catch(() => ({
+        error: FAILED,
+      }));
+      if ("held" in res) return setHeld(res.held);
+      setHeld(0);
+      const why =
+        "error" in res
+          ? res.error
+          : "event" in res
+            ? `It's in the claim event ${res.event}. End the event first.`
+            : "gone" in res
+              ? "That item is not in your stock."
+              : null;
+      setError(why ?? undefined);
+      if (why) return void toast.notSaved(why);
+      toast.itemRemoved(row.name, () => void restore(row.id, row.name));
       onDone();
     });
   return (
@@ -41,19 +79,35 @@ export function EditPanel({
           e.preventDefault();
           const form = new FormData(e.currentTarget);
           const fixed = String(form.get("overridePrice") ?? "").trim();
-          const change = fixed
-            ? `Fixed price ${fixed.replace("$", "")}.`
-            : "Follows the market.";
+          // Sent only when typed, so a stepper tap since opening isn't undone.
+          const qty = String(form.get("qty") ?? "").trim();
+          const typed = qty !== String(row.qty);
+          const name = custom ? String(form.get("name") ?? "").trim() : "";
+          const change = [
+            typed && `Quantity ${qty}.`,
+            fixed
+              ? `Fixed price ${fixed.replace("$", "")}.`
+              : "Follows the market.",
+          ]
+            .filter(Boolean)
+            .join(" ");
           save(
             {
+              ...(typed && { qty }),
               overridePrice: fixed,
               cost: form.get("cost"),
               ...(row.kind === "raw" && { condition: form.get("condition") }),
+              ...(custom && {
+                name,
+                setName: form.get("setName"),
+                ...(form.has("number") && { number: form.get("number") }),
+              }),
             },
-            () => toast.itemUpdated(row.name, change),
+            () => toast.itemUpdated(name || row.name, change),
           );
         }}
       >
+        {custom && <OwnFields row={row} />}
         <Fields row={row} />
         {error && <p className="text-sm text-danger">{error}</p>}
         <div className="flex flex-wrap gap-3">
@@ -73,10 +127,93 @@ export function EditPanel({
           >
             {row.active ? "Hide from store" : "Show in store"}
           </TicketButton>
+          <TicketButton
+            variant="secondary"
+            className="text-danger"
+            disabled={pending || held > 0}
+            onClick={() => remove(false)}
+          >
+            Remove from inventory
+          </TicketButton>
         </div>
+        {held > 0 && (
+          <div className="flex flex-col gap-3">
+            <p className="font-semibold">
+              {held} {held === 1 ? "buyer has" : "buyers have"} this on hold.
+              Removing takes it off their {held === 1 ? "request" : "requests"}{" "}
+              and tells them.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                autoFocus
+                onClick={() => setHeld(0)}
+                className={lineButton}
+              >
+                Keep
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => remove(true)}
+                className={`${lineButton} text-danger`}
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        )}
       </form>
-      {row.catalogItemId === null && <Photo row={row} />}
+      {custom && <Photo row={row} />}
     </Ticket>
+  );
+}
+
+/** A custom item's own name, set and number; catalog cards take the catalog's. */
+function OwnFields({ row }: { row: StockRow }) {
+  const other = row.kind === "other";
+  const id = (name: string) => `${name}-${row.id}`;
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={id("name")}>Name</Label>
+        <Input
+          id={id("name")}
+          name="name"
+          required
+          maxLength={120}
+          defaultValue={row.name}
+        />
+      </div>
+      <div
+        className={
+          other ? "flex flex-col gap-2" : "grid grid-cols-[1fr_7rem] gap-3"
+        }
+      >
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={id("set")}>
+            {other ? "Category (optional)" : "Set (optional)"}
+          </Label>
+          <Input
+            id={id("set")}
+            name="setName"
+            maxLength={120}
+            defaultValue={row.setName ?? ""}
+          />
+        </div>
+        {!other && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={id("number")}>Number</Label>
+            <Input
+              id={id("number")}
+              name="number"
+              maxLength={20}
+              defaultValue={row.number ?? ""}
+            />
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -132,6 +269,20 @@ function Fields({ row }: { row: StockRow }) {
   const priceId = `price-${row.id}`;
   return (
     <>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={`qty-${row.id}`}>Quantity</Label>
+        <Input
+          id={`qty-${row.id}`}
+          name="qty"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={9999}
+          required
+          defaultValue={row.qty}
+          className="num w-28"
+        />
+      </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor={priceId}>Fixed price (USD)</Label>
         <Input

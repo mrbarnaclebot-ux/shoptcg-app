@@ -116,6 +116,14 @@ function error(title: string, body: string, retry?: () => void) {
   });
 }
 
+/**
+ * What a buyer reads when the vendor removes something they hold or have in
+ * their cart. The cart and store pages show it without a toast (they load no
+ * toasts), and the request page also keeps it on the ticket.
+ */
+export const goneText = (names: string[]) =>
+  `${names.join(", ")} ${names.length === 1 ? "was" : "were"} removed from the store.`;
+
 export type ImportSummary = {
   count: number;
   unpriced: number;
@@ -187,6 +195,16 @@ export const toast = {
       `${name} is off your public table. Show it again from Edit.`,
       5000,
     ),
+  itemRemoved: (name: string, undo: () => void) =>
+    show(
+      "info",
+      "Removed",
+      `${name} is off your stock and store. Restore it from Removed.`,
+      8000,
+      { title: "Undo", onClick: undo },
+    ),
+  itemRestored: (name: string) =>
+    show("ok", "Restored", `${name} is back in your stock.`, 4000),
   qtyZero: (name: string, onHide: () => void) => {
     const body = `${name} is at 0 and shows as sold out.`;
     announce(`Sold out. ${body}`);
@@ -264,6 +282,9 @@ export const toast = {
       title: "Send again",
       onClick: sendAgain,
     }),
+  /** The vendor took these off their store while they were on hold. */
+  goneFromStore: (names: string[]) =>
+    show("warn", "Item removed", goneText(names), 8000),
   requestDeclined: (back: () => void) =>
     show(
       "info",

@@ -15,6 +15,7 @@ import { buyerRequest } from "@/lib/request-reads";
 import { saleForRequest } from "@/lib/sales";
 import { modeCopy } from "@/lib/selling-mode";
 import { UUID } from "@/lib/storefront";
+import { goneText } from "@/lib/toast";
 import { storeOr404 } from "../../store-lookup";
 import {
   CancelRequest,
@@ -59,10 +60,28 @@ export default async function RequestPage({
   if (r.status === "confirmed") return <Sold requestId={r.id} slug={slug} />;
   const copy = modeCopy(r.sellingMode);
   const soon = copy.holdSoon(r.tableLabel);
+  const gone = r.removedItems.length ? goneText(r.removedItems) : null;
   return (
     <main className="mx-auto flex w-full max-w-[560px] flex-1 flex-col gap-5 px-4 pt-6 pb-16 md:pt-10">
-      <RequestLive id={r.id} slug={slug} status={r.status} lines={r.lines} />
-      {r.status === "pending" ? (
+      <RequestLive
+        id={r.id}
+        slug={slug}
+        status={r.status}
+        lines={r.lines}
+        removed={r.removedItems}
+      />
+      {r.status === "declined" && gone && !r.lines.length ? (
+        // Removing its last item closed it; that, not a decline, is the news.
+        <Ended
+          title={gone}
+          sub="Nothing else was on your request, so it's closed."
+          action={
+            <Link href={`/${slug}`} className={lineButton}>
+              Back to store
+            </Link>
+          }
+        />
+      ) : r.status === "pending" ? (
         <>
           <Ticket
             as="div"
@@ -81,6 +100,9 @@ export default async function RequestPage({
               {r.code}
             </p>
             <HoldWarning at={r.expiresAt.getTime()} soon={soon} />
+            {gone && (
+              <p className="mt-4 font-semibold text-brand-text">{gone}</p>
+            )}
             <Checkout r={r} />
             {r.whatsapp && (
               <a

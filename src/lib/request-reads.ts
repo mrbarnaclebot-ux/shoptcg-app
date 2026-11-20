@@ -118,6 +118,7 @@ export async function buyerRequest(db: Db, id: string, sessionId: string) {
       fulfil: request.fulfil,
       payWith: request.payWith,
       deliveryAddress: request.deliveryAddress,
+      removedItems: request.removedItems,
       // Only for a buyer who chose transfer: the page shows it to nobody else.
       bankDetails: sql<
         string | null
