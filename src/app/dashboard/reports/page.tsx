@@ -19,6 +19,7 @@ import {
 } from "@/lib/reports";
 import { requireStore, sellerTimeZone } from "@/lib/session";
 import { shortName } from "@/lib/short-name";
+import { BackToMore } from "../back-to-more";
 
 export const metadata: Metadata = { title: "Report - tcgmart" };
 
@@ -26,7 +27,8 @@ type Search = Pick<PageProps<"/dashboard/reports">, "searchParams">;
 
 export default function ReportPage({ searchParams }: Search) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-start gap-4 px-4 pt-8 pb-16 lg:max-w-[1280px] lg:px-8">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-start gap-4 px-4 pt-4 pb-16 lg:max-w-[1280px] lg:px-8">
+      <BackToMore />
       <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
         Report
       </h1>
@@ -165,6 +167,60 @@ function BestSellers({ rows }: { rows: Report["bestSellers"] }) {
   );
 }
 
+/** One row per day with a sale, so a weekend or a month reads day by day. */
+function ByDay({ rows }: { rows: Report["days"] }) {
+  const money = "num py-1.5 pl-3 text-right font-semibold";
+  return (
+    <div className="mt-6">
+      <Heading>By day</Heading>
+      <div className="mt-2 overflow-x-auto">
+        <table className="w-full border-b border-border text-sm sm:text-base">
+          <thead className="text-left text-sm text-muted-foreground">
+            <tr>
+              <th scope="col" className="py-1.5 font-normal">
+                Day
+              </th>
+              <th scope="col" className="py-1.5 pl-3 text-right font-normal">
+                Sales
+              </th>
+              <th scope="col" className="py-1.5 pl-3 text-right font-normal">
+                Cash
+              </th>
+              <th scope="col" className="py-1.5 pl-3 text-right font-normal">
+                Card and other
+              </th>
+              <th scope="col" className="py-1.5 pl-3 text-right font-normal">
+                Total
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((d) => (
+              <tr key={d.day} className="border-t border-border">
+                <th scope="row" className="py-1.5 text-left font-semibold">
+                  {dayName(d.day)}
+                </th>
+                <td className="num py-1.5 pl-3 text-right">{d.sales}</td>
+                <td className={money}>{usd(Number(d.cash))}</td>
+                <td className={money}>{usd(Number(d.other))}</td>
+                <td className={money}>{usd(Number(d.total))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+const dayName = (iso: string) =>
+  new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+
 function SaleRow(props: {
   s: Report["sales"][number];
   store: string;
@@ -286,7 +342,7 @@ async function Report({ searchParams }: Search) {
                 secondCurrency={store.secondCurrency}
               />
               <dl className="border-b border-border">
-                <Row k="Revenue" big>
+                <Row k="Takings, after discounts" big>
                   {usd(Number(sum.revenue))}
                 </Row>
                 <Row k="Sales">{sum.sales}</Row>
@@ -295,6 +351,7 @@ async function Report({ searchParams }: Search) {
                 <Row k="Discounts given">{usd(Number(sum.discounts))}</Row>
               </dl>
             </div>
+            {range.from !== range.to && <ByDay rows={report.days} />}
             {/* Desktop: what sold beside who bought it. */}
             <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-10">
               <BestSellers rows={report.bestSellers} />

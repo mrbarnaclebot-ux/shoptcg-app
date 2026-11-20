@@ -6,6 +6,7 @@ import { lineButton, TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CONDITIONS } from "@/lib/condition";
+import type { LOWER_REASONS } from "@/lib/listing-input";
 import type { StockRow } from "@/lib/listings";
 import { toast } from "@/lib/toast";
 import { PhotoField } from "./add/custom-form";
@@ -136,6 +137,8 @@ export function EditPanel({
           // Sent only when typed, so a stepper tap since opening isn't undone.
           const qty = String(form.get("qty") ?? "").trim();
           const typed = qty !== String(row.qty);
+          // A lower count says why, for the ledger.
+          const reason = typed && Number(qty) < row.qty && form.get("reason");
           const name = custom ? String(form.get("name") ?? "").trim() : "";
           const change = [
             typed && `Quantity ${qty}.`,
@@ -148,6 +151,7 @@ export function EditPanel({
           save(
             {
               ...(typed && { qty }),
+              ...(reason && { reason }),
               overridePrice: fixed,
               cost: form.get("cost"),
               ...(row.kind === "raw" && { condition: form.get("condition") }),
@@ -301,23 +305,56 @@ function Photo({ row }: { row: StockRow }) {
   );
 }
 
+/** Why a typed count went down; the ledger shows it on the stock move. */
+const LOWER: [(typeof LOWER_REASONS)[number], string][] = [
+  ["adjusted", "Correction"],
+  ["counted", "Stock count"],
+  ["damaged", "Damaged"],
+  ["lost", "Lost"],
+];
+
+const select =
+  "h-12 bg-bg px-3 text-base shadow-[inset_0_0_0_1.5px_var(--border-strong)] focus-visible:shadow-[inset_0_0_0_2.5px_var(--focus)] focus-visible:outline-none";
+
 function Fields({ row }: { row: StockRow }) {
   const priceId = `price-${row.id}`;
+  const [qty, setQty] = useState(String(row.qty));
+  const lower = qty.trim() !== "" && Number(qty) < row.qty;
   return (
     <>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`qty-${row.id}`}>Quantity</Label>
-        <Input
-          id={`qty-${row.id}`}
-          name="qty"
-          type="number"
-          inputMode="numeric"
-          min={0}
-          max={9999}
-          required
-          defaultValue={row.qty}
-          className="num w-28"
-        />
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`qty-${row.id}`}>Quantity</Label>
+          <Input
+            id={`qty-${row.id}`}
+            name="qty"
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={9999}
+            required
+            value={qty}
+            onChange={(e) => setQty(e.target.value)}
+            className="num w-28"
+          />
+        </div>
+        {lower && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={`reason-${row.id}`}>Why fewer?</Label>
+            <select
+              id={`reason-${row.id}`}
+              name="reason"
+              defaultValue="adjusted"
+              className={select}
+            >
+              {LOWER.map(([v, label]) => (
+                <option key={v} value={v}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor={priceId}>Fixed price (USD)</Label>
@@ -344,7 +381,7 @@ function Fields({ row }: { row: StockRow }) {
             id={`cond-${row.id}`}
             name="condition"
             defaultValue={row.condition ?? "NM"}
-            className="h-12 bg-bg px-3 text-base shadow-[inset_0_0_0_1.5px_var(--border-strong)] focus-visible:shadow-[inset_0_0_0_2.5px_var(--focus)] focus-visible:outline-none"
+            className={select}
           >
             {CONDITIONS.map((c) => (
               <option key={c}>{c}</option>

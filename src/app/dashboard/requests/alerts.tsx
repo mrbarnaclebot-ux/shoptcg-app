@@ -48,7 +48,7 @@ async function unsubscribePush() {
   await sub.unsubscribe();
 }
 
-/** "Sound on" and "Test alert". Push is off, silently, without VAPID keys. */
+/** "Chime for new lists" and "Test alert". Push is off, silently, without VAPID keys. */
 export function AlertsRow({ publicKey }: { publicKey: string | null }) {
   const on = useSyncExternalStore(onSoundChange, soundOn, () => false);
   const [note, setNote] = useState<keyof typeof PUSH_NOTE | null>(null);
@@ -96,7 +96,7 @@ export function AlertsRow({ publicKey }: { publicKey: string | null }) {
           onChange={toggle}
           className="size-6 accent-brand"
         />
-        Sound on
+        Chime for new lists
       </label>
       <button
         type="button"

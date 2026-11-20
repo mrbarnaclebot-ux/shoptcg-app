@@ -33,6 +33,9 @@ describe("csvCell", () => {
     expect(csvCell('a,"b"')).toBe('"a,""b"""');
     expect(csvCell("a\nb")).toBe('"a\nb"');
     expect(csvCell(3)).toBe("3");
+    // A typed number is never a formula: a stock move of -1 stays a number.
+    expect(csvCell(-1)).toBe("-1");
+    expect(csvCell("-1")).toBe("'-1");
     expect(csvCell(null)).toBe("");
   });
 });

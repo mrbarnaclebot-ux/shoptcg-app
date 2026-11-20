@@ -18,11 +18,11 @@ Decisions by the owner:
 - [x] Word-by-word search across name, set and number (shared with the store page)
 - [x] Sort; bulk hide/show/remove/restore; CSV export; paging past 1,000 with a real count
 - [x] Phone filter-row fade; accurate limit message
-- [ ] Ledger stock valuation past 1,000 items → E
+- [x] Ledger stock valuation past 1,000 items → E
 - [x] Buy picker past 1,000 items → C
-- [ ] Export/import round-trip keeps hidden items hidden (a `hidden` column) → E
-- [ ] Reason picker when lowering stock by hand (Correction, Count, Damaged, Lost) → E
-- [ ] Bulk "set fixed price / follow market" → E
+- [x] Export/import round-trip keeps hidden items hidden (a `hidden` column) → E
+- [x] Reason picker when lowering stock by hand (Correction, Count, Damaged, Lost) → E
+- [x] Bulk "set fixed price / follow market" → E
 
 ## B. Bug sweep and Terms (PR #62)
 - [x] New-request chime and toast on every dashboard page; Requests tab count
@@ -63,23 +63,23 @@ Decisions by the owner:
 - [ ] Fieldset error wiring; heading levels; hide the stepper for last-one items
 - [ ] Image `sizes`; store grid paging past 1,000; sold-out items last
 
-## E. Settings and back office (not started)
-- [ ] More menu: settings vs work pages (Ledger, Report, Customers, Events, Sign, Preview); consistent layout and back links
-- [ ] Desktop More opens on Store profile; Account row on phones; Delete account at the bottom behind a disclosure; fix its export copy
-- [ ] One save pattern with an unsaved-changes bar; "Saved." clears on edit; warn on leave
-- [ ] Table number and NFC edited in one place (How you sell); read-only on Sign
-- [ ] Claim event form: errors per field with focus; no nested scroll; reason when Create is disabled; end time and time zone shown
-- [ ] Event status label in the house style; "Live" stamp
-- [ ] Claim events page width matches other pages; menu row for table stores
-- [ ] Pricing layout on desktop (played-card labels, rounding wrap)
-- [ ] Report: per-day rows; This month / Last month; wording matches the menu
-- [ ] Ledger: full CSV; item identity (set, number, condition) on stock moves; valuation past 1,000
-- [ ] Destructive actions consistent (Admin Dismiss confirm; event End/Block styling; store image remove undo)
-- [ ] Preview on phone opens the real page; "Open in new tab" on desktop
-- [ ] Customers empty state; placeholders say "e.g."; checkbox border contrast; "Chime for new lists" label
-- [ ] Remove customer button name (WCAG 2.5.3)
-- [ ] Admin: back link at the top; account search
-- [ ] Inventory leftovers from A: hidden column, stock-lowering reason, bulk fixed price
+## E. Settings and back office (PR #67)
+- [x] More menu: settings vs work pages (Ledger, Report, Customers, Events, Sign, Preview); consistent layout and back links
+- [x] Desktop More opens on Store profile; Account row on phones; Delete account at the bottom behind a disclosure; fix its export copy
+- [x] One save pattern with an unsaved-changes bar; "Saved." clears on edit; warn on leave
+- [x] Table number and NFC edited in one place (How you sell); read-only on Sign
+- [x] Claim event form: errors per field with focus; no nested scroll; reason when Create is disabled; end time and time zone shown
+- [x] Event status label in the house style; "Live" stamp
+- [x] Claim events page width matches other pages; menu row for table stores
+- [x] Pricing layout on desktop (played-card labels, rounding wrap)
+- [x] Report: per-day rows; This month / Last month; wording matches the menu
+- [x] Ledger: full CSV; item identity (set, number, condition) on stock moves; valuation past 1,000
+- [x] Destructive actions consistent (Admin Dismiss confirm; event End/Block styling; store image remove undo)
+- [x] Preview on phone opens the real page; "Open in new tab" on desktop
+- [x] Customers empty state; placeholders say "e.g."; checkbox border contrast; "Chime for new lists" label
+- [x] Remove customer button name (WCAG 2.5.3)
+- [x] Admin: back link at the top; account search
+- [x] Inventory leftovers from A: hidden column, stock-lowering reason, bulk fixed price
 
 ## F. Landing and foundations (not started)
 - [ ] OG image, `metadataBase`, title template (drop hand-typed suffixes)

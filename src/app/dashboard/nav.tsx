@@ -22,6 +22,8 @@ const TABS = [
   { href: "/dashboard/sales", label: "Sales", icon: ReceiptText },
   {
     href: "/dashboard/settings",
+    // A desk has room for the menu beside a page, so More opens on one.
+    desk: "/dashboard/settings/store",
     label: "More",
     icon: Ellipsis,
     also: [
@@ -49,14 +51,21 @@ export function DashboardNav() {
       data-tab-bar
       className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:sticky lg:top-0 lg:flex lg:h-dvh lg:w-24 lg:flex-col lg:gap-1 lg:border-t-0 lg:bg-bg lg:pt-20 lg:pb-0"
     >
-      {TABS.map(({ href, label, icon: Icon, also }) => {
+      {TABS.flatMap(({ href, desk, label, icon: Icon, also }) => {
         const count = href === "/dashboard" ? waiting : 0;
-        return (
+        // Two links when the desk's differs; CSS shows one, so one is read.
+        const links: [string, string][] = desk
+          ? [
+              [href, "lg:hidden"],
+              [desk, "hidden lg:flex"],
+            ]
+          : [[href, "flex"]];
+        return links.map(([to, show]) => (
           <Link
-            key={href}
-            href={href}
+            key={to}
+            href={to}
             aria-current={current(href, also) ? "page" : undefined}
-            className="group flex h-16 flex-col items-center justify-center gap-1 text-[0.8125rem] font-medium text-muted-foreground aria-[current=page]:font-bold aria-[current=page]:text-text"
+            className={`group ${show} h-16 flex-col items-center justify-center gap-1 text-[0.8125rem] font-medium text-muted-foreground aria-[current=page]:font-bold aria-[current=page]:text-text`}
           >
             <span className="relative">
               <Icon aria-hidden className="size-[22px] stroke-[1.75]" />
@@ -76,7 +85,7 @@ export function DashboardNav() {
               {count > 0 && <span className="sr-only">({count} waiting)</span>}
             </span>
           </Link>
-        );
+        ));
       })}
     </nav>
   );

@@ -179,12 +179,6 @@ export const toast = {
     );
   },
   notSaved: (why: string) => error("Not saved", why),
-  tableSaved: (label: string | null) => {
-    const body = label
-      ? `Table ${label} is on your sign and store page.`
-      : "Your sign no longer shows a table number.";
-    return show("ok", "Settings saved", body, 4000);
-  },
 
   itemUpdated: (name: string, change: string) =>
     show("ok", "Updated", `${name}. ${change}`, 4000),
@@ -205,6 +199,15 @@ export const toast = {
         : `${what} are off your stock and store. Restore them from Removed.`,
       8000,
       { title: "Undo", onClick: undo },
+    ),
+  /** Undo puts the same picture back, when the browser could keep a copy. */
+  imageRemoved: (what: string, undo?: () => void) =>
+    show(
+      "info",
+      "Removed",
+      `Your ${what} is off your store page.`,
+      8000,
+      undo && { title: "Undo", onClick: undo },
     ),
   itemRestored: (what: string, n: number) =>
     show(

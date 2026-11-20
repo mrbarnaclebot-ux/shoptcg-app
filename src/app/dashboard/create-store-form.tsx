@@ -42,7 +42,7 @@ export function CreateStoreForm() {
           name="name"
           required
           maxLength={80}
-          placeholder="Ridgeline Cards"
+          placeholder="e.g. Ridgeline Cards"
         />
         <FieldError id="name-error" message={state.errors?.name} />
       </div>

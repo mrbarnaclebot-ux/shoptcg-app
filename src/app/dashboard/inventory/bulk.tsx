@@ -8,8 +8,10 @@ import {
   type ReactNode,
 } from "react";
 import { lineButton } from "@/components/ticket-button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "@/lib/toast";
-import { showAction } from "./actions";
+import { setPriceAction, showAction } from "./actions";
 import { HeldAsk, restore, useRemove } from "./edit-panel";
 
 const Picked = createContext<{
@@ -109,6 +111,25 @@ function Bar(props: {
       );
       onDone();
     });
+  const [pricing, setPricing] = useState(false);
+  const [price, setPrice] = useState("");
+  const [priceError, setPriceError] = useState<string>();
+  // Blank follows the market again.
+  const reprice = (to: string) =>
+    start(async () => {
+      const res = await setPriceAction(ids, to).catch(() => ({
+        error: "Couldn't save that. Try again.",
+      }));
+      setPriceError(res.error);
+      if (res.error) return void toast.notSaved(res.error);
+      toast.itemUpdated(
+        what,
+        to.trim()
+          ? `Fixed price ${to.trim().replace("$", "")}.`
+          : "Follows the market.",
+      );
+      onDone();
+    });
   const again = () =>
     start(async () => {
       if (await restore(ids, what)) onDone();
@@ -144,6 +165,15 @@ function Bar(props: {
             </button>
             <button
               type="button"
+              disabled={pending}
+              aria-expanded={pricing}
+              onClick={() => setPricing(!pricing)}
+              className={lineButton}
+            >
+              Set price
+            </button>
+            <button
+              type="button"
               disabled={pending || gone.held > 0}
               onClick={() => gone.remove(false)}
               className={`${lineButton} text-danger`}
@@ -160,6 +190,50 @@ function Bar(props: {
           Clear
         </button>
       </div>
+      {pricing && view !== "removed" && (
+        <form
+          className="flex flex-wrap items-end gap-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            reprice(price);
+          }}
+        >
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="bulk-price">Fixed price each (USD)</Label>
+            <Input
+              id="bulk-price"
+              inputMode="decimal"
+              autoFocus
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="e.g. 4.50"
+              aria-invalid={priceError ? true : undefined}
+              aria-describedby="bulk-price-error"
+              className="num w-36"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={pending || !price.trim()}
+            className={lineButton}
+          >
+            Set fixed price
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => reprice("")}
+            className={lineButton}
+          >
+            Follow market
+          </button>
+          {priceError && (
+            <p id="bulk-price-error" className="w-full text-sm text-danger">
+              {priceError}
+            </p>
+          )}
+        </form>
+      )}
       {gone.error && <p className="text-sm text-danger">{gone.error}</p>}
       {gone.held > 0 && (
         <HeldAsk

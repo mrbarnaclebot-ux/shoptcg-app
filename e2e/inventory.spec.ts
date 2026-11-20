@@ -34,7 +34,7 @@ test("search by any words, sort, and export the whole stock", async ({
 
   const csv = await exported(page, "Export");
   expect(csv.file).toMatch(/^tcgmart-e2e-.+-inventory-\d{4}-\d\d-\d\d\.csv$/);
-  // Import CSV's columns, plus cost: the file goes straight back in.
+  // Import CSV's columns, plus cost and hidden: the file goes straight back in.
   expect(csv.head).toEqual([
     "name",
     "set",
@@ -47,6 +47,7 @@ test("search by any words, sort, and export the whole stock", async ({
     "qty",
     "price",
     "cost",
+    "hidden",
   ]);
   // Hidden stock too.
   expect(csv.rows).toHaveLength(9);
@@ -62,7 +63,12 @@ test("search by any words, sort, and export the whole stock", async ({
     "1",
     "25.00",
     "",
+    "",
   ]);
+  // The hidden LP Mew goes out marked, so an import brings it back hidden.
+  expect(csv.rows.find((r) => r[0] === "Mew ex" && r[5] === "LP")?.[11]).toBe(
+    "yes",
+  );
 });
 
 test("ticked rows hide together, and remove together with Undo", async ({

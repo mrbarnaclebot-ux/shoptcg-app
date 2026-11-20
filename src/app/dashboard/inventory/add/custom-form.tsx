@@ -91,7 +91,7 @@ export function CustomForm() {
         <Field
           name="setName"
           label="Category (optional)"
-          placeholder="Supplies, Hot Wheels"
+          placeholder="e.g. Supplies, Hot Wheels"
           error={e.setName}
         />
       ) : (
@@ -172,10 +172,15 @@ function KindFields({
           <Field
             name="grader"
             label="Grader"
-            placeholder="PSA, ACE, TAG"
+            placeholder="e.g. PSA, ACE, TAG"
             error={e.grader}
           />
-          <Field name="grade" label="Grade" placeholder="10" error={e.grade} />
+          <Field
+            name="grade"
+            label="Grade"
+            placeholder="e.g. 10"
+            error={e.grade}
+          />
         </div>
       )}
     </>

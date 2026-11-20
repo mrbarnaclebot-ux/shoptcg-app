@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import { Segmented } from "@/components/segmented";
 import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,19 @@ const LENGTHS = [
   [10080, "7 days"],
 ] as const;
 
+const noop = () => () => {};
+
+type Field = "title" | "starts" | "max" | "pay" | "items";
+// Top to bottom, so focus goes to the first field that needs a fix.
+const ORDER: Field[] = ["title", "starts", "max", "pay", "items"];
+const FOCUS: Record<Field, string> = {
+  title: "title",
+  starts: "starts",
+  max: "max",
+  pay: "pay",
+  items: "find",
+};
+
 const whole = (v: string, min: number, max: number) => {
   const n = Number(v);
   return Number.isInteger(n) && n >= min && n <= max ? n : null;
@@ -40,6 +53,13 @@ export function NewEventForm({ stock }: { stock: Stock[] }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [errs, setErrs] = useState<Partial<Record<Field, string>>>({});
+  // The browser's zone and clock: known only once the page is running.
+  const zone = useSyncExternalStore(
+    noop,
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+    () => null,
+  );
   const [title, setTitle] = useState("");
   const [when, setWhen] = useState<"now" | "later">("now");
   const [startsAt, setStartsAt] = useState("");
@@ -66,32 +86,45 @@ export function NewEventForm({ stock }: { stock: Stock[] }) {
   const edit = (id: string, patch: Partial<Picked>) =>
     setPicked((p) => ({ ...p, [id]: { ...p[id], ...patch } }));
 
+  const startTime =
+    when === "now" ? new Date() : startsAt ? new Date(startsAt) : null;
+  const ends =
+    startTime && !Number.isNaN(+startTime)
+      ? new Date(+startTime + Number(minutes) * 60_000)
+      : null;
+
+  const fail = (found: Partial<Record<Field, string>>) => {
+    setErrs(found);
+    const first = ORDER.find((f) => found[f]);
+    if (first) document.getElementById(FOCUS[first])?.focus();
+  };
+
   const submit = () =>
     start(async () => {
       setError(null);
       const start =
         when === "now" ? new Date() : startsAt ? new Date(startsAt) : null;
-      if (!start || Number.isNaN(+start))
-        return setError("Pick when it starts.");
+      const found: Partial<Record<Field, string>> = {};
+      if (!title.trim()) found.title = "Give the event a name.";
+      if (!start || Number.isNaN(+start)) found.starts = "Pick when it starts.";
       const max = whole(maxPerBuyer, 1, 99);
       const pay = whole(payWithin, 1, 168);
-      if (max === null)
-        return setError("Items per buyer is a whole number from 1 to 99.");
-      if (pay === null)
-        return setError("Time to pay is a whole number of hours, 1 to 168.");
+      if (max === null) found.max = "A whole number from 1 to 99.";
+      if (pay === null) found.pay = "A whole number of hours, 1 to 168.";
       const items = [];
       for (const [listingId, p] of Object.entries(picked)) {
         const each = whole(p.max, 1, 99);
         if (each === null)
-          return setError(
-            "Each per-item limit is a whole number from 1 to 99.",
-          );
+          found.items = "Each per-item limit is a whole number from 1 to 99.";
         items.push({
           listingId,
           price: priceMode === "custom" ? p.price.replace("$", "") : null,
-          maxPerBuyer: each,
+          maxPerBuyer: each ?? 1,
         });
       }
+      if (!start || max === null || pay === null || Object.keys(found).length)
+        return fail(found);
+      setErrs({});
       const res = await createEventAction({
         title,
         startsAt: start.toISOString(),
@@ -106,6 +139,18 @@ export function NewEventForm({ stock }: { stock: Stock[] }) {
       if ("error" in res) return setError(res.error);
       router.push(`/dashboard/events/${res.id}`);
     });
+
+  // A field's invalid state and its own error line.
+  const err = (f: Field) => ({
+    "aria-invalid": errs[f] ? true : undefined,
+    "aria-describedby": `${f}-error`,
+  });
+  const fieldError = (f: Field) =>
+    errs[f] ? (
+      <p id={`${f}-error`} className="text-sm font-semibold text-danger">
+        {errs[f]}
+      </p>
+    ) : null;
 
   return (
     <form
@@ -122,9 +167,11 @@ export function NewEventForm({ stock }: { stock: Stock[] }) {
           id="title"
           value={title}
           maxLength={80}
-          placeholder="Friday night drop"
+          placeholder="e.g. Friday night drop"
           onChange={(e) => setTitle(e.target.value)}
+          {...err("title")}
         />
+        {fieldError("title")}
       </div>
       <Segmented
         label="Starts"
@@ -143,7 +190,9 @@ export function NewEventForm({ stock }: { stock: Stock[] }) {
             type="datetime-local"
             value={startsAt}
             onChange={(e) => setStartsAt(e.target.value)}
+            {...err("starts")}
           />
+          {fieldError("starts")}
           <p className="text-sm text-muted-foreground">
             Buyers can join before it starts, so share the link early.
           </p>
@@ -163,8 +212,23 @@ export function NewEventForm({ stock }: { stock: Stock[] }) {
             </option>
           ))}
         </select>
-        <p className="text-sm text-muted-foreground">
-          Or less: it ends early once everything is claimed.
+        <p className="text-sm text-muted-foreground" aria-live="polite">
+          {zone && ends && (
+            <>
+              Ends{" "}
+              <span className="num font-semibold text-text">
+                {ends.toLocaleString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </span>
+              , {zone.replaceAll("_", " ")} time.{" "}
+            </>
+          )}
+          Or sooner: it ends early once everything is claimed.
         </p>
       </div>
       <Segmented
@@ -184,7 +248,9 @@ export function NewEventForm({ stock }: { stock: Stock[] }) {
             inputMode="numeric"
             value={maxPerBuyer}
             onChange={(e) => setMaxPerBuyer(e.target.value)}
+            {...err("max")}
           />
+          {fieldError("max")}
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="pay">Hours to pay after</Label>
@@ -193,7 +259,9 @@ export function NewEventForm({ stock }: { stock: Stock[] }) {
             inputMode="numeric"
             value={payWithin}
             onChange={(e) => setPayWithin(e.target.value)}
+            {...err("pay")}
           />
+          {fieldError("pay")}
         </div>
       </div>
       <p className="-mt-3 text-sm text-muted-foreground">
@@ -224,6 +292,7 @@ export function NewEventForm({ stock }: { stock: Stock[] }) {
           isn&apos;t claimed comes back after.
         </p>
         <Input
+          id="find"
           aria-label="Find in stock"
           placeholder="Find in stock"
           value={q}
@@ -234,7 +303,9 @@ export function NewEventForm({ stock }: { stock: Stock[] }) {
             Nothing in stock to add. Add stock first.
           </p>
         )}
-        <ul className="max-h-[60vh] overflow-y-auto">
+        {fieldError("items")}
+        {/* One scroll: the page's, not a box inside it. */}
+        <ul>
           {shown.map((s) => {
             const p = picked[s.id];
             return (
@@ -263,7 +334,7 @@ export function NewEventForm({ stock }: { stock: Stock[] }) {
                           id={`price-${s.id}`}
                           inputMode="decimal"
                           value={p.price}
-                          placeholder="0.00"
+                          placeholder="e.g. 12.00"
                           onChange={(e) =>
                             edit(s.id, { price: e.target.value })
                           }
@@ -292,13 +363,25 @@ export function NewEventForm({ stock }: { stock: Stock[] }) {
           {error}
         </p>
       )}
-      <TicketButton
-        type="submit"
-        disabled={pending || !count}
-        aria-busy={pending}
-      >
-        {pending ? "Saving" : when === "now" ? "Start event" : "Schedule event"}
-      </TicketButton>
+      <div className="flex flex-col items-start gap-2">
+        <TicketButton
+          type="submit"
+          disabled={pending || !count}
+          aria-busy={pending}
+          aria-describedby="create-why"
+        >
+          {pending
+            ? "Saving"
+            : when === "now"
+              ? "Start event"
+              : "Schedule event"}
+        </TicketButton>
+        {!count && (
+          <p id="create-why" className="text-sm text-muted-foreground">
+            Pick at least one item above to start.
+          </p>
+        )}
+      </div>
     </form>
   );
 }

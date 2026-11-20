@@ -63,7 +63,7 @@ test("a show's report adds up, and its CSV is safe to open", async ({
     "aria-current",
     "page",
   );
-  await expect(row(page, "Revenue")).toContainText("$140.00");
+  await expect(row(page, "Takings, after discounts")).toContainText("$140.00");
   await expect(row(page, "Sales")).toContainText("3");
   await expect(row(page, "Items sold")).toContainText("3");
   await expect(row(page, "Average sale")).toContainText("$46.67");
@@ -135,7 +135,7 @@ test("last week's sale is out of today and in a range that covers it", async ({
   await page.goto("/dashboard/reports");
   await expect(page.getByText("No sales in this range.")).toBeVisible();
   await page.goto(`/dashboard/reports?from=${day}&to=${day}`);
-  await expect(row(page, "Revenue")).toContainText("$25.00");
+  await expect(row(page, "Takings, after discounts")).toContainText("$25.00");
   await expect(page.getByRole("link", { name: "Today" })).not.toHaveAttribute(
     "aria-current",
     "page",
@@ -149,11 +149,9 @@ test("the promo list is opted-in buyers only, and unsubscribing leaves it", asyn
   test.setTimeout(90_000);
   const slug = await openVendor(page);
   await page.goto("/dashboard/customers");
+  // Nothing to search or export yet: just how the list fills.
   await expect(page.getByText("No customers yet.")).toBeVisible();
-  await expect(page.getByText("No one has opted in yet.")).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Export promo list" }),
-  ).toBeDisabled();
+  await expect(page.getByRole("search")).toHaveCount(0);
 
   const yes = buyerEmail();
   const gone = buyerEmail();
@@ -222,13 +220,13 @@ test("the promo list is opted-in buyers only, and unsubscribing leaves it", asyn
   await rowOf("Noor No").locator("summary").click();
   await expect(page.getByText(no)).toBeVisible();
 
-  await page.getByRole("button", { name: "Remove Noor No" }).click();
+  await page.getByRole("button", { name: "Remove customer Noor No" }).click();
   await expect(page.getByRole("button", { name: "Keep" })).toBeFocused();
   await page.getByRole("button", { name: "Keep" }).click();
   await expect(
-    page.getByRole("button", { name: "Remove Noor No" }),
+    page.getByRole("button", { name: "Remove customer Noor No" }),
   ).toBeFocused();
-  await page.getByRole("button", { name: "Remove Noor No" }).click();
+  await page.getByRole("button", { name: "Remove customer Noor No" }).click();
   await page.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(page.locator(".toasts")).toContainText("Customer removed");
   await expect(page.getByText("No one matches that.")).toBeVisible();

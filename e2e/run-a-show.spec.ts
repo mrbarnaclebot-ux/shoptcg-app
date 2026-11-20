@@ -253,7 +253,9 @@ test("a vendor runs a whole show", async ({ page, browser }) => {
 
   await test.step("the day's report adds up", async () => {
     await page.goto("/dashboard/reports");
-    await expect(reportRow(page, "Revenue")).toContainText(total);
+    await expect(reportRow(page, "Takings, after discounts")).toContainText(
+      total,
+    );
     await expect(reportRow(page, "Sales")).toContainText("1");
     await expect(reportRow(page, "Items sold")).toContainText("2");
     await expect(page.getByRole("table").getByRole("row").nth(1)).toContainText(

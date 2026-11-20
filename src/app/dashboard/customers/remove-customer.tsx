@@ -29,7 +29,8 @@ export function RemoveCustomer({ id, name }: { id: string; name: string }) {
           kept.current = false;
         }}
         onClick={() => setAsking(true)}
-        aria-label={`Remove ${name}`}
+        // Starts with the visible words, so voice control finds it (WCAG 2.5.3).
+        aria-label={`Remove customer ${name}`}
         className="min-h-11 self-start text-sm text-muted-foreground underline underline-offset-4"
       >
         Remove customer
