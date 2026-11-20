@@ -81,7 +81,7 @@ Decisions by the owner:
 - [x] Admin: back link at the top; account search
 - [x] Inventory leftovers from A: hidden column, stock-lowering reason, bulk fixed price
 
-## F. Landing and foundations (PR open)
+## F. Landing and foundations (PR #66)
 - [x] OG image, `metadataBase`, title template (drop hand-typed suffixes)
 - [x] Invite path: landing primary "Get an invite"; `/join` single ticket with Segmented
 - [x] Phone hero height so the main button is on the first screen; the product shown below 1280
