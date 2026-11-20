@@ -56,6 +56,7 @@ async function Review({
         code: draft.code,
         buyerName: draft.buyerName ?? "Buyer",
         isTest: draft.isTest,
+        emailed: draft.emailed,
         expiresAt: draft.expiresAt.getTime(),
         fulfil: draft.fulfil,
         payWith: draft.payWith,

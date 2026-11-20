@@ -38,8 +38,36 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* viewport-fit=cover: keep text clear of a landscape notch. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
   html {
     @apply font-sans;
+  }
+  /*
+    Fixed bottom bars would cover whatever focus or an anchor scrolls to
+    (WCAG 2.4.11), so the page scrolls clear of them: the dashboard tab bar,
+    the Confirm sale bar riding on it, the item page's cart button and the
+    claim room's total. The pages pad their ends by as much.
+  */
+  html:has([data-tab-bar]) {
+    scroll-padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+  html:has([data-bottom-bar]) {
+    scroll-padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+  }
+  html:has([data-tab-bar]):has([data-toast-clear]) {
+    scroll-padding-bottom: calc(12rem + env(safe-area-inset-bottom));
+  }
+  /* From lg the tab bar is a side rail and the item page's button sits in the page. */
+  @media (width >= 64rem) {
+    html:has([data-tab-bar]),
+    html:has([data-bottom-bar="item"]) {
+      scroll-padding-bottom: 0;
+    }
+    html:has([data-tab-bar]):has([data-toast-clear]) {
+      scroll-padding-bottom: 8rem;
+    }
   }
 }

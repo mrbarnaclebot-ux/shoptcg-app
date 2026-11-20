@@ -160,7 +160,8 @@ test("store settings keep their choices after saving", async ({ page }) => {
   await expect(
     page.getByRole("radio", { name: "Nearest $0.50" }),
   ).toBeChecked();
-  await expect(page.getByLabel("Price rule (% of market)")).toHaveValue("-10");
+  await expect(page.getByRole("radio", { name: "Under market" })).toBeChecked();
+  await expect(page.getByLabel("Percent under market")).toHaveValue("10");
 });
 
 test("a new store starts paused and one tap opens it", async ({ page }) => {

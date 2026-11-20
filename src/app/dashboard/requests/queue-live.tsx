@@ -12,10 +12,10 @@ import { RequestLines } from "@/components/request-lines";
 import { Stamp } from "@/components/stamp";
 import { StubValue, Ticket } from "@/components/ticket";
 import { lineButton, TicketButton } from "@/components/ticket-button";
-import { chime, soundOn } from "@/lib/chime";
 import type { Line } from "@/lib/request-reads";
 import { toast } from "@/lib/toast";
-import { clock, useLive, useNow } from "@/lib/use-live";
+import { clock, useNow } from "@/lib/use-live";
+import { useStoreLive } from "../store-live";
 import { declineAction, sendTestRequest } from "./actions";
 
 const WARN_MS = 3 * 60_000;
@@ -31,26 +31,10 @@ function onlineSub(cb: () => void) {
   };
 }
 
-const showQueue = () =>
-  document
-    .getElementById("requests-h")
-    ?.scrollIntoView({ behavior: "smooth", block: "start" });
-
-/** The queue's live line: chime and toast on arrival, status, and the pull fallback. */
+/** The queue's live line: status and the pull fallback. The layout's stream chimes. */
 export function QueueLive({ pending }: { pending: number }) {
   const router = useRouter();
-  const up = useLive("/api/live/store", (e) => {
-    if (e.t === "cancelled") toast.requestCancelled();
-  });
-  // On the count, not the event, so one found by a re-read still chimes.
-  const seen = useRef(pending);
-  useEffect(() => {
-    if (pending > seen.current) {
-      if (soundOn()) chime();
-      toast.newRequest(showQueue);
-    }
-    seen.current = pending;
-  }, [pending]);
+  const { up } = useStoreLive();
   const online = useSyncExternalStore(
     onlineSub,
     () => navigator.onLine,

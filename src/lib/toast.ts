@@ -317,9 +317,14 @@ export const toast = {
     announce("Recording sale");
     return put({ tone: "wait", title: "Recording", duration: null });
   },
-  saleRecorded: (id: string, receiptNo: string, total: string) => {
+  saleRecorded: (
+    id: string,
+    receiptNo: string,
+    total: string,
+    emailed: boolean,
+  ) => {
     const title = `Sale ${receiptNo} recorded`;
-    const body = `${total}. The receipt is on its way.`;
+    const body = emailed ? `${total}. The receipt is on its way.` : `${total}.`;
     announce(`${title}. ${body}`);
     put({ tone: "ok", title, body, duration: 6000 }, id);
     recorded = id;

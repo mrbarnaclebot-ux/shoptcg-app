@@ -191,15 +191,22 @@ export async function storeQueue(db: Db, storeId: string, timeZone: string) {
   };
 }
 
-/** Buyers still holding something: what pausing or stopping would leave waiting. */
-export async function waitingCount(db: Db, storeId: string) {
+/**
+ * Buyers still holding something: what pausing or stopping would leave waiting.
+ * `tests` counts the vendor's test requests too, as the queue and its chime do.
+ */
+export async function waitingCount(
+  db: Db,
+  storeId: string,
+  { tests = false } = {},
+) {
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(request)
     .where(
       and(
         eq(request.storeId, storeId),
-        eq(request.isTest, false),
+        tests ? undefined : eq(request.isTest, false),
         eq(request.walkUp, false),
         isNull(request.claimEventId),
         sql`${effectiveStatus} = 'pending'`,

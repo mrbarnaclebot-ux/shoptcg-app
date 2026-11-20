@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Big_Shoulders, Schibsted_Grotesk } from "next/font/google";
 import "./globals.css";
 
@@ -30,6 +30,13 @@ export const metadata: Metadata = {
   title: "tcgmart",
   description:
     "Run your Pokemon card business online and at shows: one live-priced store, carts that ping your phone, and a ledger that keeps the books.",
+};
+
+// cover: the page runs under the notch and home bar, so the bars' existing
+// env(safe-area-inset-*) padding takes effect. The theme colour is the hall.
+export const viewport: Viewport = {
+  viewportFit: "cover",
+  themeColor: "#090911",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

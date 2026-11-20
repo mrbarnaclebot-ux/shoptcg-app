@@ -17,6 +17,9 @@ import { toast } from "@/lib/toast";
 import { addCatalogAction } from "../actions";
 import { CostField } from "../edit-panel";
 
+export const OFFLINE =
+  "Couldn't reach the server. Check your connection and try again.";
+
 export function AddPanel({
   item,
   graded = false,
@@ -43,7 +46,7 @@ export function AddPanel({
         qty: form.get("qty"),
         overridePrice: fixed,
         cost: form.get("cost"),
-      });
+      }).catch(() => ({ error: OFFLINE, first: false, merged: null }));
       setError(res.error);
       if (res.error) return void toast.notSaved(res.error);
       // The panel turns into the confirmation; no toast on top of it.
@@ -60,7 +63,15 @@ export function AddPanel({
     );
   return (
     <Ticket as="div" className="[--stub:2rem]">
-      <form action={submit} data-panel className="flex flex-col gap-5">
+      {/* By hand: a form action clears the fields even when the add fails. */}
+      <form
+        onSubmit={(ev) => {
+          ev.preventDefault();
+          submit(new FormData(ev.currentTarget));
+        }}
+        data-panel
+        className="flex flex-col gap-5"
+      >
         <button
           type="button"
           onClick={onClose}

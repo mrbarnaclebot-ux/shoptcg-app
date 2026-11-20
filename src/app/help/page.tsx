@@ -195,21 +195,28 @@ export default function HelpPage() {
               </li>
               <li>
                 Name your store and pick its address (tcgmart.app/your-name).
-                The address can&apos;t be changed later, so pick one you&apos;ll
-                keep.
+                You can change it later under{" "}
+                <strong>More → Store profile → Link</strong>; old links keep
+                working and send buyers to the new one.
               </li>
-              <li>
-                Under <strong>More → Store profile</strong>, add a banner and a
-                profile image. Buyers see them at the top of your store.
-              </li>
-              <li>Add your stock and set your price rule.</li>
-              <li>Choose whether you sell online or at a table.</li>
-              <li>Share your link or print your table sign, then open.</li>
             </ol>
             <p>
-              Your dashboard shows a short checklist until you hide it. This
-              page stays here for later.
+              Then your dashboard shows a short checklist, in this order, until
+              you hide it:
             </p>
+            <ol>
+              <li>Add your stock.</li>
+              <li>Choose whether you sell online or at a table.</li>
+              <li>Set your price rule.</li>
+              <li>
+                Under <strong>More → Store profile</strong>, add a banner or a
+                profile image. Buyers see them at the top of your store.
+              </li>
+              <li>Turn on alerts.</li>
+              <li>Share your link, or print your table sign.</li>
+              <li>Open your store.</li>
+            </ol>
+            <p>This page stays here for later.</p>
           </Section>
 
           <Section id="stock" wide shots={["add-stock"]}>
@@ -268,8 +275,10 @@ export default function HelpPage() {
             </p>
             <ul>
               <li>
-                <strong>Price rule:</strong> sell above or below market by a
-                percentage. Use -10 to sell 10% under market, 0 to match it.
+                <strong>Price rule:</strong> sell under or over market by a
+                percentage. Pick <strong>Under market</strong> or{" "}
+                <strong>Over market</strong> and enter the percent; 0 matches
+                market.
               </li>
               <li>
                 <strong>Played cards:</strong> market prices are for Near Mint.
