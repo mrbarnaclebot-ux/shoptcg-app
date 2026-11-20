@@ -642,7 +642,7 @@ describe("export", () => {
     const gone = await item(s, "Gone card");
     await removeListings(db, s, [gone.id], false);
     const rows = await stockCsvRows(db, s);
-    expect(rows[0]).toEqual([...CSV_COLUMNS, "cost"]);
+    expect(rows[0]).toEqual([...CSV_COLUMNS]);
     const back = readCsv(toCsv(rows).slice(1));
     expect(back).toEqual([
       {

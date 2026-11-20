@@ -15,6 +15,11 @@ export const HOLD_MS: Record<SellingMode, number> = {
   online: 24 * 60 * 60_000,
 };
 
+/** "+15 min" on the sale screen, for a buyer who went to the ATM. */
+export const EXTEND_MIN = 15;
+/** The most a buyer's hold can gain in all; request_hold_added_min checks it too. */
+export const MAX_EXTEND_MIN = 60;
+
 export const MODE_COPY = {
   table: {
     label: "At a table",

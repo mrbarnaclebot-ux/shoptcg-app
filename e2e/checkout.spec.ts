@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   add,
-  confirm,
+  confirmAndView,
   fillForm,
   newBuyer,
   openVendor,
@@ -80,7 +80,7 @@ test("an online buyer picks delivery and bank transfer, then sees where to pay",
     "tel:0771234567",
   );
   await expect(page.getByRole("radio", { name: "Transfer" })).toBeChecked();
-  await confirm(page).click();
+  await confirmAndView(page);
   await expect(page.getByTestId("receipt-no")).toBeVisible();
 });
 

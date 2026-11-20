@@ -37,3 +37,16 @@ export function priceSale(
   if (discount > subtotal) return null;
   return { subtotal, discount, total: subtotal - discount, pct };
 }
+
+/**
+ * Round sums a buyer hands over for this total, in cents: the next $10, $20,
+ * $50 and $100 above it, at most three. A $13 sale offers $20, $50, $100.
+ */
+export function cashNotes(total: number) {
+  const notes: number[] = [];
+  for (const step of [1000, 2000, 5000, 10_000]) {
+    const n = Math.ceil(total / step) * step;
+    if (n > total && !notes.includes(n)) notes.push(n);
+  }
+  return notes.slice(0, 3);
+}

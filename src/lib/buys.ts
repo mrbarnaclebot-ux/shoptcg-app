@@ -11,8 +11,17 @@ import {
   store,
 } from "@/db/schema";
 import { stockReason } from "@/lib/ledger";
-import { customListingSchema, priceSchema } from "@/lib/listing-input";
-import { addCustomListing, blendCost } from "@/lib/listings";
+import {
+  catalogListingSchema,
+  customListingSchema,
+  priceSchema,
+} from "@/lib/listing-input";
+import {
+  addCustomListing,
+  blendCost,
+  catalogCard,
+  stockCatalogCard,
+} from "@/lib/listings";
 import { fromCents, toCents } from "@/lib/money";
 import { localDate } from "@/lib/reports";
 
@@ -42,6 +51,16 @@ export const buyInput = z
           z.object({ listingId: z.uuid(), qty, unitPrice: paid }),
           // A new item: a custom listing made with the bought units.
           z.object({ item: customListingSchema, qty, unitPrice: paid }),
+          // A catalog card: it tops up the store's row of that card and
+          // condition, or makes one (the add rule).
+          catalogListingSchema
+            .pick({
+              catalogItemId: true,
+              condition: true,
+              grader: true,
+              grade: true,
+            })
+            .extend({ qty, unitPrice: paid }),
         ]),
       )
       .min(1, "Add what you bought")
@@ -55,7 +74,14 @@ export const buyInput = z
 export type BuyInput = z.infer<typeof buyInput>;
 
 export type BuyResult =
-  | { ok: true; buyId: string; total: string; already?: true }
+  | {
+      ok: true;
+      buyId: string;
+      total: string;
+      already?: true;
+      /** Catalog cards that got a new listing, to price. */
+      added?: string[];
+    }
   /** A listing isn't this store's (or is gone); nothing changed. */
   | { gone: true }
   /** These listings would pass 9999 units; nothing changed. */
@@ -65,13 +91,26 @@ export type BuyResult =
  * Records cards bought at the table: the buy, its lines and the stock, in one
  * transaction, labelled "bought" in the ledger. The price paid becomes the
  * listing's cost: averaged with what the units on hand cost when that is known,
- * otherwise it replaces it. Safe to repeat: the same id returns the first buy.
+ * otherwise it replaces it. A catalog card follows the add rule
+ * (stockCatalogCard). Safe to repeat: the same id returns the first buy.
  */
-export function recordBuy(
+export async function recordBuy(
   db: Db,
   storeId: string,
   input: BuyInput,
 ): Promise<BuyResult> {
+  // Outside the lock: a picked grade makes its graded catalog row.
+  const cards = await Promise.all(
+    input.lines.map((l) =>
+      "catalogItemId" in l
+        ? catalogCard(db, {
+            ...l,
+            cost: l.unitPrice,
+            overridePrice: null,
+          })
+        : null,
+    ),
+  );
   return db.transaction(async (t) => {
     const tx = t as Db;
     // Same lock order as a sale (store, then listings by id), so they never deadlock.
@@ -142,6 +181,7 @@ export function recordBuy(
     });
     await stockReason(tx, "bought", input.id);
     const lines = [];
+    const added = [];
     for (const [i, l] of input.lines.entries()) {
       let listingId: string;
       let name: string;
@@ -156,7 +196,7 @@ export function recordBuy(
             updatedAt: sql`now()`,
           })
           .where(eq(listing.id, listingId));
-      } else {
+      } else if ("item" in l) {
         const row = await addCustomListing(tx, storeId, {
           ...l.item,
           qty: l.qty,
@@ -164,6 +204,12 @@ export function recordBuy(
         });
         listingId = row.id;
         name = l.item.name;
+      } else {
+        const card = cards[i]!;
+        const row = await stockCatalogCard(tx, storeId, card);
+        if (!row.merged) added.push(row.catalogItemId!);
+        listingId = row.id;
+        name = card.name;
       }
       lines.push({
         buyId: input.id,
@@ -175,7 +221,7 @@ export function recordBuy(
       });
     }
     await tx.insert(buyLine).values(lines);
-    return { ok: true, buyId: input.id, total };
+    return { ok: true, buyId: input.id, total, added };
   });
 }
 

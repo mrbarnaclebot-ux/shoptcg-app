@@ -3,10 +3,11 @@ import { and, eq } from "drizzle-orm";
 import { beforeAll, expect, test } from "vitest";
 import type { Db } from "@/db/open";
 import { buy, buyLine, listing, stockMove, store, till } from "@/db/schema";
+import { upsertHits } from "@/lib/catalog";
 import { buyInput, recordBuy } from "@/lib/buys";
 import { createRequest } from "@/lib/requests";
 import { confirmSale, voidSale } from "@/lib/sales";
-import { addStore, migratedDb } from "@/lib/test-fixtures";
+import { addStore, hit, migratedDb } from "@/lib/test-fixtures";
 import { overShort } from "@/lib/format";
 import { closeTill, currentTill, openTill, setFloat } from "@/lib/till";
 
@@ -50,7 +51,7 @@ test("a buy adds stock, averages the cost and labels the move", async () => {
     lines: [{ listingId: s.listingId, qty: 2, unitPrice: "16" }],
   });
   const r = await recordBuy(db, s.storeId, b);
-  expect(r).toEqual({ ok: true, buyId: b.id, total: "32.00" });
+  expect(r).toEqual({ ok: true, buyId: b.id, total: "32.00", added: [] });
   // Two on hand at $10 and two bought at $16: $13 each.
   expect(await one(s.listingId)).toMatchObject({ qty: 4, cost: "13.00" });
   const [move] = await db
@@ -118,6 +119,69 @@ test("a new item becomes a listing with the bought units at cost", async () => {
     .from(stockMove)
     .where(eq(stockMove.listingId, line.listingId));
   expect(move).toMatchObject({ reason: "bought", delta: 3, ref: b.id });
+});
+
+test("a catalog card tops up the store's row of that card and condition, or makes one", async () => {
+  const s = await shop();
+  const [card] = await upsertHits(db, [hit({ providerId: "buy-merge-1" })]);
+  const [nm] = await db
+    .insert(listing)
+    .values({
+      storeId: s.storeId,
+      catalogItemId: card.id,
+      kind: "raw",
+      language: "en",
+      condition: "NM",
+      qty: 2,
+      cost: "10.00",
+    })
+    .returning({ id: listing.id });
+  // A hidden row of the same card is left alone, as an add leaves it.
+  await db.insert(listing).values({
+    storeId: s.storeId,
+    catalogItemId: card.id,
+    kind: "raw",
+    language: "en",
+    condition: "NM",
+    qty: 5,
+    active: false,
+  });
+  const b = input({
+    lines: [
+      { catalogItemId: card.id, condition: "NM", qty: 2, unitPrice: "16" },
+      { catalogItemId: card.id, condition: "LP", qty: 1, unitPrice: "5" },
+    ],
+  });
+  const r = await recordBuy(db, s.storeId, b);
+  expect(r).toMatchObject({ ok: true, total: "37.00", added: [card.id] });
+  expect(await one(nm.id)).toMatchObject({ qty: 4, cost: "13.00" });
+  const lines = await db.select().from(buyLine).where(eq(buyLine.buyId, b.id));
+  expect(lines.map((l) => l.name)).toEqual(["Charizard ex", "Charizard ex"]);
+  expect(lines[0].listingId).toBe(nm.id);
+  // The LP copy is a new row with the catalog's kind and language, at cost.
+  expect(await one(lines[1].listingId)).toMatchObject({
+    catalogItemId: card.id,
+    condition: "LP",
+    name: null,
+    qty: 1,
+    cost: "5.00",
+  });
+  const moves = await db
+    .select()
+    .from(stockMove)
+    .where(eq(stockMove.ref, b.id));
+  expect(moves.map((m) => [m.reason, m.delta]).sort()).toEqual([
+    ["bought", 1],
+    ["bought", 2],
+  ]);
+  // A raw card needs a condition, as in the add panel.
+  await expect(
+    recordBuy(
+      db,
+      s.storeId,
+      input({ lines: [{ catalogItemId: card.id, qty: 1, unitPrice: "1" }] }),
+    ),
+  ).rejects.toThrow(/condition/);
 });
 
 test("a double tap records one buy and adds stock once", async () => {

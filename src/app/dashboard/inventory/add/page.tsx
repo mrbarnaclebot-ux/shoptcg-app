@@ -1,6 +1,10 @@
 import { ChevronLeft } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
+import { TicketLoading } from "@/components/ticket";
+import { requireStore } from "@/lib/session";
+import { storePricing } from "@/lib/vendor-price";
 import { AddFlow } from "./add-flow";
 
 export const metadata: Metadata = { title: "Add stock - tcgmart" };
@@ -18,7 +22,15 @@ export default function AddPage() {
       <h1 className="font-display text-[3.5rem] leading-[0.82] font-black">
         Add stock
       </h1>
-      <AddFlow />
+      <Suspense fallback={<TicketLoading>Loading</TicketLoading>}>
+        <Flow />
+      </Suspense>
     </main>
   );
+}
+
+/** The store's pricing rides along so a pick shows what it will sell at. */
+async function Flow() {
+  const { store } = await requireStore();
+  return <AddFlow pricing={storePricing(store)} />;
 }

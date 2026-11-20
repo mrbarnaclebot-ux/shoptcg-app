@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { awaitingPrice, underMarket, vendorPrice } from "@/lib/vendor-price";
+import {
+  awaitingPrice,
+  conditionPrice,
+  underMarket,
+  vendorPrice,
+} from "@/lib/vendor-price";
 
 describe("awaitingPrice", () => {
   const now = Date.parse("2026-11-12T12:00:00Z");
@@ -60,4 +65,25 @@ describe("underMarket", () => {
   ])("price %s market %s -> %s", (p, m, want) =>
     expect(underMarket(p, m)).toBe(want),
   );
+});
+
+describe("conditionPrice", () => {
+  const flat = { rulePct: 0, rounding: 0 };
+  it("moves NM to the condition share to the cent, then the store rule", () => {
+    // 85% of $291.77 is $248.0045.
+    expect(conditionPrice(291.77, 85, flat)).toEqual({
+      market: 248,
+      sell: 248,
+    });
+    // Half a cent rounds up, as Postgres round() does.
+    expect(conditionPrice(291.7, 85, flat)?.market).toBe(247.95);
+    // 10% under, to whole dollars.
+    expect(conditionPrice(291.77, 85, { rulePct: -10, rounding: 1 })).toEqual({
+      market: 248,
+      sell: 223,
+    });
+    expect(conditionPrice(10, 100, flat)).toEqual({ market: 10, sell: 10 });
+  });
+  it("is null with no market yet", () =>
+    expect(conditionPrice(null, 85, flat)).toBeNull());
 });

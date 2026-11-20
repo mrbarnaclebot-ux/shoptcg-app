@@ -4,6 +4,7 @@ import { newVendor } from "./auth";
 import {
   buyerEmail,
   confirm,
+  confirmAndView,
   exported,
   newBuyer,
   outboxLine,
@@ -225,7 +226,7 @@ test("a vendor runs a whole show", async ({ page, browser }) => {
     await expect(confirm(page)).toHaveText(/\$58\.95/);
     total = "$58.95";
     await check(page, "confirm");
-    await confirm(page).click();
+    await confirmAndView(page);
     await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
     await expect(page.getByText("Paid by Cash")).toBeVisible();
     await expect(page.getByText(`Emailed to ${emailA}.`)).toBeVisible();

@@ -114,6 +114,15 @@ export const pay = async (page: Page, method: string) => {
 export const confirm = (page: Page) =>
   page.getByRole("button", { name: /^Confirm sale/ });
 
+/** Confirms, then opens the receipt from the toast: the sale screen goes back to the queue. */
+export async function confirmAndView(
+  page: Page,
+  tap: "click" | "dblclick" = "click",
+) {
+  await confirm(page)[tap]();
+  await page.getByRole("button", { name: "View receipt" }).click();
+}
+
 export async function outboxLine(email: string) {
   let line: string | undefined;
   await expect

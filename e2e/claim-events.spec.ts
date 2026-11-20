@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import {
   buyerEmail,
-  confirm,
+  confirmAndView,
   newBuyer,
   openVendor,
   outboxLine,
@@ -107,7 +107,7 @@ test("two buyers race for the last unit, the vendor marks it paid, and leftovers
   ).toHaveAttribute("href", /^https:\/\/wa\.me\/947/);
   await claimCard.getByRole("link", { name: "Mark as paid" }).click();
   await pay(page, "Cash");
-  await confirm(page).click();
+  await confirmAndView(page);
   await expect(page.getByTestId("receipt-no")).toBeVisible();
   if (winnerEmail) await outboxLine(winnerEmail);
   await expect(

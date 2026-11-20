@@ -1,7 +1,7 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import {
   buyerEmail,
-  confirm,
+  confirmAndView,
   exported,
   openVendor,
   outboxLine,
@@ -29,7 +29,7 @@ async function sell(page: Page, browser: Browser, slug: string, s: Sale) {
     await page.getByLabel("Percent off").fill(s.pct);
   }
   await pay(page, s.method);
-  await confirm(page).click();
+  await confirmAndView(page);
   await expect(page.getByTestId("receipt-no")).toBeVisible();
 }
 

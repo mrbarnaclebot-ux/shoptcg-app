@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { confirm, openVendor, pay, reviewSale } from "./buyer";
+import { confirmAndView, openVendor, pay, reviewSale } from "./buyer";
 
 const figure = (page: Page, label: string) =>
   page.locator("dl > div", { hasText: label }).locator("dd");
@@ -19,7 +19,7 @@ test("the ledger shows profit, stock value and every stock move", async ({
   // One item with a cost and one without, sold together.
   await reviewSale(page, browser, slug, ["Charizard ex", "Mew ex"]);
   await pay(page, "Cash");
-  await confirm(page).click();
+  await confirmAndView(page);
   await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
 
   await page.goto("/dashboard/settings");

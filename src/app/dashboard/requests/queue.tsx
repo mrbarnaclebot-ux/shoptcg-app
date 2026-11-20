@@ -6,7 +6,7 @@ import { getDb } from "@/db";
 import { vapid } from "@/lib/push";
 import { usd } from "@/lib/format";
 import { storeQueue, type QueueTicket as Row } from "@/lib/request-reads";
-import { salesToday } from "@/lib/sales";
+import { salesOn } from "@/lib/sales";
 import { modeCopy, type SellingMode } from "@/lib/selling-mode";
 import { sellerTimeZone } from "@/lib/session";
 import { AlertsRow, InstallNudge } from "./alerts";
@@ -35,7 +35,7 @@ export async function RequestQueue({
     console.error("[queue] load failed", err);
     return null;
   });
-  const sold = (await salesToday(getDb(), storeId, tz).catch(() => [])).filter(
+  const sold = (await salesOn(getDb(), storeId, tz).catch(() => [])).filter(
     (s) => !s.voided,
   );
   const takings = sold.reduce((sum, s) => sum + Number(s.total), 0);
