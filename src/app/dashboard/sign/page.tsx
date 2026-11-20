@@ -4,9 +4,9 @@ import { Suspense } from "react";
 import { appUrl } from "@/lib/deployed";
 import { modeCopy } from "@/lib/selling-mode";
 import { requireStore } from "@/lib/session";
+import { BackToMore } from "../back-to-more";
 import { PrintButton } from "./print-button";
 import "./sign.css";
-import { TableForm } from "./table-form";
 import { TableSign, type SignSize } from "./table-sign";
 
 export const metadata: Metadata = { title: "Table sign" };
@@ -25,7 +25,8 @@ export default function SignPage({
   searchParams,
 }: PageProps<"/dashboard/sign">) {
   return (
-    <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-8 px-4 pt-8 pb-16 md:px-6 lg:px-8">
+    <main className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col gap-8 px-4 pt-4 pb-16 md:px-6 lg:px-8">
+      <BackToMore />
       <h1 className="font-display text-4xl font-black">Table sign</h1>
       <Suspense
         fallback={<div className="h-[600px] animate-pulse bg-surface" />}
@@ -79,29 +80,45 @@ async function Sign({
             ))}
           </div>
         </nav>
-        <TableForm value={store.tableLabel ?? ""} />
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-semibold">NFC tag</span>
-          <p className="text-sm text-muted-foreground">
-            {store.nfcEnabled ? (
-              <>
-                The sign says &quot;Or tap your phone here&quot;. Write this
-                link to an NTAG215 tag and stick it by that line:{" "}
-                <span className="num font-semibold break-all text-text">
-                  {nfc.url}
-                </span>
-              </>
-            ) : (
-              "No NFC line on the sign."
-            )}{" "}
-            <Link
-              href="/dashboard/settings/table"
-              className="font-semibold text-text underline"
-            >
-              {store.nfcEnabled ? "Change in settings" : "I have a tag"}
-            </Link>
-          </p>
-        </div>
+        {/* Edited under How you sell only, so both save the same way. */}
+        <dl className="flex flex-col gap-3 text-sm">
+          {copy.showTable && (
+            <div className="flex flex-col gap-1">
+              <dt className="font-semibold">Table number</dt>
+              <dd className="text-muted-foreground">
+                {store.tableLabel ? (
+                  <span className="num font-semibold text-text">
+                    {store.tableLabel}
+                  </span>
+                ) : (
+                  "None on the sign."
+                )}
+              </dd>
+            </div>
+          )}
+          <div className="flex flex-col gap-1">
+            <dt className="font-semibold">NFC tag</dt>
+            <dd className="text-muted-foreground">
+              {store.nfcEnabled ? (
+                <>
+                  The sign says &quot;Or tap your phone here&quot;. Write this
+                  link to an NTAG215 tag and stick it by that line:{" "}
+                  <span className="num font-semibold break-all text-text">
+                    {nfc.url}
+                  </span>
+                </>
+              ) : (
+                "No NFC line on the sign."
+              )}
+            </dd>
+          </div>
+        </dl>
+        <Link
+          href="/dashboard/settings/table"
+          className="-mt-6 inline-flex min-h-11 items-center self-start font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+        >
+          Edit {copy.showTable ? "table number and NFC" : "NFC"}
+        </Link>
         <div className="flex flex-col items-start gap-3">
           <PrintButton />
           <p className="text-sm text-muted-foreground">

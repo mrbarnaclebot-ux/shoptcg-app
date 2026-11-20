@@ -15,37 +15,22 @@ import { TicketLoading } from "@/components/ticket";
 import { getDb } from "@/db";
 import { ExportButton } from "@/components/export-button";
 import { lineButton } from "@/components/ticket-button";
-import type { BuyMethod } from "@/db/schema";
-import { overShort, usd } from "@/lib/format";
-import { ledger, MOVES_SHOWN, type StockReason } from "@/lib/ledger";
+import { overShort, usd, withLanguage } from "@/lib/format";
+import { ledger, MOVE_LABEL, MOVES_SHOWN, PAID_WITH } from "@/lib/ledger";
 import { localDate, parseRange } from "@/lib/reports";
 import { requireStore, sellerTimeZone } from "@/lib/session";
+import { BackToMore } from "../back-to-more";
 
 export const metadata: Metadata = { title: "Ledger" };
 
 type Search = Pick<PageProps<"/dashboard/ledger">, "searchParams">;
 
 const BASE = "/dashboard/ledger";
-const REASON: Record<StockReason, string> = {
-  opening: "Opening stock",
-  added: "Added",
-  adjusted: "Adjusted",
-  sold: "Sold",
-  voided: "Sale voided",
-  bought: "Bought",
-  removed: "Removed",
-  restored: "Restored",
-};
-const PAID_WITH: Record<BuyMethod, string> = {
-  cash: "Cash",
-  card: "Card",
-  paypal: "PayPal",
-  trade: "Trade",
-};
 
 export default function LedgerPage({ searchParams }: Search) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-start gap-6 px-4 pt-8 pb-16 lg:max-w-[1280px] lg:px-8">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-start gap-6 px-4 pt-4 pb-16 lg:max-w-[1280px] lg:px-8">
+      <BackToMore />
       <h1 className="font-display text-4xl font-black">Ledger</h1>
       <Suspense fallback={<TicketLoading>Adding it up</TicketLoading>}>
         <Ledger searchParams={searchParams} />
@@ -74,6 +59,18 @@ function Row(props: { k: string; children: ReactNode; big?: boolean }) {
 }
 
 const units = (n: number) => `${n} ${n === 1 ? "item" : "items"}`;
+
+// Which one moved: set, number and condition, as the report's best sellers say it.
+const itemMeta = (m: {
+  setName: string | null;
+  number: string | null;
+  condition: string | null;
+  language: string | null;
+}) =>
+  withLanguage(
+    [m.setName, m.number, m.condition].filter(Boolean).join(" "),
+    m.language ?? "en",
+  );
 
 async function Ledger({ searchParams }: Search) {
   const { store } = await requireStore();
@@ -177,6 +174,12 @@ async function Ledger({ searchParams }: Search) {
             >
               Export buys
             </ExportButton>
+            <ExportButton
+              href={`/dashboard/ledger/export?from=${range.from}&to=${range.to}`}
+              unit="row"
+            >
+              Export ledger
+            </ExportButton>
           </div>
         </section>
 
@@ -264,8 +267,13 @@ async function Ledger({ searchParams }: Search) {
                 >
                   <span className="min-w-0 font-semibold [overflow-wrap:anywhere]">
                     {m.name ?? "Removed item"}
+                    {itemMeta(m) && (
+                      <small className="block text-sm font-normal text-muted-foreground">
+                        {itemMeta(m)}
+                      </small>
+                    )}
                     <small className="block text-sm font-normal text-muted-foreground">
-                      {time.format(m.at)}. {REASON[m.reason]}
+                      {time.format(m.at)}. {MOVE_LABEL[m.reason]}
                       {m.saleId && m.receiptNo && (
                         <>
                           ,{" "}

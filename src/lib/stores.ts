@@ -178,20 +178,6 @@ export const tableLabelSchema = z.preprocess(
     .nullable(),
 );
 
-/** Sets the owner's table number; the owner id is the ownership check. */
-export async function updateTableLabel(
-  db: Db,
-  ownerUserId: string,
-  tableLabel: string | null,
-) {
-  const rows = await db
-    .update(store)
-    .set({ tableLabel })
-    .where(eq(store.ownerUserId, ownerUserId))
-    .returning({ id: store.id });
-  return rows.length > 0;
-}
-
 const checkbox = z.preprocess((v) => v === "on" || v === true, z.boolean());
 
 const conditionPctField = z.coerce

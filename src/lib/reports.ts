@@ -12,7 +12,7 @@ export const SALES_SHOWN = 500;
 export type Range = {
   from: string;
   to: string;
-  preset: "today" | "weekend" | "custom";
+  preset: "today" | "weekend" | "month" | "last-month" | "custom";
 };
 
 type Params = Record<string, string | string[] | undefined>;
@@ -68,6 +68,18 @@ export function weekendLabel(today: string) {
   return today === from || today === to ? "This weekend" : "Last weekend";
 }
 
+/** The calendar month a date is in, first to last day. */
+export function monthOf(iso: string) {
+  const from = `${iso.slice(0, 8)}01`;
+  const next = new Date(`${from}T00:00:00Z`);
+  next.setUTCMonth(next.getUTCMonth() + 1);
+  return { from, to: addDays(next.toISOString().slice(0, 10), -1) };
+}
+
+/** The month before the one this date is in. */
+export const lastMonthOf = (iso: string) =>
+  monthOf(addDays(`${iso.slice(0, 8)}01`, -1));
+
 /** Bad input falls back to today; a backwards range swaps; a long one is cut. */
 export function parseRange(params: Params, timeZone: string, now: Date): Range {
   const today = localDate(now, timeZone);
@@ -77,13 +89,17 @@ export function parseRange(params: Params, timeZone: string, now: Date): Range {
   const wanted = a < b ? b : a;
   const last = addDays(from, MAX_SPAN_DAYS - 1);
   const to = wanted > last ? last : wanted;
-  const weekend = weekendOf(today);
-  const preset =
-    from === today && to === today
-      ? "today"
-      : from === weekend.from && to === weekend.to
-        ? "weekend"
-        : "custom";
+  const is = (r: { from: string; to: string }) =>
+    from === r.from && to === r.to;
+  const preset = is({ from: today, to: today })
+    ? "today"
+    : is(weekendOf(today))
+      ? "weekend"
+      : is(monthOf(today))
+        ? "month"
+        : is(lastMonthOf(today))
+          ? "last-month"
+          : "custom";
   return { from, to, preset };
 }
 
@@ -111,11 +127,13 @@ export async function salesReport(
 ) {
   const where = inRange(storeId, r);
   const revenueOf = sql`sum(${saleLine.qty} * ${saleLine.unitPrice})`;
+  // The receipt's own day, as inRange counts it.
+  const dayOf = sql<string>`to_char(${sale.createdAt} at time zone ${sale.timeZone}, 'YYYY-MM-DD')`;
   // One snapshot, so a sale landing mid-read can't split the count from the cash.
-  const { totals, items, methods, bestSellers, sales, lines } =
+  const { totals, items, methods, bestSellers, sales, lines, days } =
     await db.transaction(
       async (tx) => {
-        const [[totals], [items], methods, bestSellers, sales] =
+        const [[totals], [items], methods, bestSellers, sales, days] =
           await Promise.all([
             tx
               .select({
@@ -167,6 +185,17 @@ export async function salesReport(
               .where(where)
               .orderBy(desc(sale.createdAt))
               .limit(SALES_SHOWN),
+            tx
+              .select({
+                day: dayOf,
+                sales: count(),
+                cash: sql<string>`coalesce(sum(${sale.total}) filter (where ${sale.paymentMethod} = 'cash'), 0)`,
+                total: sql<string>`sum(${sale.total})`,
+              })
+              .from(sale)
+              .where(where)
+              .groupBy(dayOf)
+              .orderBy(dayOf),
           ]);
         const lines = sales.length
           ? await tx
@@ -180,7 +209,7 @@ export async function salesReport(
               )
               .orderBy(saleLine.lineNo)
           : [];
-        return { totals, items, methods, bestSellers, sales, lines };
+        return { totals, items, methods, bestSellers, sales, lines, days };
       },
       { isolationLevel: "repeatable read", accessMode: "read only" },
     );
@@ -201,6 +230,14 @@ export async function salesReport(
     }),
     bestSellers,
     sales: sales.map((s) => ({ ...s, lines: byId.get(s.id) ?? [] })),
+    // Days with a sale, oldest first. Card and the rest is the total less cash.
+    days: days.map((d) => ({
+      day: d.day,
+      sales: d.sales,
+      cash: d.cash,
+      other: fromCents(toCents(d.total) - toCents(d.cash)),
+      total: d.total,
+    })),
   };
 }
 

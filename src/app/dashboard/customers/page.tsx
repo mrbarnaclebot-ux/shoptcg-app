@@ -14,6 +14,7 @@ import {
   subscribedCount,
 } from "@/lib/customers";
 import { requireStore, sellerTimeZone } from "@/lib/session";
+import { BackToMore } from "../back-to-more";
 import { RemoveCustomer } from "./remove-customer";
 
 export const metadata: Metadata = { title: "Customers" };
@@ -22,7 +23,8 @@ type Search = Pick<PageProps<"/dashboard/customers">, "searchParams">;
 
 export default function CustomersPage({ searchParams }: Search) {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-start gap-4 px-4 pt-8 pb-16 lg:max-w-[1280px] lg:px-8">
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-start gap-4 px-4 pt-4 pb-16 lg:max-w-[1280px] lg:px-8">
+      <BackToMore />
       <h1 className="font-display text-4xl font-black">Customers</h1>
       <Suspense fallback={<TicketLoading>Finding your buyers</TicketLoading>}>
         <Customers searchParams={searchParams} />
@@ -69,6 +71,18 @@ async function Customers({ searchParams }: Search) {
     subscribedCount(db, store.id),
   ]);
   const qs = q ? `q=${encodeURIComponent(q)}` : "";
+  // Nothing to filter, search or export yet: just say how the list fills.
+  if (!rows.length && !q && !subscribed)
+    return (
+      <section className="paper tally w-full px-5 pt-7 pb-5">
+        <p className="font-display text-[2rem] leading-none font-extrabold">
+          No customers yet.
+        </p>
+        <p className="mt-2 text-muted-foreground">
+          Buyers appear here after their first confirmed sale.
+        </p>
+      </section>
+    );
   return (
     <>
       <nav aria-label="Filter customers" className="flex flex-wrap gap-2">
@@ -126,28 +140,17 @@ async function Customers({ searchParams }: Search) {
           </p>
         )}
         {rows.length === 0 ? (
-          q || subscribed ? (
-            <>
-              <p className="font-display text-[2rem] leading-none font-extrabold">
-                No one matches that.
-              </p>
-              <Link
-                href="/dashboard/customers"
-                className="mt-1 inline-flex min-h-11 items-center font-semibold underline underline-offset-4"
-              >
-                Show everyone
-              </Link>
-            </>
-          ) : (
-            <>
-              <p className="font-display text-[2rem] leading-none font-extrabold">
-                No customers yet.
-              </p>
-              <p className="mt-2 text-muted-foreground">
-                Buyers appear here after their first confirmed sale.
-              </p>
-            </>
-          )
+          <>
+            <p className="font-display text-[2rem] leading-none font-extrabold">
+              No one matches that.
+            </p>
+            <Link
+              href="/dashboard/customers"
+              className="mt-1 inline-flex min-h-11 items-center font-semibold underline underline-offset-4"
+            >
+              Show everyone
+            </Link>
+          </>
         ) : (
           <ul className="border-b border-border lg:grid lg:grid-cols-2 lg:gap-x-10 xl:grid-cols-3">
             {rows.map((c) => {

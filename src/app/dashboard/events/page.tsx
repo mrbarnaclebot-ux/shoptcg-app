@@ -7,15 +7,18 @@ import { TicketButton } from "@/components/ticket-button";
 import { getDb } from "@/db";
 import { listEvents } from "@/lib/claim-events";
 import { requireStore, sellerTimeZone } from "@/lib/session";
-import { eventTime, STATUS_LABEL } from "./format";
+import { BackToMore } from "../back-to-more";
+import { eventTime } from "./format";
+import { StatusStamp } from "./status";
 
 export const metadata: Metadata = { title: "Claim events" };
 
 export default function EventsPage() {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-start gap-4 px-4 pt-8 pb-16">
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-start gap-4 px-4 pt-4 pb-16 lg:max-w-[1280px] lg:px-8">
+      <BackToMore />
       <h1 className="font-display text-4xl font-black">Claim events</h1>
-      <p className="text-muted-foreground">
+      <p className="max-w-2xl text-muted-foreground">
         A timed sale on its own page. Buyers join with their name, WhatsApp and
         email, then claim with one tap. It ends at the time you set or when
         everything is claimed.
@@ -57,7 +60,7 @@ async function Events() {
         <TicketButton href="/dashboard/events/new">New event</TicketButton>
       )}
       {events.length ? (
-        <ul className="w-full">
+        <ul className="w-full lg:grid lg:grid-cols-2 lg:gap-x-10">
           {events.map((e) => (
             <li key={e.id} className="border-b border-border">
               <Link
@@ -75,9 +78,7 @@ async function Events() {
                     {e.buyers === 1 ? "buyer" : "buyers"}
                   </span>
                 </span>
-                <span className="shrink-0 text-sm font-semibold">
-                  {STATUS_LABEL[e.status]}
-                </span>
+                <StatusStamp status={e.status} className="mt-1 shrink-0" />
               </Link>
             </li>
           ))}

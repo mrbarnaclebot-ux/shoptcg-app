@@ -1,8 +1,9 @@
 import { headingIcon } from "@/components/bento";
-import { Activity, MailQuestion, Ticket, Users } from "lucide-react";
+import { Activity, MailQuestion, Search, Ticket, Users } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
+import { BackToMore } from "@/app/dashboard/back-to-more";
 import {
   bentoColumn,
   bentoLeft,
@@ -35,29 +36,36 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default function AdminPage() {
+type Search = Pick<PageProps<"/admin">, "searchParams">;
+
+export default function AdminPage({ searchParams }: Search) {
   return (
     // Desktop: invites and system on the left, the long accounts list beside.
     <main
       className={`mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 pt-8 pb-16 lg:max-w-[1280px] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:px-8 ${bentoPage}`}
     >
+      <div className="lg:col-span-2">
+        <BackToMore />
+      </div>
       <h1 className="font-display text-4xl font-black lg:col-span-2 lg:mb-8">
         Admin
       </h1>
       <Suspense fallback={<TicketLoading>Checking who you are</TicketLoading>}>
-        <Admin />
+        <Admin searchParams={searchParams} />
       </Suspense>
     </main>
   );
 }
 
-async function Admin() {
+async function Admin({ searchParams }: Search) {
   await requireAdmin();
+  const { q: raw } = await searchParams;
+  const q = typeof raw === "string" ? raw.trim().slice(0, 100) : "";
   const db = getDb();
   const [requests, invites, accounts, timeZone, priced] = await Promise.all([
     openInviteRequests(db),
     listInvites(db),
-    listAccounts(db),
+    listAccounts(db, q || undefined),
     sellerTimeZone(),
     lastPriceDate(db),
   ]);
@@ -189,6 +197,31 @@ async function Admin() {
             <Users aria-hidden className={headingIcon} />
             Accounts
           </h2>
+          <form action="/admin" role="search" className="flex w-full gap-2">
+            <label className="min-w-0 flex-1">
+              <span className="sr-only">Search accounts</span>
+              <input
+                type="search"
+                name="q"
+                defaultValue={q}
+                maxLength={100}
+                placeholder="Email, store name or link"
+                className="h-12 w-full border border-border-strong bg-transparent px-3 text-base"
+              />
+            </label>
+            <button type="submit" className={lineButton}>
+              <Search aria-hidden className="size-5" />
+              Search
+            </button>
+          </form>
+          {q && accounts.length === 0 && (
+            <p className="text-muted-foreground">
+              No account matches that.{" "}
+              <Link href="/admin" className="font-semibold underline">
+                Show everyone
+              </Link>
+            </p>
+          )}
           <ul className="divide-y divide-border border-y border-border">
             {accounts.map((a) => (
               <li key={a.id} className="flex flex-col gap-1 py-3">
@@ -235,12 +268,6 @@ async function Admin() {
           {accounts.length === SHOWN && <Capped />}
         </section>
       </div>
-      <Link
-        href="/dashboard"
-        className={`${lineButton} self-start lg:col-span-2 lg:mt-8 lg:justify-self-start`}
-      >
-        Back to dashboard
-      </Link>
     </>
   );
 }

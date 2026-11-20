@@ -57,7 +57,18 @@ const stock = {
   qty: qtySchema.default(1),
   overridePrice: priceSchema.default(null),
   cost: priceSchema.default(null),
+  // False keeps it off the store page: a hidden item exported and imported
+  // back. Left out, the item shows.
+  active: z.boolean().optional(),
 };
+
+/** Why a vendor typed a lower quantity; "adjusted" is a plain correction. */
+export const LOWER_REASONS = [
+  "adjusted",
+  "counted",
+  "damaged",
+  "lost",
+] as const;
 
 export { GRADERS, GRADES };
 
@@ -115,6 +126,8 @@ export const listingPatchSchema = z.object({
   setName: optText(120).optional(),
   number: optText(20).optional(),
   qty: qtySchema.optional(),
+  /** Labels the stock move a typed qty makes. */
+  reason: z.enum(LOWER_REASONS).optional(),
   condition: conditionSchema.optional(),
   overridePrice: priceSchema.optional(),
   cost: priceSchema.optional(),

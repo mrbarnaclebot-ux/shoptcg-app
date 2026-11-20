@@ -13,7 +13,8 @@ import { usd } from "@/lib/format";
 import { requireStore, sellerTimeZone } from "@/lib/session";
 import { UUID } from "@/lib/storefront";
 import { CopyLink } from "../../copy-link";
-import { eventTime, STATUS_LABEL } from "../format";
+import { eventTime } from "../format";
+import { StatusStamp } from "../status";
 import { BuyerActions, EndEvent } from "./controls";
 
 export const metadata: Metadata = { title: "Claim event" };
@@ -64,9 +65,7 @@ async function Event({
         inMs={e.status === "scheduled" ? e.msToStart : open ? e.msToEnd : null}
       />
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-          {STATUS_LABEL[e.status]}
-        </p>
+        <StatusStamp status={e.status} className="mb-2 self-start" />
         <h1 className="font-display text-[3rem] leading-[0.85] font-black text-balance">
           {e.title}
         </h1>

@@ -329,6 +329,10 @@ export const STOCK_REASONS = [
   "bought",
   "removed",
   "restored",
+  // Why a vendor lowered a count by hand ("adjusted" is a plain correction).
+  "counted",
+  "damaged",
+  "lost",
 ] as const;
 
 // Every change to a listing's quantity, written by the listing_stock_move
@@ -355,7 +359,7 @@ export const stockMove = pgTable(
     index("stock_move_store_at_idx").on(t.storeId, t.at.desc()),
     check(
       "stock_move_reason",
-      sql`${t.reason} in ('opening', 'added', 'adjusted', 'sold', 'voided', 'bought', 'removed', 'restored')`,
+      sql`${t.reason} in ('opening', 'added', 'adjusted', 'sold', 'voided', 'bought', 'removed', 'restored', 'counted', 'damaged', 'lost')`,
     ),
   ],
 );

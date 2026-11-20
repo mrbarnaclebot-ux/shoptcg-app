@@ -72,7 +72,7 @@ test("changing the password needs the current one and signs out other devices", 
   await passwordSignIn(phone, email);
   await expect(phone.getByText("Your public page").first()).toBeVisible();
 
-  await page.goto("/dashboard/settings");
+  await page.goto("/dashboard/settings/account");
   const form = page.getByRole("region", { name: "Change password" });
   await form.getByLabel("Current password").fill("wrong-current");
   await form.getByLabel("New password").fill("changed-password-9");
@@ -142,6 +142,7 @@ test("someone asks for an invite, the admin invites them, and they set up", asyn
   const requests = page.getByRole("region", { name: "Invite requests" });
   await expect(requests.getByText("Weekend shows")).toBeVisible();
   await requests.getByRole("button", { name: `Dismiss ${spam}` }).click();
+  await requests.getByRole("button", { name: "Yes, dismiss" }).click();
   await expect(requests.getByText(spam)).toHaveCount(0);
   await noticeSent(spamEmail, "request-declined");
   const link = await newLink(email, () =>
@@ -185,7 +186,7 @@ test("a vendor moves to a new email: the link confirms it, the old one is told",
   const id = await newVendor(page);
   const old = `e2e-${id}@example.test`;
   const next = fresh();
-  await page.goto("/dashboard/settings");
+  await page.goto("/dashboard/settings/account");
   const form = page.getByRole("region", { name: "Change email" });
   await form.getByLabel("New email").fill(admin(0));
   await form.getByLabel("Your password").fill(PASSWORD);
@@ -232,7 +233,9 @@ test("a vendor with sales deletes their account and everything under it", async 
   await confirmAndView(page);
   await expect(page.getByTestId("receipt-no")).toBeVisible();
 
-  await page.goto("/dashboard/settings");
+  await page.goto("/dashboard/settings/account");
+  // Folded away at the bottom of the page.
+  await page.getByText("Delete account", { exact: true }).click();
   const form = page.getByRole("region", { name: "Delete account" });
   await form.getByLabel(/Type .delete my account./).fill("delete it");
   await form.getByLabel("Your password").fill(PASSWORD);

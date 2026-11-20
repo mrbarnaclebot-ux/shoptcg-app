@@ -4,12 +4,16 @@ import { useState, useTransition } from "react";
 import { lineButton } from "@/components/ticket-button";
 import { blockAction, endEventAction, releaseAction } from "../actions";
 
-/** An action that asks once before it runs. */
+/**
+ * An action that asks once before it runs. `danger` ones (End, Block) look
+ * like the app's other removals: red, with Keep first and focused.
+ */
 function Confirmed(props: {
   label: string;
   ask: string;
   run: () => Promise<boolean>;
   failed: string;
+  danger?: boolean;
 }) {
   const [asking, setAsking] = useState(false);
   const [pending, start] = useTransition();
@@ -29,7 +33,7 @@ function Confirmed(props: {
             setError(null);
             setAsking(true);
           }}
-          className="min-h-11 text-sm font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+          className={`min-h-11 text-sm font-semibold underline decoration-[1.5px] underline-offset-[5px] ${props.danger ? "text-danger" : "decoration-brand"}`}
         >
           {props.label}
         </button>
@@ -41,6 +45,14 @@ function Confirmed(props: {
       <span className="text-sm font-semibold">{props.ask}</span>
       <button
         type="button"
+        autoFocus={props.danger}
+        onClick={() => setAsking(false)}
+        className={`${lineButton} min-h-11 px-3 text-sm`}
+      >
+        Keep
+      </button>
+      <button
+        type="button"
         disabled={pending}
         onClick={() =>
           start(async () => {
@@ -49,16 +61,9 @@ function Confirmed(props: {
             setAsking(false);
           })
         }
-        className={`${lineButton} min-h-11 px-3 text-sm`}
+        className={`${lineButton} min-h-11 px-3 text-sm ${props.danger ? "text-danger" : ""}`}
       >
         {pending ? "Working" : `Yes, ${props.label.toLowerCase()}`}
-      </button>
-      <button
-        type="button"
-        onClick={() => setAsking(false)}
-        className="min-h-11 px-2 text-sm font-semibold"
-      >
-        Keep
       </button>
     </div>
   );
@@ -71,6 +76,7 @@ export function EndEvent({ id }: { id: string }) {
       ask="End the event for everyone?"
       run={() => endEventAction(id)}
       failed="It has already ended."
+      danger
     />
   );
 }
@@ -89,6 +95,7 @@ export function BuyerActions({ requestId }: { requestId: string }) {
         ask="Release and block this number and email?"
         run={() => blockAction(requestId)}
         failed="Already released or paid."
+        danger
       />
     </div>
   );

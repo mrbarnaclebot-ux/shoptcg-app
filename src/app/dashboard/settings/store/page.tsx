@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { bento } from "@/components/bento";
 import { SectionMark } from "@/components/section-mark";
 import { appUrl } from "@/lib/deployed";
-import { requireStore } from "@/lib/session";
+import { redirect } from "next/navigation";
+import { storeOrNull } from "@/lib/session";
 import { SettingsPage } from "../section";
 import { NameForm, SlugForm } from "../settings-form";
 import { StoreImages } from "../store-images";
@@ -19,7 +20,9 @@ export default function StoreProfilePage() {
 }
 
 async function Profile() {
-  const { store } = await requireStore();
+  // The desk's More tab lands here; with no store yet, the account is all there is.
+  const store = await storeOrNull();
+  if (!store) redirect("/dashboard/settings/account");
   return (
     <div className={bento}>
       <section aria-labelledby="name-h" className="flex flex-col gap-4">

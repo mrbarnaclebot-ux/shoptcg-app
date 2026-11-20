@@ -22,7 +22,9 @@ import {
   removeListings,
   restoreListings,
   setActive,
+  setPrices,
   stockCsvRows,
+  stockValue,
   countStock,
   stepQty,
   updateListing,
@@ -641,8 +643,13 @@ describe("export", () => {
     );
     const gone = await item(s, "Gone card");
     await removeListings(db, s, [gone.id], false);
+    // Hidden stock goes out marked and comes back hidden.
+    const [box] = (await listStock(db, s)).filter(
+      (l) => l.name === "Booster box",
+    );
+    await setActive(db, s, [box.id], false);
     const rows = await stockCsvRows(db, s);
-    expect(rows[0]).toEqual([...CSV_COLUMNS]);
+    expect(rows[0]).toEqual([...CSV_COLUMNS, "hidden"]);
     const back = readCsv(toCsv(rows).slice(1));
     expect(back).toEqual([
       {
@@ -658,6 +665,7 @@ describe("export", () => {
           qty: 3,
           overridePrice: "25.00",
           cost: "12.50",
+          active: true,
         }),
       },
       {
@@ -669,9 +677,66 @@ describe("export", () => {
           condition: null,
           qty: 1,
           overridePrice: null,
+          active: false,
         }),
       },
     ]);
+  });
+});
+
+describe("back office", () => {
+  it("a typed lower count carries its reason into the ledger", async () => {
+    const s = await newStore();
+    const l = await item(s, "Dinged card", 5);
+    await updateListing(db, s, { id: l.id, qty: 4, reason: "damaged" });
+    await updateListing(db, s, { id: l.id, qty: 2, reason: "counted" });
+    await updateListing(db, s, { id: l.id, qty: 1 });
+    expect(await moves(l.id)).toEqual([
+      { reason: "added", delta: 5, qtyAfter: 5 },
+      { reason: "damaged", delta: -1, qtyAfter: 4 },
+      { reason: "counted", delta: -2, qtyAfter: 2 },
+      { reason: "adjusted", delta: -1, qtyAfter: 1 },
+    ]);
+  });
+
+  it("sets one fixed price on many, or puts them back on the market", async () => {
+    const s = await newStore();
+    const x = await item(s, "Bulk one");
+    const y = await item(s, "Bulk two");
+    const gone = await item(s, "Bulk gone");
+    await removeListings(db, s, [gone.id], false);
+    const other = await item(await newStore(), "Not theirs");
+    expect(
+      await setPrices(db, s, [x.id, y.id, gone.id, other.id], "4.50"),
+    ).toBe(2);
+    const price = async (id: string) =>
+      (
+        await db
+          .select({ p: schema.listing.overridePrice })
+          .from(schema.listing)
+          .where(eq(schema.listing.id, id))
+      )[0].p;
+    expect([await price(x.id), await price(y.id)]).toEqual(["4.50", "4.50"]);
+    expect(await price(other.id)).toBe("10.00");
+    expect(await setPrices(db, s, [x.id], null)).toBe(1);
+    expect(await price(x.id)).toBeNull();
+  });
+
+  it("values every unit held, hidden included, removed and sold out not", async () => {
+    const s = await newStore();
+    await addCustomListing(db, s, custom({ name: "A", qty: 3, cost: "2.00" }));
+    const hidden = await addCustomListing(db, s, custom({ name: "B", qty: 2 }));
+    await setActive(db, s, [hidden.id], false);
+    const gone = await item(s, "C", 4);
+    await removeListings(db, s, [gone.id], false);
+    await addCustomListing(db, s, custom({ name: "D", qty: 0, cost: "9.00" }));
+    expect(await stockValue(db, s)).toEqual({
+      units: 5,
+      lines: 2,
+      atCost: 6,
+      uncostedUnits: 2,
+      atMarket: 0,
+    });
   });
 });
 

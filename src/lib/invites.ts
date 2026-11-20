@@ -1,5 +1,5 @@
 import { createHash, randomInt } from "node:crypto";
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { invite, inviteRequest, store, user } from "@/db/schema";
 import { storeState } from "@/lib/store-state";
@@ -125,7 +125,9 @@ export function listInvites(db: Db) {
 }
 
 /** Every account, for reviewing who got in. Read only. */
-export function listAccounts(db: Db) {
+/** Newest first; `q` matches the email, store name or link anywhere in it. */
+export function listAccounts(db: Db, q?: string) {
+  const like = q && `%${q.replace(/[\\%_]/g, "\\$&")}%`;
   return db
     .select({
       id: user.id,
@@ -150,6 +152,15 @@ export function listAccounts(db: Db) {
     .from(user)
     .leftJoin(store, eq(store.ownerUserId, user.id))
     .leftJoin(invite, eq(invite.redeemedBy, user.id))
+    .where(
+      like
+        ? or(
+            sql`${user.email} ilike ${like}`,
+            sql`${store.name} ilike ${like}`,
+            sql`${store.slug} ilike ${like}`,
+          )
+        : undefined,
+    )
     .orderBy(desc(user.createdAt))
     .limit(SHOWN);
 }

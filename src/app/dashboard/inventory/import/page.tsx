@@ -6,7 +6,9 @@ import { ImportFlow } from "./import-flow";
 
 export const metadata: Metadata = { title: "Import CSV" };
 
-const COLUMN_HELP: Record<(typeof CSV_COLUMNS)[number], string> = {
+// The export adds hidden after the template's columns; an import reads it back.
+const COLUMNS = [...CSV_COLUMNS, "hidden"] as const;
+const COLUMN_HELP: Record<(typeof COLUMNS)[number], string> = {
   name: "Required. Card or product name.",
   set: "Set name, e.g. Obsidian Flames.",
   number: "Card number, e.g. 223/197.",
@@ -18,6 +20,7 @@ const COLUMN_HELP: Record<(typeof CSV_COLUMNS)[number], string> = {
   qty: "Whole number. Default 1.",
   price: "Optional fixed price in USD. Blank follows the market.",
   cost: "Optional. What you paid each, in USD. Only you see it.",
+  hidden: "Optional. yes keeps it off your store page. The export fills it in.",
 };
 
 export default function ImportPage() {
@@ -49,7 +52,7 @@ export default function ImportPage() {
           Template columns
         </summary>
         <dl className="mt-3 grid grid-cols-[7rem_1fr] gap-x-4 gap-y-2 text-sm">
-          {CSV_COLUMNS.map((c) => (
+          {COLUMNS.map((c) => (
             <div key={c} className="contents">
               <dt className="font-mono text-sm text-text">{c}</dt>
               <dd className="text-muted-foreground">{COLUMN_HELP[c]}</dd>

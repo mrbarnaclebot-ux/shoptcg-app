@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { lineButton } from "@/components/ticket-button";
-import { weekendLabel, weekendOf, type Range } from "@/lib/reports";
+import {
+  lastMonthOf,
+  monthOf,
+  weekendLabel,
+  weekendOf,
+  type Range,
+} from "@/lib/reports";
 
 const dateInput =
   "h-12 w-full min-w-0 border border-border-strong bg-transparent px-2 text-base";
@@ -21,24 +27,29 @@ function Preset(props: { href: string; on: boolean; children: string }) {
   );
 }
 
-/** "Today" and the nearest weekend, as links: every range is a URL. */
+/** "Today", the nearest weekend and the months, as links: every range is a URL. */
 export function RangePresets(props: {
   base: string;
   label: string;
   range: Range;
   today: string;
 }) {
-  const weekend = weekendOf(props.today);
+  const { base, range, today } = props;
+  const to = (r: { from: string; to: string }) =>
+    `${base}?from=${r.from}&to=${r.to}`;
   return (
     <nav aria-label={props.label} className="flex flex-wrap gap-2">
-      <Preset href={props.base} on={props.range.preset === "today"}>
+      <Preset href={base} on={range.preset === "today"}>
         Today
       </Preset>
-      <Preset
-        href={`${props.base}?from=${weekend.from}&to=${weekend.to}`}
-        on={props.range.preset === "weekend"}
-      >
-        {weekendLabel(props.today)}
+      <Preset href={to(weekendOf(today))} on={range.preset === "weekend"}>
+        {weekendLabel(today)}
+      </Preset>
+      <Preset href={to(monthOf(today))} on={range.preset === "month"}>
+        This month
+      </Preset>
+      <Preset href={to(lastMonthOf(today))} on={range.preset === "last-month"}>
+        Last month
       </Preset>
     </nav>
   );

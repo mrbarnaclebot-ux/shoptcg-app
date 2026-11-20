@@ -72,7 +72,7 @@ export const inOpenEvent = sql<boolean>`exists (
     and ${claimEvent.endedAt} is null and ${claimEvent.endsAt} > now())`;
 
 // The inventory pages through with `page`; other callers read the first page.
-// ponytail: ledger valuation stops at this many rows; page it too if a store passes it.
+// ponytail: the claim-event picker stops at this many rows; page it too if a store passes it.
 export const PAGE_ROWS = 1000;
 
 function latestPrices(db: Db, storeId: string) {
@@ -226,8 +226,40 @@ export async function listStock(db: Db, storeId: string, f: StockFilter = {}) {
 export type StockRow = Awaited<ReturnType<typeof listStock>>[number];
 
 /**
- * Every listing not removed, oldest first, as CSV rows the import reads back
- * (CSV_COLUMNS), with price only when fixed (else it follows the market).
+ * What the store holds right now, hidden and claim-event stock included:
+ * units, listings, and their worth at cost and at market. Summed in SQL, so it
+ * covers every listing, not one page of them.
+ */
+export async function stockValue(db: Db, storeId: string) {
+  const latest = latestPrices(db, storeId);
+  const n = (v: SQL) => sql<string>`coalesce(${v}, 0)`.mapWith(Number);
+  const [row] = await db
+    .select({
+      units: n(sql`sum(${listing.qty})`),
+      lines: count(),
+      atCost: n(sql`sum(${listing.qty} * ${listing.cost})`),
+      uncostedUnits: n(
+        sql`sum(${listing.qty}) filter (where ${listing.cost} is null)`,
+      ),
+      atMarket: n(sql`sum(${listing.qty} * ${conditionMarket(latest.market)})`),
+    })
+    .from(listing)
+    .innerJoin(store, eq(store.id, listing.storeId))
+    .leftJoin(latest, eq(latest.catalogItemId, listing.catalogItemId))
+    .where(
+      and(
+        eq(listing.storeId, storeId),
+        isNull(listing.removedAt),
+        sql`${listing.qty} > 0`,
+      ),
+    );
+  return row;
+}
+
+/**
+ * Every listing not removed, oldest first, as CSV rows the import reads back:
+ * CSV_COLUMNS plus hidden, with price only when fixed (else it follows
+ * the market).
  */
 export async function stockCsvRows(db: Db, storeId: string) {
   const rows = await db
@@ -243,12 +275,16 @@ export async function stockCsvRows(db: Db, storeId: string) {
       qty: listing.qty,
       price: listing.overridePrice,
       cost: listing.cost,
+      hidden: sql<
+        string | null
+      >`case when ${listing.active} then null else 'yes' end`,
     })
     .from(listing)
     .leftJoin(catalogItem, eq(catalogItem.id, listing.catalogItemId))
     .where(and(eq(listing.storeId, storeId), isNull(listing.removedAt)))
     .orderBy(listing.createdAt, listing.id);
-  return [[...CSV_COLUMNS], ...rows.map((r) => CSV_COLUMNS.map((c) => r[c]))];
+  const head = [...CSV_COLUMNS, "hidden"] as const;
+  return [[...head], ...rows.map((r) => head.map((c) => r[c]))];
 }
 
 /** Every row listStock pages through for this filter. */
@@ -500,7 +536,11 @@ export async function importListings(
     const condition = item.kind === "raw" ? (r.input.condition ?? "NM") : null;
     const { kind, language } = item;
     return {
-      key: cardKey(r.input.catalogItemId, condition),
+      // A hidden row stays its own listing rather than topping up one on show.
+      key:
+        r.input.active !== false
+          ? cardKey(r.input.catalogItemId, condition)
+          : null,
       value: { ...r.input, storeId, kind, language, condition },
     };
   });
@@ -522,7 +562,11 @@ export async function importListings(
         fresh.push(v);
       }
     }
-    await assertRoom(tx, storeId, fresh.length);
+    await assertRoom(
+      tx,
+      storeId,
+      fresh.filter((v) => v.value.active !== false).length,
+    );
     // 1000 rows x 18 columns stays under the 65535 bind-parameter cap.
     const added = fresh.length
       ? await tx
@@ -551,29 +595,59 @@ export async function importListings(
 /**
  * Applies a patch to one of the store's listings; false when it is not theirs
  * or removed. Name, set and number are a custom item's own: catalog cards
- * take theirs from the catalog.
+ * take theirs from the catalog. A typed quantity's stock move carries
+ * `reason` (a count, damage, a loss); without one it is "adjusted".
  */
 export async function updateListing(
   db: Db,
   storeId: string,
-  { id, ...patch }: ListingPatch,
+  { id, reason, ...patch }: ListingPatch,
 ) {
   const own = [patch.name, patch.setName, patch.number].some(
     (v) => v !== undefined,
   );
+  return db.transaction(async (t) => {
+    const tx = t as Db;
+    if (reason && patch.qty !== undefined) await stockReason(tx, reason);
+    const rows = await tx
+      .update(listing)
+      .set({ ...patch, updatedAt: sql`now()` })
+      .where(
+        and(
+          eq(listing.id, id),
+          eq(listing.storeId, storeId),
+          isNull(listing.removedAt),
+          own ? isNull(listing.catalogItemId) : undefined,
+        ),
+      )
+      .returning({ id: listing.id });
+    return rows.length > 0;
+  });
+}
+
+/**
+ * One fixed price on these listings, or null to follow the market again.
+ * Removed ones are left alone. Returns how many changed.
+ */
+export async function setPrices(
+  db: Db,
+  storeId: string,
+  ids: string[],
+  price: string | null,
+) {
+  if (!ids.length) return 0;
   const rows = await db
     .update(listing)
-    .set({ ...patch, updatedAt: sql`now()` })
+    .set({ overridePrice: price, updatedAt: sql`now()` })
     .where(
       and(
-        eq(listing.id, id),
+        inArray(listing.id, ids),
         eq(listing.storeId, storeId),
         isNull(listing.removedAt),
-        own ? isNull(listing.catalogItemId) : undefined,
       ),
     )
     .returning({ id: listing.id });
-  return rows.length > 0;
+  return rows.length;
 }
 
 /**

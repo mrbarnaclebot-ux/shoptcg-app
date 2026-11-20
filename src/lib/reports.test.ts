@@ -19,8 +19,10 @@ import {
   MAX_SPAN_DAYS,
   addDays,
   inRange,
+  lastMonthOf,
   lineTotals,
   localDate,
+  monthOf,
   parseRange,
   reportCsvRows,
   salesReport,
@@ -125,6 +127,16 @@ describe("parseRange", () => {
     expect(weekendOf("2026-11-09")).toEqual(sun); // Monday.
     expect(weekendOf("2026-11-13")).toEqual(sun); // Friday.
     expect(parseRange(sun, "UTC", now).preset).toBe("weekend");
+  });
+
+  it("knows this month and last, across a year end", () => {
+    expect(monthOf("2026-11-11")).toEqual(day("2026-11-01", "2026-11-30"));
+    expect(monthOf("2028-02-10")).toEqual(day("2028-02-01", "2028-02-29"));
+    expect(lastMonthOf("2026-01-31")).toEqual(day("2025-12-01", "2025-12-31"));
+    expect(parseRange(monthOf("2026-11-11"), "UTC", now).preset).toBe("month");
+    expect(parseRange(lastMonthOf("2026-11-11"), "UTC", now).preset).toBe(
+      "last-month",
+    );
   });
 
   it("calls a weekend gone by what it is", () => {
@@ -309,6 +321,22 @@ describe("salesReport", () => {
     expect(r.bestSellers[2].language).toBe("ja");
     expect(r.sales).toHaveLength(3);
     expect(r.sales.flatMap((s) => s.lines)).toHaveLength(4);
+    // One row for the one day with sales, split cash and the rest.
+    expect(
+      r.days.map((d) => ({
+        ...d,
+        cash: Number(d.cash),
+        total: Number(d.total),
+      })),
+    ).toEqual([
+      {
+        day: "2026-11-07",
+        sales: 3,
+        cash: 145.5,
+        other: "20.25",
+        total: 165.75,
+      },
+    ]);
 
     // The file adds up to the page, however it's summed.
     const [head, ...rows] = await reportCsvRows(db, id, range);

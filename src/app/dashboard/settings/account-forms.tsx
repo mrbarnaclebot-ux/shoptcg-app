@@ -1,7 +1,7 @@
 "use client";
 
-import { headingIcon } from "@/components/bento";
 import { AtSign, Trash2 } from "lucide-react";
+import { headingIcon } from "@/components/bento";
 import { useActionState } from "react";
 import { lineButton, TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
@@ -87,46 +87,47 @@ export function DeleteAccount() {
     {},
   );
   return (
-    <section
-      aria-labelledby="delete-h"
-      className="flex max-w-md flex-col gap-4 border-t border-border pt-6 lg:max-w-none lg:border-t-0 lg:pt-0"
-    >
-      <h2 id="delete-h" className="text-lg font-semibold text-danger">
-        <Trash2 aria-hidden className={headingIcon} />
+    // Last on the page and folded away, so nobody meets it by scrolling.
+    <details className="group max-w-xl border-t border-border pt-4">
+      <summary className="inline-flex min-h-11 cursor-pointer items-center gap-2 font-semibold text-danger">
+        <Trash2 aria-hidden className="size-5" />
         Delete account
-      </h2>
-      <p className="text-sm text-muted-foreground">
-        Deletes your account, your store page, all stock, sales, buys and
-        customer records. It can&apos;t be undone. Export anything you need from
-        Sales and Ledger first.
-      </p>
-      <form action={action} className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="delete-confirm">
-            Type &ldquo;delete my account&rdquo;
-          </Label>
-          <Input
-            id="delete-confirm"
-            name="confirm"
-            autoComplete="off"
-            required
-          />
-        </div>
-        <Current id="delete-current" />
-        {state.error && (
-          <p role="alert" className="text-sm text-danger">
-            {state.error}
-          </p>
-        )}
-        <button
-          type="submit"
-          disabled={pending}
-          aria-busy={pending}
-          className={`${lineButton} self-start text-danger`}
-        >
-          {pending ? "Deleting" : "Delete my account"}
-        </button>
-      </form>
-    </section>
+      </summary>
+      <section aria-label="Delete account" className="mt-4 flex flex-col gap-4">
+        <p className="text-sm text-muted-foreground">
+          Deletes your account, your store page, all stock, sales, buys and
+          customer records. It can&apos;t be undone. Export what you need first:
+          Report and Ledger export sales and stock moves, Inventory your stock
+          and Customers your promo list.
+        </p>
+        <form action={action} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="delete-confirm">
+              Type &ldquo;delete my account&rdquo;
+            </Label>
+            <Input
+              id="delete-confirm"
+              name="confirm"
+              autoComplete="off"
+              required
+            />
+          </div>
+          <Current id="delete-current" />
+          {state.error && (
+            <p role="alert" className="text-sm text-danger">
+              {state.error}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={pending}
+            aria-busy={pending}
+            className={`${lineButton} self-start text-danger`}
+          >
+            {pending ? "Deleting" : "Delete my account"}
+          </button>
+        </form>
+      </section>
+    </details>
   );
 }
