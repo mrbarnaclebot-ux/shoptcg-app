@@ -63,7 +63,7 @@ Decisions by the owner:
 - [x] Fieldset error wiring; heading levels; hide the stepper for last-one items
 - [x] Image `sizes`; store grid paging past 1,000; sold-out items last
 
-## E. Settings and back office (not started)
+## E. Settings and back office (PR #67)
 - [x] More menu: settings vs work pages (Ledger, Report, Customers, Events, Sign, Preview); consistent layout and back links
 - [x] Desktop More opens on Store profile; Account row on phones; Delete account at the bottom behind a disclosure; fix its export copy
 - [x] One save pattern with an unsaved-changes bar; "Saved." clears on edit; warn on leave
