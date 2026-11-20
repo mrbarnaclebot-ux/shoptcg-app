@@ -649,7 +649,7 @@ describe("export", () => {
     );
     await setActive(db, s, [box.id], false);
     const rows = await stockCsvRows(db, s);
-    expect(rows[0]).toEqual([...CSV_COLUMNS, "cost", "hidden"]);
+    expect(rows[0]).toEqual([...CSV_COLUMNS, "hidden"]);
     const back = readCsv(toCsv(rows).slice(1));
     expect(back).toEqual([
       {

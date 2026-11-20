@@ -73,6 +73,19 @@ export function gradeLabel(r: {
   return r.condition ?? "";
 }
 
+/** Grade or condition, set and number, as the pickers show them. */
+export const stockMeta = (r: {
+  kind: string;
+  condition: string | null;
+  grader: string | null;
+  grade: string | null;
+  setName: string | null;
+  number: string | null;
+}) =>
+  [gradeLabel(r), r.setName, r.number && `#${r.number}`]
+    .filter(Boolean)
+    .join(" · ");
+
 /** "4417 0932": a stable cert-style number for a listing, derived from its id. */
 export function certNo(id: string) {
   const n = parseInt(id.replace(/-/g, "").slice(0, 8), 16) % 1e8;

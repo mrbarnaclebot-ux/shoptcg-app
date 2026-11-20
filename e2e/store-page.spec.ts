@@ -129,15 +129,15 @@ test("a closed store can be browsed but not requested from", async ({
   const buyer = await (await browser.newContext()).newPage();
   await buyer.goto(`/${slug}`);
   await expect(buyer.getByText("Browsing only.")).toBeVisible();
-  await expect(buyer.getByRole("button", { name: /to your cart/ })).toHaveCount(
-    0,
-  );
+  await expect(
+    buyer.getByRole("button", { name: /(to|from) your cart/ }),
+  ).toHaveCount(0);
 
   await openStore(page);
   await buyer.reload();
   await expect(buyer.getByText("Browsing only.")).toHaveCount(0);
   await expect(
-    buyer.getByRole("button", { name: /to your cart/ }).first(),
+    buyer.getByRole("button", { name: /(to|from) your cart/ }).first(),
   ).toBeVisible();
 });
 

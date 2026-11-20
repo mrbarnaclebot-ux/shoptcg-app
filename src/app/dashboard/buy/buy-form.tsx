@@ -2,17 +2,27 @@
 
 import { X } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
-import { Segmented } from "@/components/segmented";
+import { chip, Segmented } from "@/components/segmented";
 import { lineButton, TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { BuyMethod } from "@/db/schema";
+import { StockSearch } from "../stock-search";
+import type { SearchItem } from "@/lib/catalog";
 import { usd } from "@/lib/format";
-import { CONDITIONS } from "@/lib/condition";
+import { CONDITIONS, type Condition } from "@/lib/condition";
+import { fromCents, toCents } from "@/lib/money";
+import type { Grader } from "@/lib/pricing/provider";
 import { toast } from "@/lib/toast";
-import { buyAction } from "./actions";
+import { conditionPrice, type StorePricing } from "@/lib/vendor-price";
+import { MarketLine, SlabFields } from "../inventory/add/add-panel";
+import {
+  CatalogSearch,
+  savedCondition,
+  savePrefs,
+} from "../inventory/add/catalog-search";
+import { buyAction, findBuyStockAction } from "./actions";
 
-type Stock = { id: string; name: string; meta: string; qty: number };
 type Kind = "raw" | "graded" | "sealed" | "other";
 type NewItem = {
   name: string;
@@ -22,15 +32,36 @@ type NewItem = {
   grader: string;
   grade: string;
 };
+/** A card picked from the catalog search, with what the vendor says it is. */
+type Card = {
+  item: SearchItem;
+  graded: boolean;
+  condition: Condition;
+  grader: Grader;
+  grade: string;
+};
 type Line = {
   key: string;
   name: string;
   meta: string;
   listingId?: string;
   item?: NewItem;
+  card?: Card;
   qty: string;
   price: string;
 };
+
+const OFFERS = [60, 70, 80];
+
+/** The market a catalog line is bought against: its condition's share of NM; none for a slab yet. */
+function cardMarket(c: Card, pricing: StorePricing) {
+  const raw = c.item.kind === "raw" && !c.graded;
+  return conditionPrice(
+    c.graded || c.item.market === null ? null : Number(c.item.market),
+    raw ? pricing.cond[c.condition] : 100,
+    pricing,
+  )?.market;
+}
 
 const METHODS = [
   ["cash", "Cash"],
@@ -57,8 +88,7 @@ const lineTotal = (l: Line) => {
 };
 
 /** Pick what you bought from stock or describe a new item, then how you paid. */
-export function BuyForm({ stock }: { stock: Stock[] }) {
-  const [q, setQ] = useState("");
+export function BuyForm({ pricing }: { pricing: StorePricing }) {
   const [lines, setLines] = useState<Line[]>([]);
   const [fresh, setFresh] = useState<NewItem | null>(null);
   const [method, setMethod] = useState<BuyMethod>("cash");
@@ -68,17 +98,7 @@ export function BuyForm({ stock }: { stock: Stock[] }) {
   // One id per buy, kept across retries, so a double tap records it once.
   const buyId = useRef<string | null>(null);
 
-  const picked = new Set(lines.map((l) => l.listingId));
-  const needle = q.trim().toLowerCase();
-  const hits = needle
-    ? stock
-        .filter(
-          (s) =>
-            !picked.has(s.id) &&
-            `${s.name} ${s.meta}`.toLowerCase().includes(needle),
-        )
-        .slice(0, 6)
-    : [];
+  const picked = new Set(lines.flatMap((l) => l.listingId ?? []));
   const total = lines.reduce((sum, l) => sum + lineTotal(l), 0);
   const items = lines.reduce((n, l) => n + (Number(l.qty) || 0), 0);
 
@@ -102,18 +122,30 @@ export function BuyForm({ stock }: { stock: Stock[] }) {
         lines: lines.map((l) => ({
           qty: l.qty,
           unitPrice: l.price,
-          ...(l.listingId
-            ? { listingId: l.listingId }
-            : {
-                item: {
-                  name: l.item!.name,
-                  kind: l.item!.kind,
-                  language: l.item!.kind === "other" ? "en" : l.item!.language,
-                  condition: l.item!.kind === "raw" ? l.item!.condition : null,
-                  grader: l.item!.kind === "graded" ? l.item!.grader : null,
-                  grade: l.item!.kind === "graded" ? l.item!.grade : null,
-                },
-              }),
+          ...(l.card
+            ? {
+                catalogItemId: l.card.item.id,
+                condition:
+                  l.card.item.kind === "raw" && !l.card.graded
+                    ? l.card.condition
+                    : null,
+                grader: l.card.graded ? l.card.grader : null,
+                grade: l.card.graded ? l.card.grade : null,
+              }
+            : l.listingId
+              ? { listingId: l.listingId }
+              : {
+                  item: {
+                    name: l.item!.name,
+                    kind: l.item!.kind,
+                    language:
+                      l.item!.kind === "other" ? "en" : l.item!.language,
+                    condition:
+                      l.item!.kind === "raw" ? l.item!.condition : null,
+                    grader: l.item!.kind === "graded" ? l.item!.grader : null,
+                    grade: l.item!.kind === "graded" ? l.item!.grade : null,
+                  },
+                }),
         })),
       }).catch(() => ({
         error: "Couldn't reach the server. Try again.",
@@ -124,7 +156,6 @@ export function BuyForm({ stock }: { stock: Stock[] }) {
       buyId.current = null;
       setLines([]);
       setSeller("");
-      setQ("");
       setDone(
         `Bought ${r.items} ${r.items === 1 ? "item" : "items"} for ${usd(Number(r.total))}. They're in stock.`,
       );
@@ -138,51 +169,38 @@ export function BuyForm({ stock }: { stock: Stock[] }) {
         </p>
       )}
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="buy-search">Find it in your stock</Label>
-        <Input
-          id="buy-search"
-          type="search"
-          autoComplete="off"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Name or number"
+      {/* The catalog has the market price; a card already in stock is topped up. */}
+      <section aria-label="Catalog" className="flex flex-col gap-2">
+        <p className="text-sm font-semibold">Search the catalog</p>
+        <CatalogSearch
+          pricing={pricing}
+          onPick={(item, graded) =>
+            add({
+              name: item.name,
+              meta: [item.setName, item.number && `#${item.number}`]
+                .filter(Boolean)
+                .join(" · "),
+              card: {
+                item,
+                graded,
+                condition: savedCondition(),
+                grader: "PSA",
+                grade: "10",
+              },
+            })
+          }
         />
-        {needle && (
-          <ul className="border-b border-border">
-            {hits.map((s) => (
-              <li
-                key={s.id}
-                className="flex items-center justify-between gap-3 border-t border-border py-2"
-              >
-                <span className="min-w-0 font-semibold [overflow-wrap:anywhere]">
-                  {s.name}
-                  <small className="block text-sm font-normal text-muted-foreground">
-                    {s.meta ? `${s.meta}. ` : ""}
-                    {s.qty} in stock.
-                  </small>
-                </span>
-                <button
-                  type="button"
-                  // The same card can be two listings (NM and LP).
-                  aria-label={`Add ${s.name}${s.meta ? `, ${s.meta}` : ""}`}
-                  onClick={() => {
-                    add({ listingId: s.id, name: s.name, meta: s.meta });
-                    setQ("");
-                  }}
-                  className={lineButton}
-                >
-                  Add
-                </button>
-              </li>
-            ))}
-            {hits.length === 0 && (
-              <li className="border-t border-border py-2 text-sm text-muted-foreground">
-                Not in your stock. Add it as a new item.
-              </li>
-            )}
-          </ul>
-        )}
+      </section>
+
+      <div className="flex flex-col gap-2">
+        <StockSearch
+          id="buy-search"
+          label="Or find it in your stock"
+          search={findBuyStockAction}
+          skip={picked}
+          empty="Not in your stock. Add it as a new item."
+          onPick={(s) => add({ listingId: s.id, name: s.name, meta: s.meta })}
+        />
         {!fresh && (
           <button
             type="button"
@@ -231,6 +249,16 @@ export function BuyForm({ stock }: { stock: Stock[] }) {
                   <X aria-hidden className="size-5" />
                 </button>
               </div>
+              {l.card && (
+                <CardFields
+                  lineKey={l.key}
+                  card={l.card}
+                  pricing={pricing}
+                  price={l.price}
+                  onChange={(card) => edit(l.key, { card })}
+                  onOffer={(price) => edit(l.key, { price })}
+                />
+              )}
               <div className="grid grid-cols-[5rem_1fr] gap-3">
                 <div className="flex flex-col gap-2">
                   <Label htmlFor={`qty-${l.key}`}>
@@ -297,6 +325,72 @@ export function BuyForm({ stock }: { stock: Stock[] }) {
               : `Record buy, ${items} ${items === 1 ? "item" : "items"}, ${usd(total)}`}
           </TicketButton>
         </>
+      )}
+    </div>
+  );
+}
+
+/** Condition or grade, the market for it, and offer chips that fill Paid each. */
+function CardFields(props: {
+  lineKey: string;
+  card: Card;
+  pricing: StorePricing;
+  price: string;
+  onChange: (c: Card) => void;
+  onOffer: (price: string) => void;
+}) {
+  const { card: c } = props;
+  const set = (patch: Partial<Card>) => props.onChange({ ...c, ...patch });
+  const market = cardMarket(c, props.pricing);
+  return (
+    <div className="flex flex-col gap-3">
+      {c.graded ? (
+        <SlabFields
+          id={`grade-${props.lineKey}`}
+          grader={c.grader}
+          onGrader={(grader) => set({ grader })}
+          grade={c.grade}
+          onGrade={(grade) => set({ grade })}
+        />
+      ) : (
+        c.item.kind === "raw" && (
+          <Segmented
+            label="Condition"
+            name={`condition-${props.lineKey}`}
+            value={c.condition}
+            options={CONDITIONS.map((x) => [x, x] as const)}
+            onChange={(condition) => {
+              set({ condition });
+              savePrefs({ condition });
+            }}
+          />
+        )
+      )}
+      <MarketLine
+        item={c.item}
+        condition={c.condition}
+        graded={c.graded}
+        pricing={props.pricing}
+        sell={false}
+      />
+      {market != null && (
+        <div role="group" aria-label="Offer" className="flex flex-wrap gap-2">
+          {OFFERS.map((pct) => {
+            const offer = fromCents(Math.round((toCents(market) * pct) / 100));
+            return (
+              <button
+                key={pct}
+                type="button"
+                aria-label={`Offer ${pct}%`}
+                aria-pressed={props.price === offer}
+                onClick={() => props.onOffer(offer)}
+                className={chip}
+              >
+                {pct}%
+              </button>
+            );
+          })}
+        </div>
       )}
     </div>
   );

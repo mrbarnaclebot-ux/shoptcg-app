@@ -35,7 +35,7 @@ import {
   confirmSale,
   optOut,
   saleWithLines,
-  salesToday,
+  salesOn,
   voidSale,
   type ConfirmInput,
 } from "@/lib/sales";
@@ -547,7 +547,7 @@ test("a void with restock puts the units back, labelled in the ledger", async ()
   const read = await saleWithLines(db, s.storeId, s.saleId);
   expect(read?.void).toMatchObject({ restocked: true, reason: "Wrong card" });
   // Still listed today, marked, so callers can leave it out of the total.
-  const [today] = await salesToday(db, s.storeId, "UTC");
+  const [today] = await salesOn(db, s.storeId, "UTC");
   expect(today).toMatchObject({ id: s.saleId, voided: true });
   // The sale itself is untouched.
   expect((await salesOf(db, s.storeId))[0].total).toBe("20.00");

@@ -34,7 +34,8 @@ test("add to cart from a tile; the old list link lands on the cart", async ({
   expect(res.status()).toBe(308);
   expect(res.headers().location).toMatch(new RegExp(`/${slug}/cart\\?ids=x$`));
   await buyer.goto(`/${slug}/list`);
-  await expect(buyer).toHaveURL(new RegExp(`/${slug}/cart$`));
+  // The cart then writes its ids into the URL, so either is a landing.
+  await expect(buyer).toHaveURL(new RegExp(`/${slug}/cart(\\?ids=[^&]+)?$`));
   await expect(buyer.getByRole("heading", { name: "Your cart" })).toBeVisible();
   await expect(buyer.getByText("Mew ex", { exact: true })).toBeVisible();
 });
@@ -79,7 +80,7 @@ test("the item page: zoom, details, add a quantity, back to the same filters", a
   await expect(buyer).toHaveURL(new RegExp(`/${slug}\\?type=raw$`));
   await expect(
     buyer.getByRole("status").filter({ hasText: "Your cart" }),
-  ).toContainText("2 items, $531.00");
+  ).toContainText("2 items, $531");
 });
 
 test("online mode: the copy says order, the hold is a day, no 14-hour pause", async ({

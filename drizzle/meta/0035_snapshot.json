@@ -1,5 +1,5 @@
 {
-  "id": "5ef474c7-d56b-4fbe-aaea-67164da44a2d",
+  "id": "f4592c9a-bdcc-4345-9c60-61669f8db964",
   "prevId": "cfe19837-ba41-44d1-bc70-0ec4b44d83e0",
   "version": "7",
   "dialect": "postgresql",
@@ -901,7 +901,7 @@
       "checkConstraints": {
         "stock_move_reason": {
           "name": "stock_move_reason",
-          "value": "\"stock_move\".\"reason\" in ('opening', 'added', 'adjusted', 'sold', 'voided', 'bought', 'removed', 'restored', 'counted', 'damaged', 'lost')"
+          "value": "\"stock_move\".\"reason\" in ('opening', 'added', 'adjusted', 'sold', 'voided', 'bought', 'removed', 'restored')"
         }
       },
       "isRLSEnabled": false
@@ -2229,6 +2229,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "hold_added_min": {
+          "name": "hold_added_min",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -2444,6 +2451,10 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "request_hold_added_min": {
+          "name": "request_hold_added_min",
+          "value": "\"request\".\"hold_added_min\" between 0 and 60"
+        },
         "request_status": {
           "name": "request_status",
           "value": "\"request\".\"status\" in ('pending', 'confirmed', 'declined', 'expired', 'cancelled')"

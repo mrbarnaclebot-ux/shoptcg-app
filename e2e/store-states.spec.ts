@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   add,
-  confirm,
+  confirmAndView,
   newBuyer,
   openVendor,
   pay,
@@ -132,7 +132,7 @@ for (const to of ["pause", "off"] as const)
     ).toBeVisible();
     // The buyer is at the table, so the sale still goes through.
     await pay(page, "Cash");
-    await confirm(page).click();
+    await confirmAndView(page);
     await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
   });
 

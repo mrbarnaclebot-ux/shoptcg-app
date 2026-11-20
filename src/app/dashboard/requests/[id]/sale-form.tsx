@@ -3,10 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useLayoutEffect, useRef, useState, useTransition } from "react";
 import { CardThumb } from "@/components/card-thumb";
-import { Segmented } from "@/components/segmented";
+import { chip, Segmented } from "@/components/segmented";
 import { Stepper } from "@/components/stepper";
 import { StubValue, Ticket } from "@/components/ticket";
-import { TicketButton } from "@/components/ticket-button";
+import { lineButton, TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { PaymentMethod } from "@/db/schema";
@@ -18,12 +18,33 @@ import {
 } from "@/lib/checkout";
 import { usd } from "@/lib/format";
 import { altPrice, formatAlt } from "@/lib/fx";
-import { fromCents, PRICE_RE, priceSale, toCents } from "@/lib/money";
+import {
+  cashNotes,
+  fromCents,
+  PRICE_RE,
+  priceSale,
+  toCents,
+} from "@/lib/money";
+import {
+  dropPending,
+  isNetworkError,
+  savePending,
+  type SaleInput,
+} from "@/lib/pending-sales";
+import type { ConfirmResult } from "@/lib/sales";
+import { EXTEND_MIN, MAX_EXTEND_MIN } from "@/lib/selling-mode";
 import { shortName } from "@/lib/short-name";
 import { toast } from "@/lib/toast";
 import { clock, useNow } from "@/lib/use-live";
+import { usePendingSales } from "../../pending-sales";
+import { StockSearch } from "../../stock-search";
 import { declineAction } from "../actions";
-import { confirmSaleAction } from "./actions";
+import {
+  addToSaleAction,
+  confirmSaleAction,
+  extendHoldAction,
+  findFreeStockAction,
+} from "./actions";
 
 export type DraftLine = {
   listingId: string;
@@ -57,10 +78,20 @@ const DISCOUNTS = [
 
 const money = (cents: number) => usd(Number(fromCents(cents)));
 
+// A line the screen hasn't seen yet (just added) starts as asked, capped by stock.
+const startEdit = (l: DraftLine): Edit => ({
+  qty: l.left > 0 ? Math.min(l.qty, l.left) : l.qty,
+  price: l.price,
+  removed: false,
+});
+
 function LineRow(props: {
   line: DraftLine;
   edit: Edit;
   canRemove: boolean;
+  /** Up to what's free: one past the held quantity holds one more first. */
+  canAdd: boolean;
+  onMore: () => void;
   onChange: (patch: Partial<Edit>) => void;
 }) {
   const { line: l, edit: e } = props;
@@ -92,8 +123,8 @@ function LineRow(props: {
       ? l.held
         ? "Held for another buyer. Decline that request or wait."
         : "No longer in stock"
-      : l.left < l.qty
-        ? `Only ${l.left} of ${l.qty} left`
+      : short
+        ? `Only ${l.left} of ${e.qty} left`
         : null;
   const changed = toCents(e.price) !== toCents(l.price);
   const priceId = `price-${l.listingId}`;
@@ -129,8 +160,13 @@ function LineRow(props: {
           label={`Quantity of ${l.name}`}
           value={e.qty}
           min={1}
-          max={l.qty}
-          onStep={(d) => props.onChange({ qty: e.qty + d })}
+          // The confirm takes at most 99 of a line.
+          max={props.canAdd ? Math.min(99, Math.max(l.qty, l.left)) : l.qty}
+          onStep={(d) =>
+            d > 0 && e.qty >= l.qty
+              ? props.onMore()
+              : props.onChange({ qty: e.qty + d })
+          }
         />
         <div className="flex max-w-44 min-w-0 flex-1 flex-col gap-1">
           <div className="flex flex-wrap items-baseline justify-between gap-x-2">
@@ -155,6 +191,124 @@ function LineRow(props: {
         </div>
       </div>
     </li>
+  );
+}
+
+// The cash chip that means "they handed over the total".
+const EXACT = "exact";
+
+/** What the buyer handed over and the change to give back; nothing is stored. */
+function CashGiven(props: {
+  total: number;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const { total, value } = props;
+  const typed = value.trim().replace("$", "");
+  const given =
+    value === EXACT ? total : PRICE_RE.test(typed) ? toCents(typed) : null;
+  const chips: [string, string][] = [
+    [EXACT, "Exact"],
+    ...cashNotes(total).map(
+      (c) => [fromCents(c), money(c)] as [string, string],
+    ),
+  ];
+  return (
+    <div className="flex flex-col gap-2">
+      <Label id="cash-given-label" htmlFor="cash-given">
+        Cash given
+      </Label>
+      <div
+        role="group"
+        aria-labelledby="cash-given-label"
+        className="flex flex-wrap gap-2"
+      >
+        {chips.map(([v, text]) => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={value === v}
+            onClick={() => props.onChange(v)}
+            className={chip}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+      <Input
+        id="cash-given"
+        inputMode="decimal"
+        autoComplete="off"
+        placeholder="Or type it"
+        className="num w-36"
+        value={value === EXACT ? fromCents(total) : value}
+        onChange={(e) => props.onChange(e.target.value)}
+      />
+      {given !== null && (
+        <p
+          role="status"
+          className={`font-display num text-[1.875rem] leading-none font-extrabold ${given < total ? "text-danger" : ""}`}
+        >
+          {given < total
+            ? `${money(total - given)} short`
+            : `Change: ${money(given - total)}`}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * A card the buyer picked up at the table, or one more of a line: held on the
+ * server first, like the rest of the sale, then the page re-reads.
+ */
+function useAddToSale(id: string) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const add = (listingId: string, then?: () => void) =>
+    start(async () => {
+      const ok = await addToSaleAction(id, listingId).catch(() => null);
+      if (ok === null) toast.notSaved("Couldn't reach the server. Try again.");
+      else if (!ok) toast.notSaved("None of that is free any more.");
+      else then?.();
+      router.refresh();
+    });
+  return { add, pending };
+}
+
+/** "+15 min" for a buyer who went to the ATM, while the hold can still grow. */
+function ExtendHold(props: { id: string; added: number; canExtend: boolean }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  const more = props.canExtend && props.added < MAX_EXTEND_MIN;
+  const extend = () =>
+    start(async () => {
+      const ok = await extendHoldAction(props.id).catch(() => null);
+      if (ok === null) toast.notSaved("Couldn't reach the server. Try again.");
+      else if (!ok) toast.notSaved("That hold can't be pushed back any more.");
+      router.refresh();
+    });
+  if (!more && !props.added) return null;
+  return (
+    <div className="flex flex-col items-start gap-1">
+      {more && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={extend}
+          aria-label={`+${EXTEND_MIN} min on the hold`}
+          className={lineButton}
+        >
+          +{EXTEND_MIN} min
+        </button>
+      )}
+      {props.added > 0 && (
+        <p role="status" className="num text-sm text-muted-foreground">
+          {props.added} min added
+          {more ? "" : `, the most a hold can get`}.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -213,28 +367,33 @@ export function SaleForm(props: {
     payWith: PayWith | null;
     phone: string | null;
     address: string | null;
+    /** A buyer's request whose hold the vendor may push back. */
+    canExtend: boolean;
+    /** Pending and not a test or claim: more can be held on it. */
+    canAdd: boolean;
+    holdAddedMin: number;
   };
   lines: DraftLine[];
   currency: string | null;
   fxRate: number | null;
+  /** Where the sale started: the queue, inventory (table sale) or its claim event. */
+  back: string;
 }) {
   const { request: r, lines } = props;
   const router = useRouter();
   const now = useNow();
+  // A sale saved on this phone while offline, waiting or refused.
+  const saved = usePendingSales().find((p) => p.input.requestId === r.id);
   // A cancel or a rival sale while the seller is editing shows up through the
   // layout's stream, which re-reads this page.
-  const [edits, setEdits] = useState<Record<string, Edit>>(() =>
-    Object.fromEntries(
-      lines.map((l) => [
-        l.listingId,
-        {
-          qty: l.left > 0 ? Math.min(l.qty, l.left) : l.qty,
-          price: l.price,
-          removed: false,
-        },
-      ]),
-    ),
+  const [seen, setEdits] = useState<Record<string, Edit>>(() =>
+    Object.fromEntries(lines.map((l) => [l.listingId, startEdit(l)])),
   );
+  const edits: Record<string, Edit> = Object.fromEntries(
+    lines.map((l) => [l.listingId, seen[l.listingId] ?? startEdit(l)]),
+  );
+  const more = useAddToSale(r.id);
+  const [adding, setAdding] = useState(false);
   const [discountKind, setKind] = useState<"none" | "amount" | "percent">(
     "none",
   );
@@ -242,6 +401,7 @@ export function SaleForm(props: {
   // What the buyer said they'd pay with; the seller can still change it.
   const [method, setMethod] = useState<PaymentMethod | null>(r.payWith);
   const [note, setNote] = useState("");
+  const [given, setGiven] = useState("");
   const [failed, setFailed] = useState(false);
   const [pending, start] = useTransition();
 
@@ -265,7 +425,12 @@ export function SaleForm(props: {
     ? altPrice(Number(fromCents(priced.total)), props.fxRate)
     : null;
   const ready = Boolean(
-    priced && method && noteOk && !shortLines.length && !typing,
+    priced &&
+    method &&
+    noteOk &&
+    !shortLines.length &&
+    !typing &&
+    !(saved && !saved.refused),
   );
   const helper = !method
     ? "Pick how they paid."
@@ -284,28 +449,64 @@ export function SaleForm(props: {
   const badDiscount =
     !typing && !priced && Boolean(priceSale(chosen, { kind: "none" }));
 
-  const patch = (id: string, p: Partial<Edit>) =>
-    setEdits((all) => ({ ...all, [id]: { ...all[id], ...p } }));
+  const patch = (
+    l: DraftLine,
+    p: Partial<Edit> | ((e: Edit) => Partial<Edit>),
+  ) =>
+    setEdits((all) => {
+      const e = all[l.listingId] ?? startEdit(l);
+      return {
+        ...all,
+        [l.listingId]: { ...e, ...(typeof p === "function" ? p(e) : p) },
+      };
+    });
 
+  const change =
+    method === "cash" && priced && given && given !== EXACT
+      ? toCents(given.replace("$", "")) - priced.total
+      : 0;
   const confirm = () =>
     start(async () => {
       setFailed(false);
-      const id = toast.saleRecording();
-      const res = await confirmSaleAction({
+      const input: SaleInput = {
         requestId: r.id,
         lines: chosen,
         discount,
-        method,
+        method: method!,
         note: method === "other" ? note.trim() : undefined,
-      }).catch(() => null);
+      };
+      // Kept on this phone and sent once it's back online (PendingSync).
+      const keep = () =>
+        savePending({
+          input,
+          buyer: shortName(r.buyerName),
+          total: money(priced!.total),
+          emailed: r.emailed,
+        });
+      if (!navigator.onLine && keep()) return;
+      const id = toast.saleRecording();
+      let res: ConfirmResult | null = null;
+      try {
+        res = await confirmSaleAction(input);
+      } catch (err) {
+        // It may have landed; a resend of a recorded sale returns that sale.
+        if (isNetworkError(err) && keep()) return void toast.dismiss(id);
+      }
       if (res && "ok" in res) {
+        const { saleId } = res;
+        dropPending(r.id);
         toast.saleRecorded(
           id,
-          res.receiptNo,
-          usd(Number(res.total)),
-          r.emailed,
+          {
+            receiptNo: res.receiptNo,
+            total: usd(Number(res.total)),
+            emailed: r.emailed,
+            change: change > 0 ? money(change) : undefined,
+          },
+          () => router.push(`/dashboard/sales/${saleId}`),
         );
-        router.push(`/dashboard/sales/${res.saleId}`);
+        // Back to where the sale started; the receipt stays on Sales.
+        router.push(props.back);
         return;
       }
       toast.dismiss(id);
@@ -335,9 +536,16 @@ export function SaleForm(props: {
           items are here.
         </p>
       )}
-      <div className="flex gap-8">
+      <div className="flex flex-wrap items-start gap-x-8 gap-y-3">
         <StubValue k="Code" v={r.code} testId="sale-code" />
         <StubValue k="Hold" v={over ? "Over" : clock(r.expiresAt, now)} />
+        {!r.isTest && (
+          <ExtendHold
+            id={r.id}
+            added={r.holdAddedMin}
+            canExtend={r.canExtend && !over}
+          />
+        )}
       </div>
       {(r.fulfil || r.payWith || r.phone) && (
         <section
@@ -371,10 +579,46 @@ export function SaleForm(props: {
               line={l}
               edit={edits[l.listingId]}
               canRemove={kept.length > 1}
-              onChange={(p) => patch(l.listingId, p)}
+              canAdd={r.canAdd}
+              onMore={() =>
+                more.add(l.listingId, () =>
+                  patch(l, (e) => ({ qty: e.qty + 1 })),
+                )
+              }
+              onChange={(p) => patch(l, p)}
             />
           ))}
         </ul>
+        {r.canAdd &&
+          (adding ? (
+            <div className="border-t border-border pt-3">
+              <StockSearch
+                id="add-item"
+                label="Add item"
+                search={findFreeStockAction}
+                disabled={more.pending}
+                empty="Nothing free in your stock matches."
+                onPick={(h) => {
+                  const l = lines.find((x) => x.listingId === h.id);
+                  more.add(
+                    h.id,
+                    l &&
+                      (() =>
+                        patch(l, (e) => ({ qty: e.qty + 1, removed: false }))),
+                  );
+                  setAdding(false);
+                }}
+              />
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className={`${lineButton} mt-3`}
+            >
+              Add item
+            </button>
+          ))}
       </Ticket>
       <Segmented
         label="Discount"
@@ -442,6 +686,9 @@ export function SaleForm(props: {
           </div>
         )}
       </dl>
+      {method === "cash" && priced && !r.isTest && (
+        <CashGiven total={priced.total} value={given} onChange={setGiven} />
+      )}
       {!r.isTest && (
         <div
           data-toast-clear
@@ -453,10 +700,23 @@ export function SaleForm(props: {
               won&apos;t record twice.
             </p>
           )}
+          {saved &&
+            (saved.refused ? (
+              <p role="alert" className="font-semibold text-danger">
+                The sale saved on this phone wasn&apos;t recorded.{" "}
+                {saved.refused} Check it and confirm again.
+              </p>
+            ) : (
+              <p role="status" className="font-semibold">
+                Saved on this phone. It sends when you&apos;re back online.
+              </p>
+            ))}
           <TicketButton disabled={!ready || pending} onClick={confirm}>
-            {pending
-              ? "Recording"
-              : `Confirm sale${priced ? `, ${money(priced.total)}` : ""}`}
+            {saved && !saved.refused
+              ? "Waiting to send"
+              : pending
+                ? "Recording"
+                : `Confirm sale${priced ? `, ${money(priced.total)}` : ""}`}
           </TicketButton>
           <p className="text-sm">
             {helper ?? "This can't be changed after you confirm."}

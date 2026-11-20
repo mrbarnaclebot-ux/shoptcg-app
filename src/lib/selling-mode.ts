@@ -15,6 +15,11 @@ export const HOLD_MS: Record<SellingMode, number> = {
   online: 24 * 60 * 60_000,
 };
 
+/** "+15 min" on the sale screen, for a buyer who went to the ATM. */
+export const EXTEND_MIN = 15;
+/** The most a buyer's hold can gain in all; request_hold_added_min checks it too. */
+export const MAX_EXTEND_MIN = 60;
+
 export const MODE_COPY = {
   table: {
     label: "At a table",
@@ -32,6 +37,7 @@ export const MODE_COPY = {
     sentNext:
       "Head to the table and show this screen. Your items are held for you.",
     codeLabel: "Show the seller this code",
+    sentWord: "Request",
     declined:
       "Items are back in the store. You can talk to the seller at the table or send a new cart.",
     holdSoon: (table: string | null) =>
@@ -57,6 +63,7 @@ export const MODE_COPY = {
     sentNext:
       "The seller will confirm your order and email you to arrange payment and pickup or delivery. Your items are held for you.",
     codeLabel: "Your order code",
+    sentWord: "Order",
     declined: "Items are back in the store. You can send a new cart.",
     holdSoon: () => "The seller hasn't confirmed yet.",
     signFact: "Order on your phone",

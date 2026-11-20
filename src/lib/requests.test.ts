@@ -9,9 +9,13 @@ import * as schema from "@/db/schema";
 import { listing, request, requestLine, store } from "@/db/schema";
 import { buyerRequest, heldByListing } from "@/lib/request-reads";
 import {
+  addToRequest,
+  addToTableSale,
   cancelRequest,
   createRequest,
   declineRequest,
+  extendHold,
+  findFreeStock,
   shortName,
   type NewRequest,
 } from "@/lib/requests";
@@ -246,6 +250,106 @@ test("decline and cancel release the hold and are scoped to their owner", async 
   expect((await heldByListing(db, s.storeId)).size).toBe(0);
   expect((await buyerRequest(db, r.id, a.sessionId))?.status).toBe("declined");
   expect(await cancelRequest(db, a.sessionId, r.id)).toBe(false);
+});
+
+test("+15 min pushes a buyer's hold back, an hour at most, pending only", async () => {
+  const db = await migratedDb();
+  const s = await shop(db, 2);
+  const r = await createRequest(db, ask(s));
+  if (!r.ok) throw new Error("hold failed");
+  const ends = async (id: string) =>
+    (await db.select().from(request).where(eq(request.id, id)))[0].expiresAt;
+  const first = await ends(r.id);
+  // Not another store's to push.
+  expect(await extendHold(db, (await shop(db)).storeId, r.id)).toBeNull();
+  for (let i = 1; i <= 4; i++) {
+    const to = await extendHold(db, s.storeId, r.id);
+    expect(to!.getTime() - first.getTime()).toBe(i * 15 * 60_000);
+  }
+  // A fifth would pass the hour.
+  expect(await extendHold(db, s.storeId, r.id)).toBeNull();
+  expect((await ends(r.id)).getTime() - first.getTime()).toBe(60 * 60_000);
+
+  // A lapsed hold, a declined request and a table sale don't move.
+  const late = await createRequest(db, ask(s));
+  if (!late.ok) throw new Error("hold failed");
+  await db
+    .update(request)
+    .set({
+      createdAt: sql`now() - interval '1 hour'`,
+      expiresAt: sql`now() - interval '1 second'`,
+    })
+    .where(eq(request.id, late.id));
+  expect(await extendHold(db, s.storeId, late.id)).toBeNull();
+  const gone = await createRequest(db, ask(s));
+  if (!gone.ok) throw new Error("hold failed");
+  await declineRequest(db, s.storeId, gone.id);
+  expect(await extendHold(db, s.storeId, gone.id)).toBeNull();
+  const table = await addToTableSale(db, s.storeId, s.listingId);
+  expect(await extendHold(db, s.storeId, table!)).toBeNull();
+  // The database refuses past the cap whatever the code does.
+  await expect(
+    db.update(request).set({ holdAddedMin: 75 }).where(eq(request.id, r.id)),
+  ).rejects.toThrow();
+});
+
+test("Add item holds one more at the table, only from what's free", async () => {
+  const db = await migratedDb();
+  const s = await shop(db, 2);
+  const [pika] = await db
+    .insert(listing)
+    .values({
+      storeId: s.storeId,
+      kind: "raw",
+      language: "en",
+      name: "Pikachu",
+      condition: "NM",
+      qty: 1,
+      overridePrice: "4.00",
+    })
+    .returning({ id: listing.id });
+  const r = await createRequest(db, ask(s));
+  if (!r.ok) throw new Error("hold failed");
+  const linesOf = async (id: string) =>
+    (
+      await db
+        .select({ id: requestLine.listingId, qty: requestLine.qty })
+        .from(requestLine)
+        .where(eq(requestLine.requestId, id))
+    ).sort((a, b) => a.qty - b.qty);
+
+  // The picker shows what's free: one Mew (the other is held) and the Pikachu.
+  expect(await findFreeStock(db, s.storeId, "mew")).toEqual([
+    expect.objectContaining({ id: s.listingId, note: "1 free · $10.00" }),
+  ]);
+  // A new line, then one more of the line the buyer asked for.
+  expect(await addToRequest(db, s.storeId, r.id, pika.id)).toBe(true);
+  expect(await addToRequest(db, s.storeId, r.id, s.listingId)).toBe(true);
+  expect(await linesOf(r.id)).toEqual([
+    { id: pika.id, qty: 1 },
+    { id: s.listingId, qty: 2 },
+  ]);
+  // Nothing left free: no more, and the picker leaves them out.
+  expect(await addToRequest(db, s.storeId, r.id, pika.id)).toBe(false);
+  expect(await findFreeStock(db, s.storeId, "mew")).toEqual([]);
+  const other = await createRequest(db, ask(s));
+  expect(other).toEqual({ ok: false, taken: [s.listingId] });
+
+  // Not another store's, a declined request or a test.
+  const rival = await shop(db);
+  expect(await addToRequest(db, rival.storeId, r.id, pika.id)).toBe(false);
+  expect(await addToRequest(db, s.storeId, r.id, rival.listingId)).toBe(false);
+  const test = await createRequest(
+    db,
+    ask(rival, { isTest: true, sessionId: randomUUID() }),
+  );
+  if (!test.ok) throw new Error("hold failed");
+  expect(await addToRequest(db, rival.storeId, test.id, rival.listingId)).toBe(
+    false,
+  );
+  await declineRequest(db, s.storeId, r.id);
+  await db.update(listing).set({ qty: 5 }).where(eq(listing.id, pika.id));
+  expect(await addToRequest(db, s.storeId, r.id, pika.id)).toBe(false);
 });
 
 test("shortName keeps a first name and an initial", () => {

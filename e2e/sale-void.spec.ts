@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { confirm, openVendor, pay, reviewSale } from "./buyer";
+import { confirmAndView, openVendor, pay, reviewSale } from "./buyer";
 
 test("a vendor voids a sale, puts the stock back and it leaves the totals", async ({
   page,
@@ -8,7 +8,7 @@ test("a vendor voids a sale, puts the stock back and it leaves the totals", asyn
   const slug = await openVendor(page);
   const buyer = await reviewSale(page, browser, slug, ["Charizard ex"]);
   await pay(page, "Cash");
-  await confirm(page).click();
+  await confirmAndView(page);
   await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
 
   // Keep backs out; the restock box starts ticked.

@@ -5,6 +5,7 @@ import { getDb } from "@/db";
 import { waitingCount } from "@/lib/request-reads";
 import { storeOrNull } from "@/lib/session";
 import { DashboardNav } from "./nav";
+import { PendingSync } from "./pending-sales";
 import { StoreLive } from "./store-live";
 import { TimeZoneCookie } from "./time-zone-cookie";
 
@@ -39,11 +40,17 @@ export default function DashboardLayout({
 /**
  * The store's live stream for every dashboard page. A layout keeps its state
  * across navigations, and the stream's re-reads refresh this count with the
- * page. Test requests count: the vendor sends one to hear the chime.
+ * page. Test requests count: the vendor sends one to hear the chime. Sales
+ * saved on the phone while offline send from here too, whatever the page.
  */
 async function Alerts() {
   const store = await storeOrNull();
   if (!store) return null;
   const waiting = await waitingCount(getDb(), store.id, { tests: true });
-  return <StoreLive waiting={waiting} />;
+  return (
+    <>
+      <StoreLive waiting={waiting} />
+      <PendingSync />
+    </>
+  );
 }

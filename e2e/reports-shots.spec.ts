@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
   buyerEmail,
-  confirm,
+  confirmAndView,
   openVendor,
   outboxLine,
   pay,
@@ -54,7 +54,7 @@ for (const width of [390, 768, 1280]) {
         name: s.name,
       });
       await pay(page, s.method);
-      await confirm(page).click();
+      await confirmAndView(page);
       await expect(page.getByTestId("receipt-no")).toBeVisible();
     }
 

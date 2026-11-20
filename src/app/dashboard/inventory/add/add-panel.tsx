@@ -11,27 +11,69 @@ import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CatalogItem } from "@/db/schema";
+import type { SearchItem } from "@/lib/catalog";
 import { CONDITIONS, GRADERS, GRADES, type Condition } from "@/lib/condition";
+import { usd } from "@/lib/format";
 import type { Grader } from "@/lib/pricing/provider";
 import { toast } from "@/lib/toast";
+import { conditionPrice, type StorePricing } from "@/lib/vendor-price";
 import { addCatalogAction } from "../actions";
 import { CostField } from "../edit-panel";
 
 export const OFFLINE =
   "Couldn't reach the server. Check your connection and try again.";
 
+/**
+ * The market a catalog pick sells from, in its condition, and the store's
+ * price for it. A slab picked from a raw card has no market until it's
+ * looked up after the add.
+ */
+export function MarketLine(props: {
+  item: SearchItem;
+  condition: Condition;
+  graded: boolean;
+  pricing: StorePricing;
+  /** Their offer, on the buy screen; the add screen says what you sell at. */
+  sell?: boolean;
+}) {
+  const { item, condition } = props;
+  const raw = item.kind === "raw" && !props.graded;
+  const p = conditionPrice(
+    props.graded || item.market === null ? null : Number(item.market),
+    raw ? props.pricing.cond[condition] : 100,
+    props.pricing,
+  );
+  if (!p) return <p className="text-sm text-muted-foreground">No price yet</p>;
+  const nm = usd(Number(item.market));
+  return (
+    <p className="num font-semibold">
+      {props.sell === false
+        ? `Market ${usd(p.market)}${raw ? ` (${condition})` : ""}`
+        : `Market ${nm}${raw ? " (NM)" : ""} → you sell${raw && condition !== "NM" ? ` ${condition}` : ""} at ${usd(p.sell)}`}
+    </p>
+  );
+}
+
 export function AddPanel({
   item,
   graded = false,
+  pricing,
+  condition: initialCondition = "NM",
+  onCondition,
   onClose,
 }: {
-  item: CatalogItem;
+  item: SearchItem;
   /** Listing a raw card as a slab: the vendor picks grader and grade here. */
   graded?: boolean;
+  pricing: StorePricing;
+  /** The last condition picked, remembered by the search. */
+  condition?: Condition;
+  onCondition?: (c: Condition) => void;
   onClose: () => void;
 }) {
-  const [condition, setCondition] = useState<Condition>("NM");
+  const [condition, setCondition] = useState<Condition>(initialCondition);
   const [grader, setGrader] = useState<Grader>("PSA");
+  const [grade, setGrade] = useState("10");
   const [error, setError] = useState<string>();
   const [added, setAdded] = useState<{ first: boolean; merged?: Merged }>();
   const [pending, start] = useTransition();
@@ -42,7 +84,7 @@ export function AddPanel({
         catalogItemId: item.id,
         condition: item.kind === "raw" && !graded ? condition : null,
         grader: graded ? grader : null,
-        grade: graded ? form.get("grade") : null,
+        grade: graded ? grade : null,
         qty: form.get("qty"),
         overridePrice: fixed,
         cost: form.get("cost"),
@@ -82,37 +124,34 @@ export function AddPanel({
         </button>
         <ItemHeader item={item} />
         {graded ? (
-          <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
-            <Segmented
-              label="Grader"
-              value={grader}
-              options={GRADERS.map((g) => [g, g] as const)}
-              onChange={setGrader}
-            />
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="grade">Grade</Label>
-              <select
-                id="grade"
-                name="grade"
-                defaultValue="10"
-                className="h-12 min-w-24 bg-bg px-3 text-base shadow-[inset_0_0_0_1.5px_var(--border-strong)] focus-visible:shadow-[inset_0_0_0_2.5px_var(--focus)] focus-visible:outline-none"
-              >
-                {GRADES.map((g) => (
-                  <option key={g}>{g}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <SlabFields
+            id="grade"
+            grader={grader}
+            onGrader={setGrader}
+            grade={grade}
+            onGrade={setGrade}
+          />
         ) : (
           item.kind === "raw" && (
             <Segmented
               label="Condition"
               value={condition}
               options={CONDITIONS.map((c) => [c, c] as const)}
-              onChange={setCondition}
+              onChange={(c) => {
+                setCondition(c);
+                onCondition?.(c);
+              }}
             />
           )
         )}
+        <div role="status">
+          <MarketLine
+            item={item}
+            condition={condition}
+            graded={graded}
+            pricing={pricing}
+          />
+        </div>
         <StockFields />
         {error && <p className="text-sm text-danger">{error}</p>}
         <TicketButton type="submit" disabled={pending} aria-busy={pending}>
@@ -120,6 +159,40 @@ export function AddPanel({
         </TicketButton>
       </form>
     </Ticket>
+  );
+}
+
+/** Grader and grade for a raw card listed or bought as a slab. */
+export function SlabFields(props: {
+  id: string;
+  grader: Grader;
+  onGrader: (g: Grader) => void;
+  grade: string;
+  onGrade: (g: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+      <Segmented
+        label="Grader"
+        name={`${props.id}-grader`}
+        value={props.grader}
+        options={GRADERS.map((g) => [g, g] as const)}
+        onChange={props.onGrader}
+      />
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={props.id}>Grade</Label>
+        <select
+          id={props.id}
+          value={props.grade}
+          onChange={(e) => props.onGrade(e.target.value)}
+          className="h-12 min-w-24 bg-bg px-3 text-base shadow-[inset_0_0_0_1.5px_var(--border-strong)] focus-visible:shadow-[inset_0_0_0_2.5px_var(--focus)] focus-visible:outline-none"
+        >
+          {GRADES.map((g) => (
+            <option key={g}>{g}</option>
+          ))}
+        </select>
+      </div>
+    </div>
   );
 }
 

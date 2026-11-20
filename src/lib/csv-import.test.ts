@@ -55,6 +55,65 @@ describe("readCsv", () => {
     });
   });
 
+  it("reads a TCGplayer export's headers and condition names", () => {
+    const rows = readCsv(
+      [
+        "TCGplayer Id,Product Line,Set Name,Product Name,Number,Rarity,Condition,TCG Market Price,Total Quantity,Add to Quantity,TCG Marketplace Price",
+        "123,Pokemon,Scarlet & Violet 151,Charizard ex,199/165,SIR,Near Mint,291.77,2,0,299.99",
+        "124,Pokemon,Scarlet & Violet 151,Mew ex,205/165,SIR,Lightly Played Holofoil,40.10,1,0,",
+      ].join("\n"),
+    );
+    expect(rows).toMatchObject([
+      {
+        ok: true,
+        input: {
+          name: "Charizard ex",
+          setName: "Scarlet & Violet 151",
+          number: "199/165",
+          condition: "NM",
+          // Total Quantity comes first, so Add to Quantity is ignored.
+          qty: 2,
+          // Their market and listed prices are not ours.
+          overridePrice: null,
+        },
+      },
+      { ok: true, input: { name: "Mew ex", condition: "LP", qty: 1 } },
+    ]);
+  });
+
+  it("reads a collection export: Quantity, Card Number, language names, My Price", () => {
+    const rows = readCsv(
+      [
+        "Quantity,Product Name,Set,Card Number,Condition,Language,Price Each,My Price",
+        "3,Pikachu,Shiny Treasure ex,236/190,Moderately Played,Japanese,30.00,",
+        "1,Umbreon ex,Prismatic Evolutions,161,Damaged,English,1.00,450",
+      ].join("\n"),
+    );
+    expect(rows).toMatchObject([
+      {
+        ok: true,
+        input: {
+          name: "Pikachu",
+          setName: "Shiny Treasure ex",
+          number: "236/190",
+          qty: 3,
+          condition: "MP",
+          language: "ja",
+          overridePrice: null,
+        },
+      },
+      {
+        ok: true,
+        input: { condition: "DMG", language: "en", overridePrice: "450.00" },
+      },
+    ]);
+  });
+
+  it("prefers our own column to an alias of it", () => {
+    const [row] = readCsv("name,Product Name,qty,Quantity\nOurs,Theirs,4,9");
+    expect(row).toMatchObject({ ok: true, input: { name: "Ours", qty: 4 } });
+  });
+
   it("accepts every row of the downloadable template", () => {
     const rows = readCsv(readFileSync("public/inventory-template.csv", "utf8"));
     expect(rows.length).toBeGreaterThan(3);

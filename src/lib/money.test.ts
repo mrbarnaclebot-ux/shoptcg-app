@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { priceSale, toCents } from "@/lib/money";
+import { cashNotes, priceSale, toCents } from "@/lib/money";
 
 const line = (unitPrice: string, qty = 1) => ({ unitPrice, qty });
 
@@ -37,4 +37,13 @@ test("a free throw-in is fine; a malformed price is not", () => {
   ).toMatchObject({ subtotal: 1650, total: 1650 });
   for (const bad of ["-1", "1.234", "100000", "", "1e3"])
     expect(priceSale([line(bad)], { kind: "none" })).toBeNull();
+});
+
+test("cash notes are the round sums just above the total", () => {
+  expect(cashNotes(1300)).toEqual([2000, 5000, 10_000]);
+  expect(cashNotes(5895)).toEqual([6000, 10_000]);
+  expect(cashNotes(26_550)).toEqual([27_000, 28_000, 30_000]);
+  // A total already on a note is Exact, so only bigger ones.
+  expect(cashNotes(2000)).toEqual([5000, 10_000]);
+  expect(cashNotes(0)).toEqual([]);
 });

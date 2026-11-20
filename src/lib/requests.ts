@@ -1,5 +1,5 @@
 import { randomInt } from "node:crypto";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import type { Checkout } from "@/lib/checkout";
 import { listing, request, requestLine, store } from "@/db/schema";
@@ -11,9 +11,14 @@ import {
   heldByListing,
   pendingDuplicate,
 } from "@/lib/request-reads";
-import { HOLD_MS as MODE_HOLD_MS } from "@/lib/selling-mode";
+import {
+  EXTEND_MIN,
+  HOLD_MS as MODE_HOLD_MS,
+  MAX_EXTEND_MIN,
+} from "@/lib/selling-mode";
 import { storeState } from "@/lib/store-state";
 import { uniqueViolation } from "@/lib/stores";
+import { stockMeta, usd } from "@/lib/format";
 import { vendorPrice } from "@/lib/vendor-price";
 
 /** Bumped when the buyer consent wording or the Terms change; /terms shows it as the date. */
@@ -193,15 +198,11 @@ export async function tableSale(db: Db, storeId: string) {
   return row ?? null;
 }
 
-/**
- * One more of this listing on the store's table sale, starting one if none is
- * open. It is a request the vendor makes, so the units are held like any
- * buyer's and it is confirmed on the same screen. Null when none is free.
- */
-export function addToTableSale(db: Db, storeId: string, listingId: string) {
-  return withCode(db, async (tx) => {
-    // Store first and exclusively: two quick taps must not start two sales.
-    const [s] = await tx
+// Store first and exclusively: two quick taps must not start two sales, and
+// an add can't land in the middle of a confirm.
+const lockStoreForAdd = async (tx: Db, storeId: string) =>
+  (
+    await tx
       .select({
         id: store.id,
         priceRulePct: store.priceRulePct,
@@ -209,16 +210,47 @@ export function addToTableSale(db: Db, storeId: string, listingId: string) {
       })
       .from(store)
       .where(eq(store.id, storeId))
-      .for("no key update");
+      .for("no key update")
+  ).at(0);
+
+/** Locks a listing and prices one more unit of it; null when none is free. */
+async function oneMore(tx: Db, s: StoreRow, listingId: string) {
+  await tx
+    .select({ id: listing.id })
+    .from(listing)
+    .where(and(eq(listing.storeId, s.id), eq(listing.id, listingId)))
+    .for("update");
+  // Its own hold counts as held, so asking for one asks for one more.
+  const { priced } = await quote(tx, s, [{ listingId, qty: 1 }]);
+  return priced[0]?.quotedPrice ?? null;
+}
+
+/** One more unit on the request's line for the listing, or a new line. */
+const holdLine = (
+  tx: Db,
+  requestId: string,
+  listingId: string,
+  quotedPrice: string,
+) =>
+  tx
+    .insert(requestLine)
+    .values({ requestId, listingId, qty: 1, quotedPrice })
+    .onConflictDoUpdate({
+      target: [requestLine.requestId, requestLine.listingId],
+      set: { qty: sql`${requestLine.qty} + 1`, quotedPrice },
+    });
+
+/**
+ * One more of this listing on the store's table sale, starting one if none is
+ * open. It is a request the vendor makes, so the units are held like any
+ * buyer's and it is confirmed on the same screen. Null when none is free.
+ */
+export function addToTableSale(db: Db, storeId: string, listingId: string) {
+  return withCode(db, async (tx) => {
+    const s = await lockStoreForAdd(tx, storeId);
     if (!s) return null;
-    await tx
-      .select({ id: listing.id })
-      .from(listing)
-      .where(and(eq(listing.storeId, storeId), eq(listing.id, listingId)))
-      .for("update");
-    // Its own hold counts as held, so asking for one asks for one more.
-    const { priced } = await quote(tx, s, [{ listingId, qty: 1 }]);
-    if (!priced.length) return null;
+    const quotedPrice = await oneMore(tx, s, listingId);
+    if (quotedPrice === null) return null;
     const expiresAt = sql`now() + make_interval(secs => ${HOLD_MS / 1000})`;
     let [open] = await tx
       .update(request)
@@ -239,15 +271,121 @@ export function addToTableSale(db: Db, storeId: string, listingId: string) {
         })
         .returning({ id: request.id })
     )[0];
-    const { quotedPrice } = priced[0];
-    await tx
-      .insert(requestLine)
-      .values({ requestId: open.id, listingId, qty: 1, quotedPrice })
-      .onConflictDoUpdate({
-        target: [requestLine.requestId, requestLine.listingId],
-        set: { qty: sql`${requestLine.qty} + 1`, quotedPrice },
-      });
+    await holdLine(tx, open.id, listingId, quotedPrice);
     return open.id;
+  });
+}
+
+/**
+ * One more of a listing on an open sale: a card the buyer picked up at the
+ * table, or one more of a line. Held like the rest, so it can't be sold
+ * twice. Not on a test or a claim (paid at a distance). False when none is
+ * free or the request is no longer pending.
+ */
+export function addToRequest(
+  db: Db,
+  storeId: string,
+  requestId: string,
+  listingId: string,
+) {
+  return db.transaction(async (t) => {
+    const tx = t as Db;
+    const s = await lockStoreForAdd(tx, storeId);
+    if (!s) return false;
+    const [r] = await tx
+      .select({ id: request.id })
+      .from(request)
+      .where(
+        and(
+          eq(request.id, requestId),
+          eq(request.storeId, storeId),
+          eq(request.isTest, false),
+          isNull(request.claimEventId),
+          sql`${effectiveStatus} = 'pending'`,
+        ),
+      )
+      .for("update");
+    if (!r) return false;
+    // The confirm takes at most MAX_LINES lines.
+    const lines = await tx
+      .select({ id: requestLine.listingId })
+      .from(requestLine)
+      .where(eq(requestLine.requestId, requestId));
+    if (lines.length >= MAX_LINES && !lines.some((l) => l.id === listingId))
+      return false;
+    const quotedPrice = await oneMore(tx, s, listingId);
+    if (quotedPrice === null) return false;
+    await holdLine(tx, requestId, listingId, quotedPrice);
+    await notifyLive(tx, { s: storeId, r: requestId, t: "added" });
+    return true;
+  });
+}
+
+/** A few in-stock, for-sale listings matching the words, with how many are free and their price. */
+export async function findFreeStock(db: Db, storeId: string, q: string) {
+  const [s] = await db
+    .select({ priceRulePct: store.priceRulePct, rounding: store.rounding })
+    .from(store)
+    .where(eq(store.id, storeId));
+  const rows = await listStock(db, storeId, {
+    q,
+    forSale: true,
+    inStock: true,
+    limit: 12,
+  });
+  const held = await heldByListing(
+    db,
+    storeId,
+    rows.map((r) => r.id),
+  );
+  return rows
+    .map((r) => ({
+      r,
+      free: r.qty - (held.get(r.id)?.qty ?? 0),
+      price: vendorPrice(
+        r.market,
+        s.priceRulePct,
+        Number(s.rounding),
+        r.overridePrice,
+      ),
+    }))
+    .filter((x) => x.free > 0 && x.price !== null)
+    .slice(0, 6)
+    .map(({ r, free, price }) => ({
+      id: r.id,
+      name: r.name,
+      meta: stockMeta(r),
+      note: `${free} free · ${usd(price!)}`,
+    }));
+}
+
+/**
+ * Pushes a buyer's hold back EXTEND_MIN minutes, up to MAX_EXTEND_MIN in all.
+ * Only a pending buyer request: a table sale renews on each tap and a claim
+ * holds until its pay window. The new end, or null when it can't move.
+ */
+export function extendHold(db: Db, storeId: string, id: string) {
+  return db.transaction(async (t) => {
+    const tx = t as Db;
+    const [row] = await tx
+      .update(request)
+      .set({
+        expiresAt: sql`${request.expiresAt} + make_interval(mins => ${EXTEND_MIN})`,
+        holdAddedMin: sql`${request.holdAddedMin} + ${EXTEND_MIN}`,
+      })
+      .where(
+        and(
+          eq(request.id, id),
+          eq(request.storeId, storeId),
+          eq(request.walkUp, false),
+          isNull(request.claimEventId),
+          sql`${effectiveStatus} = 'pending'`,
+          sql`${request.holdAddedMin} + ${EXTEND_MIN} <= ${MAX_EXTEND_MIN}`,
+        ),
+      )
+      .returning({ expiresAt: request.expiresAt });
+    if (row) await notifyLive(tx, { s: storeId, r: id, t: "extended" });
+    return row?.expiresAt ?? null;
   });
 }
 

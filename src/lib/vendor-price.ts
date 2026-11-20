@@ -1,3 +1,5 @@
+import type { Condition } from "@/lib/condition";
+
 /** Rounding steps a store may pick: cents, 50 cents or whole dollars. */
 export const ROUNDING_STEPS = [0, 0.5, 1] as const;
 
@@ -20,6 +22,47 @@ export function vendorPrice(
   const rounded = Math.round(cents / step) * step;
   // A cheap card rounded to a whole-dollar step must not become free.
   return Math.max(rounded, step) / 100;
+}
+
+/** What the add and buy screens price with: the store rule and rounding, and each condition's share of NM. */
+export type StorePricing = {
+  rulePct: number;
+  rounding: number;
+  cond: Record<Condition, number>;
+};
+
+export const storePricing = (s: {
+  priceRulePct: number;
+  rounding: string;
+  condLpPct: number;
+  condMpPct: number;
+  condHpPct: number;
+  condDmgPct: number;
+}): StorePricing => ({
+  rulePct: s.priceRulePct,
+  rounding: Number(s.rounding),
+  cond: {
+    NM: 100,
+    LP: s.condLpPct,
+    MP: s.condMpPct,
+    HP: s.condHpPct,
+    DMG: s.condDmgPct,
+  },
+});
+
+/**
+ * A Near Mint market moved to a condition's share, to the cent (as
+ * conditionMarket in listings.ts), and what the store sells it at.
+ * Null when there is no market yet.
+ */
+export function conditionPrice(
+  nm: number | null,
+  pct: number,
+  p: Pick<StorePricing, "rulePct" | "rounding">,
+) {
+  if (nm === null) return null;
+  const market = Math.round((Math.round(nm * 100) * pct) / 100) / 100;
+  return { market, sell: vendorPrice(market, p.rulePct, p.rounding, null)! };
 }
 
 // Price on add runs right after the add; a big import takes a few minutes.

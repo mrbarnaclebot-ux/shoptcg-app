@@ -320,6 +320,9 @@ export async function saleDraft(db: Db, storeId: string, requestId: string) {
       code: request.code,
       buyerName: request.buyerName,
       isTest: request.isTest,
+      walkUp: request.walkUp,
+      claimEventId: request.claimEventId,
+      holdAddedMin: request.holdAddedMin,
       // Whether a receipt will be emailed; the address stays on the server.
       emailed: sql<boolean>`${request.buyerEmail} is not null`,
       expiresAt: request.expiresAt,
@@ -464,8 +467,19 @@ export async function saleForRequest(db: Db, requestId: string) {
   };
 }
 
-/** Today's sales, newest first, voided ones too; callers leave those out of totals. */
-export function salesToday(db: Db, storeId: string, timeZone: string) {
+/**
+ * One day's sales in this zone, today unless `day` (YYYY-MM-DD) says another,
+ * newest first, voided ones too; callers leave those out of totals.
+ */
+export function salesOn(
+  db: Db,
+  storeId: string,
+  timeZone: string,
+  day?: string,
+) {
+  const from = day
+    ? sql`(${day}::date)::timestamp at time zone ${timeZone}`
+    : dayStart(timeZone);
   return db
     .select({
       id: sale.id,
@@ -485,7 +499,10 @@ export function salesToday(db: Db, storeId: string, timeZone: string) {
     .where(
       and(
         eq(sale.storeId, storeId),
-        sql`${sale.createdAt} >= ${dayStart(timeZone)}`,
+        sql`${sale.createdAt} >= ${from}`,
+        day
+          ? sql`${sale.createdAt} < (${day}::date + 1)::timestamp at time zone ${timeZone}`
+          : undefined,
       ),
     )
     .orderBy(desc(sale.createdAt));

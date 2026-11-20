@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
   useTransition,
@@ -15,10 +16,11 @@ import { TicketButton } from "@/components/ticket-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CheckoutErrors, Fulfil, PayWith } from "@/lib/checkout";
-import { altPrice, formatAlt } from "@/lib/fx";
-import { usd } from "@/lib/format";
+import { altPrice, formatAlt, usdTag } from "@/lib/fx";
 import { modeCopy, type SellingMode } from "@/lib/selling-mode";
+import { clearDetails, saveDetails, useDetails } from "../buyer-details";
 import { useLines, writeList } from "../list-island";
+import { rememberSent } from "../sent-stub";
 import { sendRequest, startBuyerSession } from "./actions";
 import { CheckoutFields } from "./checkout-fields";
 
@@ -64,6 +66,53 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
+/** "Not you?": drops the kept details and empties what they filled in. */
+function forget(form: HTMLFormElement | null) {
+  clearDetails();
+  for (const k of ["name", "email", "phone", "address"]) {
+    const el = form?.elements.namedItem(k);
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)
+      el.value = "";
+  }
+  // The button goes with the details, so focus goes to the first field.
+  (form?.elements.namedItem("name") as HTMLElement | null)?.focus();
+}
+
+/** The cart's lines and form as blocks, before the phone's cart is read. */
+function CartSkeleton({ rows }: { rows: number }) {
+  return (
+    <div className="paper flex flex-col gap-5 p-5">
+      <p role="status" className="sr-only">
+        Loading the cart
+      </p>
+      <ul aria-hidden>
+        {Array.from({ length: rows }, (_, i) => (
+          <li
+            key={i}
+            className="grid grid-cols-[40px_1fr_auto] gap-3 border-b border-border py-3 first:pt-0"
+          >
+            <span className="aspect-[63/88] w-10 animate-pulse bg-surface" />
+            <span className="flex flex-col gap-2">
+              <span className="h-4 w-3/4 bg-surface" />
+              <span className="h-3 w-1/2 bg-surface" />
+              <span className="mt-1 h-11 w-[8.25rem] bg-surface" />
+            </span>
+            <span className="mt-12 h-4 w-14 bg-surface" />
+          </li>
+        ))}
+      </ul>
+      <span aria-hidden className="ml-auto h-8 w-28 bg-surface" />
+      {[0, 1].map((i) => (
+        <span key={i} aria-hidden className="flex flex-col gap-2">
+          <span className="h-4 w-32 bg-surface" />
+          <span className="h-12 bg-surface" />
+        </span>
+      ))}
+      <span aria-hidden className="h-12 bg-surface" />
+    </div>
+  );
+}
+
 export function CartReview(props: {
   store: ReviewStore;
   items: ReviewItem[];
@@ -74,6 +123,8 @@ export function CartReview(props: {
   const router = useRouter();
   const hydrated = useHydrated();
   const lines = useLines(store.slug);
+  const saved = useDetails();
+  const form = useRef<HTMLFormElement>(null);
   const [pending, start] = useTransition();
   const [errors, setErrors] = useState<Errors>({});
   const [banner, setBanner] = useState<string | null>(null);
@@ -92,7 +143,8 @@ export function CartReview(props: {
     if (stale) router.replace(`/${store.slug}/cart?ids=${ids}`);
   }, [stale, ids, store.slug, router]);
 
-  if (!hydrated) return null;
+  // The cart lives on the phone, so the server can only draw its shape.
+  if (!hydrated) return <CartSkeleton rows={Math.max(1, items.length)} />;
 
   const copy = modeCopy(store.mode);
   const closedCopy = `${store.name} just closed. Your cart is saved on this phone.`;
@@ -153,6 +205,9 @@ export function CartReview(props: {
       }
       setErrors({});
       if ("ok" in res) {
+        // Kept on the phone: the way back to this request, and next time's form.
+        rememberSent(store.slug, { id: res.id, code: res.code });
+        saveDetails(data);
         writeList(store.slug, {});
         router.push(`/${store.slug}/request/${res.id}`);
       } else if ("closed" in res) setBanner(closedCopy);
@@ -182,13 +237,20 @@ export function CartReview(props: {
                 </p>
               ) : (
                 <div className="mt-2">
-                  <Stepper
-                    label={`Quantity of ${r.name}`}
-                    value={r.qty}
-                    min={1}
-                    max={r.available}
-                    onStep={(d) => setQty(r.id, r.qty + d)}
-                  />
+                  {/* A stepper stuck at one is noise, as on the item page. */}
+                  {r.available > 1 ? (
+                    <Stepper
+                      label={`Quantity of ${r.name}`}
+                      value={r.qty}
+                      min={1}
+                      max={r.available}
+                      onStep={(d) => setQty(r.id, r.qty + d)}
+                    />
+                  ) : (
+                    !r.cut && (
+                      <p className="text-sm text-muted-foreground">Last one</p>
+                    )
+                  )}
                   {r.cut && (
                     <p role="status" className="mt-2 font-semibold">
                       Only {r.available} left, so we lowered this.
@@ -207,7 +269,7 @@ export function CartReview(props: {
                 <X aria-hidden className="size-5" />
               </button>
               <span className="num font-semibold">
-                {usd(r.gone ? 0 : r.price! * r.qty)}
+                {usdTag(r.gone ? 0 : r.price! * r.qty)}
               </span>
             </div>
           </li>
@@ -238,7 +300,7 @@ export function CartReview(props: {
         <p className="flex items-baseline justify-between font-semibold">
           {copy.cartTotal}
           <span className="font-display num text-[2rem] leading-none font-extrabold">
-            {usd(total)}
+            {usdTag(total)}
           </span>
         </p>
         {store.currency && alt !== null && (
@@ -254,6 +316,7 @@ export function CartReview(props: {
         </p>
       ) : (
         <form
+          ref={form}
           noValidate
           className="flex flex-col gap-4"
           onSubmit={(e) => {
@@ -261,6 +324,18 @@ export function CartReview(props: {
             send(e.currentTarget);
           }}
         >
+          {(saved.name || saved.email) && (
+            <p className="flex flex-wrap items-center justify-between gap-x-3 text-sm text-muted-foreground">
+              Filled in from last time, on this phone only.
+              <button
+                type="button"
+                onClick={() => forget(form.current)}
+                className="min-h-11 font-semibold text-text underline decoration-brand-text decoration-[1.5px] underline-offset-4"
+              >
+                Not you? Clear
+              </button>
+            </p>
+          )}
           <div className="flex flex-col gap-2">
             <Label htmlFor="name">Your name</Label>
             <Input
@@ -268,6 +343,7 @@ export function CartReview(props: {
               name="name"
               autoComplete="name"
               maxLength={80}
+              defaultValue={saved.name}
               aria-invalid={errors.name ? true : undefined}
               aria-describedby="name-help name-error"
             />
@@ -284,6 +360,7 @@ export function CartReview(props: {
               type="email"
               autoComplete="email"
               maxLength={254}
+              defaultValue={saved.email}
               aria-invalid={errors.email ? true : undefined}
               aria-describedby="email-error"
             />
@@ -293,6 +370,7 @@ export function CartReview(props: {
             fulfils={store.fulfils}
             pays={store.pays}
             note={store.checkoutNote}
+            saved={saved}
             errors={errors}
           />
           <label className="flex min-h-11 items-start gap-3 text-sm">

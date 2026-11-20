@@ -10,6 +10,7 @@ import { toast } from "@/lib/toast";
 import { clock, useLive, useNow, useRefreshWhile } from "@/lib/use-live";
 import { listOn, writeList } from "../../list-island";
 import { cancelMyRequest } from "../../cart/actions";
+import { forgetSent } from "../../sent-stub";
 
 const WARN_MS = 3 * 60_000;
 
@@ -74,6 +75,10 @@ export function RequestLive(props: {
     if (status === "declined" && !fresh.length)
       toast.requestDeclined(() => router.push(`/${slug}`));
   });
+  // The store's link back here is only for a request still waiting.
+  useEffect(() => {
+    if (status !== "pending") forgetSent(slug, props.id);
+  }, [status, slug, props.id]);
   return null;
 }
 

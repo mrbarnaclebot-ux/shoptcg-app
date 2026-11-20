@@ -4,6 +4,7 @@ import type { Db } from "@/db/open";
 import * as schema from "@/db/schema";
 import { upsertHits } from "@/lib/catalog";
 import {
+  countPublicStock,
   getPublicItem,
   getPublicStore,
   historyPoints,
@@ -83,6 +84,42 @@ describe("listPublicStock", () => {
       "Charizard ex",
       "Old slab",
     ]);
+    // Sold out stays last even when its name sorts first.
+    expect(await names({ sort: "name" })).toEqual([
+      "Charizard ex",
+      "Pikachu JP",
+      "Old slab",
+    ]);
+  });
+
+  it("pages in SQL and counts what it pages through", async () => {
+    expect(await listPublicStock(db, s, { page: 2 })).toEqual([]);
+    expect(await countPublicStock(db, s, {})).toBe(3);
+    expect(await countPublicStock(db, s, { langs: ["ja"] })).toBe(1);
+    expect((await getPublicItem(db, s, ids.zard))?.asOf).toBe("2026-11-08");
+  });
+
+  it("puts a fully held item with the sold out, and back once the hold ends", async () => {
+    const [r] = await db
+      .insert(schema.request)
+      .values({
+        storeId: s.id,
+        code: "ZZZZ",
+        termsVersion: "t",
+        sessionId: "held",
+        expiresAt: new Date(Date.now() + 600_000),
+      })
+      .returning({ id: schema.request.id });
+    await db.insert(schema.requestLine).values({
+      requestId: r.id,
+      listingId: ids.jp,
+      qty: 1,
+      quotedPrice: "20",
+    });
+    const names = async () => (await listPublicStock(db, s)).map((x) => x.name);
+    expect(await names()).toEqual(["Charizard ex", "Old slab", "Pikachu JP"]);
+    await db.delete(schema.request).where(eq(schema.request.id, r.id));
+    expect(await names()).toEqual(["Charizard ex", "Pikachu JP", "Old slab"]);
   });
 });
 

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { newBuyer, openVendor, sendList } from "./buyer";
+import { confirmAndView, newBuyer, openVendor, sendList } from "./buyer";
 
 // Phase 6 screenshots, not a regression test:
 //   SHOTS=sales pnpm e2e sales-shots
@@ -40,7 +40,7 @@ for (const width of [390, 768, 1280]) {
     // What the seller sees at the end of the form: the sticky Confirm over the total?
     await page.evaluate(() => scrollTo(0, document.body.scrollHeight));
     await page.screenshot({ path: `${OUT}/confirm-end-${width}.png` });
-    await page.getByRole("button", { name: /^Confirm sale/ }).click();
+    await confirmAndView(page);
     await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
     await expect(page.getByText(/^Emailed to/)).toBeVisible();
     await shot(page, "receipt", width);
