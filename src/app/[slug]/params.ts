@@ -22,11 +22,12 @@ const filterSchema = z.object({
     .catch([]),
   q: one(z.string().transform((s) => s.trim().slice(0, 60) || undefined)),
   sort: one(z.enum(["price-desc", "price-asc", "name", "new"])),
+  page: one(z.coerce.number().int().min(2).max(1000)),
 });
 
 export function parseFilter(raw: Raw): PublicFilter {
   const f = filterSchema.parse(raw);
-  return { type: f.type, langs: f.lang, q: f.q, sort: f.sort };
+  return { type: f.type, langs: f.lang, q: f.q, sort: f.sort, page: f.page };
 }
 
 /** The store URL for a filter, with defaults left out so links stay short. */
@@ -36,6 +37,7 @@ export function filterHref(slug: string, f: PublicFilter) {
   for (const l of f.langs ?? []) p.append("lang", l);
   if (f.q) p.set("q", f.q);
   if (f.sort && f.sort !== "price-desc") p.set("sort", f.sort);
+  if (f.page && f.page > 1) p.set("page", String(f.page));
   const qs = p.toString();
   return qs ? `/${slug}?${qs}` : `/${slug}`;
 }

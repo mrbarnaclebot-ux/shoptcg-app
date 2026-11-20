@@ -20,6 +20,15 @@ export const CONDITION_NAME: Record<string, string> = {
   DMG: "Damaged",
 };
 
+/** One line a newer buyer can check a card against, under the name on the item page. */
+export const CONDITION_NOTE: Record<string, string> = {
+  NM: "Looks unplayed. A tiny flaw at most.",
+  LP: "Light wear on edges or corners. No creases.",
+  MP: "Clear wear on edges and face. Maybe a small crease.",
+  HP: "Heavy wear, creases or bends. Still whole.",
+  DMG: "Tears, deep creases, or water or ink damage.",
+};
+
 /** Each played condition's settings column, in the order the form shows them. */
 export const CONDITION_FIELDS = [
   ["LP", "condLpPct"],

@@ -9,13 +9,14 @@ import { parseCheckout, storeOffer, type CheckoutErrors } from "@/lib/checkout";
 import { seedAllowed } from "@/lib/e2e-seed";
 import { previewing } from "@/lib/preview";
 import { pushNewRequest } from "@/lib/push";
+import { buyerRequest } from "@/lib/request-reads";
 import { cancelRequest, createRequest, MAX_LINES } from "@/lib/requests";
 import { HOLD_MS, type SellingMode } from "@/lib/selling-mode";
 import { getPublicStore } from "@/lib/storefront";
 import { addressHash } from "../address-hash";
 
 export type SendResult =
-  | { ok: true; id: string }
+  | { ok: true; id: string; code: string }
   | { fieldErrors: { name?: string; email?: string } & CheckoutErrors }
   | { taken: string[] }
   | { closed: true }
@@ -118,7 +119,7 @@ export async function sendRequest(
   }
   if (!r.retry)
     after(() => pushNewRequest(db, store.id, { ...r, name: fields.data.name }));
-  return { ok: true, id: r.id };
+  return { ok: true, id: r.id, code: r.code };
 }
 
 /**
@@ -127,6 +128,13 @@ export async function sendRequest(
  */
 export async function startBuyerSession() {
   await ensureBuyerSid();
+}
+
+/** Whether this phone's request is still waiting, for the store's way back to it. */
+export async function stillWaiting(id: string) {
+  const sid = await readBuyerSid();
+  if (!sid || !z.uuid().safeParse(id).success) return false;
+  return (await buyerRequest(getDb(), id, sid))?.status === "pending";
 }
 
 /** The buyer lets their hold go. False when it was not theirs or already over. */

@@ -11,6 +11,7 @@ import {
   type Fulfil,
   type PayWith,
 } from "@/lib/checkout";
+import type { Details } from "../buyer-details";
 
 function Err({ id, msg }: { id: string; msg?: string }) {
   return msg ? (
@@ -25,9 +26,11 @@ export function CheckoutFields(props: {
   fulfils: readonly Fulfil[];
   pays: readonly PayWith[];
   note: string | null;
+  /** Kept from last time on this phone. */
+  saved: Details;
   errors: CheckoutErrors;
 }) {
-  const { fulfils, pays, errors: e } = props;
+  const { fulfils, pays, saved, errors: e } = props;
   // One option is a fact the buyer reads, not a question.
   const [fulfil, setFulfil] = useState<Fulfil | "">(
     fulfils.length === 1 ? fulfils[0] : "",
@@ -46,6 +49,7 @@ export function CheckoutFields(props: {
             value={fulfil}
             options={fulfils.map((x) => [x, FULFIL_LABEL[x]] as const)}
             onChange={setFulfil}
+            error={e.fulfil && "fulfil-error"}
           />
           <Err id="fulfil-error" msg={e.fulfil} />
         </div>
@@ -62,6 +66,7 @@ export function CheckoutFields(props: {
             rows={3}
             maxLength={300}
             autoComplete="street-address"
+            defaultValue={saved.address}
             aria-invalid={e.address ? true : undefined}
             aria-describedby="address-error"
           />
@@ -79,6 +84,7 @@ export function CheckoutFields(props: {
             type="tel"
             inputMode="tel"
             autoComplete="tel"
+            defaultValue={saved.phone}
             maxLength={20}
             aria-invalid={e.phone ? true : undefined}
             aria-describedby="phone-help phone-error"
@@ -99,6 +105,7 @@ export function CheckoutFields(props: {
             value={pay}
             options={pays.map((x) => [x, payLabel(x, f)] as const)}
             onChange={setPay}
+            error={e.payWith && "pay-error"}
           />
           <Err id="pay-error" msg={e.payWith} />
         </div>

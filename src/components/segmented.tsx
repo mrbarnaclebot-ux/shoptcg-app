@@ -17,6 +17,8 @@ export function Segmented<T extends string>(props: {
   value: T;
   options: readonly (readonly [T, string])[];
   onChange: (value: T) => void;
+  /** The id of the message saying what's wrong with the choice, while there is one. */
+  error?: string;
 }) {
   const box = useRef<HTMLFieldSetElement>(null);
   // A tap before hydration moves the native radio but reaches no handler, and
@@ -29,7 +31,12 @@ export function Segmented<T extends string>(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, at hydration
   }, []);
   return (
-    <fieldset ref={box} className="flex flex-col gap-2">
+    <fieldset
+      ref={box}
+      aria-invalid={props.error ? true : undefined}
+      aria-describedby={props.error || undefined}
+      className="flex flex-col gap-2"
+    >
       <legend className="mb-2 text-sm font-semibold">{props.label}</legend>
       <div className="flex flex-wrap gap-2">
         {props.options.map(([value, text]) => (

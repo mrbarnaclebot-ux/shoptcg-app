@@ -134,3 +134,17 @@ export async function mixStock(slug: string) {
     await sql.end();
   }
 }
+
+/** More stock than one store page shows; a thousand adds by hand is no test. */
+export async function bulkStock(slug: string, n: number) {
+  const sql = localDb();
+  try {
+    await sql`
+      insert into listing (store_id, kind, language, name, condition, qty, override_price)
+      select s.id, 'raw', 'en', 'Bulk ' || lpad(i::text, 4, '0'), 'NM', 1, '1'
+      from store s, generate_series(1, ${n}::int) i
+      where s.slug = ${slug}`;
+  } finally {
+    await sql.end();
+  }
+}

@@ -37,6 +37,7 @@ export const MODE_COPY = {
     sentNext:
       "Head to the table and show this screen. Your items are held for you.",
     codeLabel: "Show the seller this code",
+    sentWord: "Request",
     declined:
       "Items are back in the store. You can talk to the seller at the table or send a new cart.",
     holdSoon: (table: string | null) =>
@@ -62,6 +63,7 @@ export const MODE_COPY = {
     sentNext:
       "The seller will confirm your order and email you to arrange payment and pickup or delivery. Your items are held for you.",
     codeLabel: "Your order code",
+    sentWord: "Order",
     declined: "Items are back in the store. You can send a new cart.",
     holdSoon: () => "The seller hasn't confirmed yet.",
     signFact: "Order on your phone",

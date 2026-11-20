@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cache, Fragment, Suspense } from "react";
+import { cache, Fragment, Suspense, type ReactNode } from "react";
 import { HangTag } from "@/components/hang-tag";
 import { RefreshAt } from "@/components/refresh-at";
 import { Stamp } from "@/components/stamp";
 import { getDb } from "@/db";
 import { modeCopy } from "@/lib/selling-mode";
 import { formatAlt, usdTag } from "@/lib/fx";
-import { gradeLabel, usd } from "@/lib/format";
+import { gradeLabel, shortDate, usd } from "@/lib/format";
 import {
   getPublicItem,
   type PublicItem,
@@ -16,16 +16,25 @@ import {
 } from "@/lib/storefront";
 import { BackToStore, CartAction, ShareItem } from "../../list-island";
 import { ArtZoom } from "./art-zoom";
-import { parseRange } from "../../params";
-import { NotVending } from "../../store-header";
+import { filterHref, parseRange } from "../../params";
+import { NotVending, SellerLine } from "../../store-header";
 import { storeOr404 } from "../../store-lookup";
 import { Art, HTML_LANG, metaLine, stockLine } from "../../tile";
-import { CONDITION_NAME } from "@/lib/condition";
+import { CONDITION_NAME, CONDITION_NOTE } from "@/lib/condition";
 import { PriceChart } from "./price-chart";
 import { priceHistory, salesHistory } from "./price-history";
 
-// Lookups run before any Suspense boundary so a hidden or unknown item is a real 404.
+// src/proxy.ts makes a hidden or unknown item a real 404 before the first
+// byte, so ../loading.tsx can stream the art box while the lookups run.
 export const instant = false;
+
+// Where the nightly sync's market price comes from, by kind.
+const SOURCE = {
+  raw: "TCGplayer",
+  sealed: "TCGplayer",
+  graded: "eBay and Fanatics",
+  other: "public sales",
+};
 
 const itemOr404 = cache(async (slug: string, id: string) => {
   const store = await storeOr404(slug);
@@ -86,6 +95,7 @@ export default async function ItemPage({
         everyMs={store.isOpen ? undefined : 60_000}
       />
       <BackToStore slug={slug} />
+      <SellerLine store={store} />
       <div className="mx-auto mt-3 w-4/5 max-w-[420px] lg:sticky lg:top-8 lg:w-full lg:self-start">
         {item.imageUrl ? (
           <ArtZoom src={item.imageUrl} name={item.name} className="w-full">
@@ -113,6 +123,7 @@ export default async function ItemPage({
                 days={days}
                 price={item.price}
                 pct={item.conditionPct}
+                source={SOURCE[item.kind]}
               />
             </Suspense>
           ) : (
@@ -134,7 +145,6 @@ export default async function ItemPage({
           </Suspense>
         )}
       </div>
-      <Action store={store} item={item} />
     </main>
   );
 }
@@ -163,12 +173,18 @@ function Details({ item, store }: { item: PublicItem; store: PublicStore }) {
         />
       )}
       {item.market !== null && (
-        <p className="flex flex-wrap items-center gap-3 text-muted-foreground">
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground">
           <span>
             Market{" "}
             <span className="num font-semibold text-text">
-              {usd(item.market)}
+              {usdTag(item.market)}
             </span>
+            {item.asOf && (
+              <span className="text-sm">
+                {" "}
+                · {SOURCE[item.kind]}, {shortDate(item.asOf)}
+              </span>
+            )}
           </span>
           {item.underPct !== null && item.qty > 0 && (
             <Stamp>{item.underPct}% under market</Stamp>
@@ -182,8 +198,10 @@ function Details({ item, store }: { item: PublicItem; store: PublicStore }) {
       >
         {stockLine(item)}
       </p>
+      {/* Right under the price on desktop; pinned to the bottom on a phone. */}
+      <Action store={store} item={item} />
       <dl className="grid grid-cols-[auto_1fr] gap-x-6 border-t border-border text-sm [&>dd]:border-b [&>dd]:border-border [&>dd]:py-2 [&>dt]:border-b [&>dt]:border-border [&>dt]:py-2 [&>dt]:text-muted-foreground">
-        {facts(item).map(([k, v]) => (
+        {facts(item, store.slug).map(([k, v]) => (
           <Fragment key={k}>
             <dt>{k}</dt>
             <dd className="num font-semibold">{v}</dd>
@@ -204,22 +222,38 @@ const KIND = {
 const LANGUAGE = { en: "English", ja: "Japanese", zh: "Chinese" };
 
 /** The rows a collector checks before buying, only those this item has. */
-function facts(it: PublicItem): [string, string][] {
-  const rows: [string, string | null][] = [
+function facts(it: PublicItem, slug: string): [string, ReactNode][] {
+  const rows: [string, ReactNode][] = [
     ["Type", KIND[it.kind]],
     ["Grade", it.kind === "graded" ? gradeLabel(it) || null : null],
     [
       "Condition",
-      it.kind === "raw" && it.condition
-        ? `${CONDITION_NAME[it.condition] ?? it.condition} (${it.condition})`
-        : null,
+      it.kind === "raw" && it.condition && (
+        <>
+          {CONDITION_NAME[it.condition] ?? it.condition} ({it.condition})
+          <span className="block font-normal text-muted-foreground">
+            {CONDITION_NOTE[it.condition]}
+          </span>
+        </>
+      ),
     ],
     // An other item's "set" is the vendor's category; it has no language.
-    [it.kind === "other" ? "Category" : "Set", it.setName],
+    // The search matches every word in the set, so the link browses it.
+    [
+      it.kind === "other" ? "Category" : "Set",
+      it.setName && (
+        <Link
+          href={filterHref(slug, { q: it.setName })}
+          className="-my-3 inline-flex min-h-11 items-center underline decoration-brand decoration-[1.5px] underline-offset-[5px]"
+        >
+          {it.setName}
+        </Link>
+      ),
+    ],
     ["Number", it.number],
     ["Language", it.kind === "other" ? null : LANGUAGE[it.language]],
   ];
-  return rows.filter((r): r is [string, string] => Boolean(r[1]));
+  return rows.filter((r) => Boolean(r[1]));
 }
 
 function RangeLinks({ base, days }: { base: string; days: number }) {
@@ -246,6 +280,7 @@ async function Chart(props: {
   days: number;
   price: number | null;
   pct: number;
+  source: string;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const nm = await priceHistory(props.id, props.days, today);
@@ -257,7 +292,14 @@ async function Chart(props: {
           ...p,
           market: Math.round(p.market * props.pct) / 100,
         }));
-  return <PriceChart points={points} days={props.days} price={props.price} />;
+  return (
+    <PriceChart
+      points={points}
+      days={props.days}
+      price={props.price}
+      source={props.source}
+    />
+  );
 }
 
 /** Recent market sales: what copies of this card actually sold for. */
@@ -267,8 +309,8 @@ async function Sales({ id, item }: { id: string; item: PublicItem }) {
   if (!days.length) return null;
   const what =
     item.kind === "graded"
-      ? `${gradeLabel(item)} copies on eBay and Fanatics. Price is the day's average sale.`
-      : "Near Mint copies on TCGplayer. Price is the day's market price.";
+      ? `${gradeLabel(item)} copies on ${SOURCE.graded}. Price is the day's average sale.`
+      : `Near Mint copies on ${SOURCE.raw}. Price is the day's market price.`;
   return (
     <section aria-labelledby="sales" className="flex flex-col gap-3">
       <h2 id="sales" className="text-lg font-semibold">
@@ -311,7 +353,7 @@ const saleDate = (date: string) =>
     timeZone: "UTC",
   });
 
-/** Sticky bottom action, or the reason there isn't one. */
+/** The add (sticky at the bottom on a phone), or the reason there isn't one. */
 function Action({ store, item }: { store: PublicStore; item: PublicItem }) {
   let body;
   if (!store.isOpen) body = <p className="font-semibold">Browsing only.</p>;
@@ -341,7 +383,7 @@ function Action({ store, item }: { store: PublicStore; item: PublicItem }) {
   return (
     <div
       data-bottom-bar="item"
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:static lg:col-start-2 lg:mt-8 lg:border-0 lg:bg-transparent lg:p-0"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:static lg:border-0 lg:bg-transparent lg:p-0"
     >
       <div className="mx-auto max-w-[560px] lg:mx-0 lg:max-w-sm">{body}</div>
     </div>

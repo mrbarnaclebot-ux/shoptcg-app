@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import type { EventItem, Room } from "@/lib/claim-events";
 import { usd } from "@/lib/format";
 import { altPrice, formatAlt } from "@/lib/fx";
+import { readDetails, saveDetails } from "../../buyer-details";
 import { Art, HTML_LANG, metaLine } from "../../tile";
 import { claimItem, joinClaimEvent, unclaimItem } from "./actions";
 
@@ -26,20 +27,10 @@ type Rules = {
 type Errors = { name?: string; phone?: string; email?: string };
 
 const POLL_MS = 3000;
-// The buyer's details, remembered on this phone for the next event.
-const DETAILS_KEY = "claim-buyer";
 
 declare global {
   interface Window {
     turnstile?: { reset: (el?: string | HTMLElement) => void };
-  }
-}
-
-function readDetails(): Partial<Record<keyof Errors, string>> {
-  try {
-    return JSON.parse(localStorage.getItem(DETAILS_KEY) ?? "{}");
-  } catch {
-    return {};
   }
 }
 
@@ -238,7 +229,7 @@ function JoinForm(props: {
   const widget = useRef<HTMLDivElement>(null);
   const form = useRef<HTMLFormElement>(null);
 
-  // Details from the last event, filled in after hydration.
+  // Details from the last event or cart on this phone, filled in after hydration.
   useEffect(() => {
     const saved = readDetails();
     for (const k of ["name", "phone", "email"] as const) {
@@ -268,16 +259,8 @@ function JoinForm(props: {
         setErrors({});
         setBanner(res.error);
       } else {
-        try {
-          localStorage.setItem(
-            DETAILS_KEY,
-            JSON.stringify({
-              name: data.get("name"),
-              phone: data.get("phone"),
-              email: data.get("email"),
-            }),
-          );
-        } catch {}
+        // Remembered on this phone for the next event, and the cart.
+        saveDetails(data);
         props.onJoined(res.room);
         return;
       }

@@ -13,6 +13,7 @@ import {
 } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import {
+  activeHold,
   catalogItem,
   claimEvent,
   claimEventItem,
@@ -54,6 +55,8 @@ export type StockFilter = {
   inStock?: true;
   /** Newest first unless set. */
   sort?: StockSort;
+  /** Sold-out and fully held rows after the rest, as the store page shows them. */
+  soldOutLast?: true;
   /** 1-based, PAGE_ROWS a page. */
   page?: number;
   /** Fewer rows than a page: a picker's first few matches. */
@@ -199,7 +202,15 @@ export async function listStock(db: Db, storeId: string, f: StockFilter = {}) {
     .leftJoin(catalogItem, eq(catalogItem.id, listing.catalogItemId))
     .leftJoin(latest, eq(latest.catalogItemId, listing.catalogItemId))
     .where(where)
-    .orderBy(...orderBy(f.sort, name, cols.market))
+    .orderBy(
+      // Nothing left to take: none in stock, or every copy on someone's hold.
+      ...(f.soldOutLast
+        ? [
+            sql`${listing.qty} <= coalesce((select sum(${activeHold.qty}) from ${activeHold} where ${activeHold.listingId} = ${listing.id}), 0)`,
+          ]
+        : []),
+      ...orderBy(f.sort, name, cols.market),
+    )
     .limit(f.limit ?? PAGE_ROWS)
     .offset(((f.page ?? 1) - 1) * PAGE_ROWS);
   const num = (v: string | null) => (v === null ? null : Number(v));

@@ -20,5 +20,7 @@ describe("usdTag", () => {
     expect(usdTag(42)).toBe("$42");
     expect(usdTag(18.5)).toBe("$18.50");
     expect(usdTag(1310.25)).toBe("$1,310.25");
+    // A cart total summed in floats is still whole.
+    expect(usdTag(10.7 + 0.3)).toBe("$11");
   });
 });
