@@ -12,7 +12,7 @@ import {
   type PublicFilter,
   type PublicStore,
 } from "@/lib/storefront";
-import { Controls, SortMenu } from "./controls";
+import { Controls, StoreSort } from "./controls";
 import { ListBar, RememberStore } from "./list-island";
 import { filterHref, parseFilter } from "./params";
 import { storeOr404 } from "./store-lookup";
@@ -134,7 +134,7 @@ async function Grid({ store, f }: { store: PublicStore; f: PublicFilter }) {
           <span className="num font-semibold text-text">{items.length}</span>{" "}
           {items.length === 1 ? "item" : "items"}
         </p>
-        <SortMenu slug={store.slug} f={f} />
+        <StoreSort slug={store.slug} f={f} />
       </div>
       <div className={GRID}>
         {items.map((it, i) => (

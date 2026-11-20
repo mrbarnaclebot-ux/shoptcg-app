@@ -1,4 +1,15 @@
-import { and, count, desc, eq, gt, inArray, or, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  gt,
+  inArray,
+  or,
+  sql,
+  type Column,
+  type SQL,
+} from "drizzle-orm";
 import type { Db } from "@/db/open";
 import {
   catalogItem,
@@ -139,31 +150,43 @@ export const SHOWN = 20;
 type SearchOpts = { kind: Kind; language: Language };
 
 /**
- * Cached rows where every word is in the name or set name, in any order and
- * as part of a word ("char", "base set", "ex charizard"). A word shaped like
- * a card number may match the number instead; with a set total ("199/165")
- * it must.
+ * One condition per word of the box: the word is in the `hay` columns, in any
+ * order and as part of a word ("char", "base set", "ex charizard"). A word
+ * shaped like a card number may match `number` instead; with a set total
+ * ("199/165") it must. Catalog search and the stock search share it.
  */
+export function wordConds(
+  text: string,
+  hay: (Column | SQL)[],
+  number: Column | SQL,
+) {
+  const all = sql`lower(concat_ws(' ', ${sql.join(hay, sql`, `)}))`;
+  // PPT stores "199/165"; TCGdex stores "199" and so never matches a set total.
+  const part = (i: number) =>
+    sql`ltrim(lower(split_part(${number}, '/', ${i})), '0')`;
+  return words(text).map((w) => {
+    const word = sql`${all} like ${contains(w.text)}`;
+    if (!w.number) return word;
+    const num = sql`${part(1)} = ${norm(w.number)}`;
+    return w.total
+      ? and(num, sql`${part(2)} = ${norm(w.total)}`)!
+      : or(num, word)!;
+  });
+}
+
+/** Cached rows matching every word (wordConds) on name and set name. */
 async function searchLocal(
   db: Db,
   provider: string,
   text: string,
   opts: SearchOpts,
 ) {
-  const ws = words(text);
-  if (!ws.length) return [];
-  const hay = sql`lower(${catalogItem.name} || ' ' || ${catalogItem.setName})`;
-  // PPT stores "199/165"; TCGdex stores "199" and so never matches a set total.
-  const part = (i: number) =>
-    sql`ltrim(lower(split_part(${catalogItem.number}, '/', ${i})), '0')`;
-  const conds = ws.map((w) => {
-    const word = sql`${hay} like ${contains(w.text)}`;
-    if (!w.number) return word;
-    const num = sql`${part(1)} = ${norm(w.number)}`;
-    return w.total
-      ? and(num, sql`${part(2)} = ${norm(w.total)}`)
-      : or(num, word);
-  });
+  const conds = wordConds(
+    text,
+    [catalogItem.name, catalogItem.setName],
+    catalogItem.number,
+  );
+  if (!conds.length) return [];
   const rows = await db
     .select()
     .from(catalogItem)

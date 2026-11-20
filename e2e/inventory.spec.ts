@@ -1,7 +1,102 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { newVendor } from "./auth";
-import { setStore } from "./buyer";
+import { exported, openVendor, setStore } from "./buyer";
 import { saveSettings } from "./settings";
+
+const rows = (page: Page) =>
+  page.getByRole("list", { name: "Your stock" }).getByRole("listitem");
+
+test("search by any words, sort, and export the whole stock", async ({
+  page,
+}) => {
+  await openVendor(page);
+  await page.goto("/dashboard/inventory");
+  await expect(page.getByRole("heading", { name: /^Inventory/ })).toHaveText(
+    /8 items/,
+  );
+  const box = page.getByLabel("Search your stock");
+  await box.fill("151 ex");
+  await box.press("Enter");
+  // Charizard ex and Mew ex, both from 151; the hidden LP Mew is under Hidden.
+  await expect(rows(page)).toHaveCount(2);
+  await box.fill("");
+  await box.press("Enter");
+  await expect(rows(page)).toHaveCount(8);
+
+  await page.locator("summary", { hasText: "Sort:" }).click();
+  await page.getByRole("link", { name: "Quantity" }).click();
+  await expect(page).toHaveURL(/sort=qty/);
+  await expect(rows(page).first().locator("output")).toHaveText("4");
+  await expect(rows(page).last().locator("output")).toHaveText("0");
+  await page.locator("summary", { hasText: "Sort:" }).click();
+  await page.getByRole("link", { name: "Price high to low" }).click();
+  await expect(rows(page).first()).toContainText("Umbreon VMAX");
+
+  const csv = await exported(page, "Export");
+  expect(csv.file).toMatch(/^tcgmart-e2e-.+-inventory-\d{4}-\d\d-\d\d\.csv$/);
+  // Import CSV's columns, plus cost: the file goes straight back in.
+  expect(csv.head).toEqual([
+    "name",
+    "set",
+    "number",
+    "language",
+    "kind",
+    "condition",
+    "grader",
+    "grade",
+    "qty",
+    "price",
+    "cost",
+  ]);
+  // Hidden stock too.
+  expect(csv.rows).toHaveLength(9);
+  expect(csv.rows).toContainEqual([
+    "Pikachu Gold Star CN promo",
+    "",
+    "SM-P 1",
+    "zh",
+    "raw",
+    "NM",
+    "",
+    "",
+    "1",
+    "25.00",
+    "",
+  ]);
+});
+
+test("ticked rows hide together, and remove together with Undo", async ({
+  page,
+}) => {
+  await openVendor(page);
+  await page.goto("/dashboard/inventory");
+  await page.getByLabel("Select Gengar").check();
+  await page.getByLabel("Select Surging Sparks booster box").check();
+  const bar = page.getByRole("region", { name: "Selected items" });
+  await expect(bar).toContainText("2 selected");
+  await bar.getByRole("button", { name: "Hide from store" }).click();
+  await expect(
+    page.locator(".toasts").getByText("2 items. Off your public table."),
+  ).toBeVisible();
+  await expect(bar).toHaveCount(0);
+  await expect(rows(page).filter({ hasText: "Gengar" })).toHaveCount(0);
+
+  await page.getByRole("link", { name: "Hidden", exact: true }).click();
+  await expect(rows(page)).toHaveCount(3);
+  await page.getByLabel("Select all shown").check();
+  await expect(bar).toContainText("3 selected");
+  await bar.getByRole("button", { name: "Remove", exact: true }).click();
+  await expect(page.getByText("Nothing matches.")).toBeVisible();
+  await page
+    .locator(".toasts li")
+    .filter({ hasText: "3 items are off your stock and store." })
+    .getByRole("button", { name: "Undo" })
+    .click();
+  await expect(
+    page.locator(".toasts").getByText("3 items are back in your stock."),
+  ).toBeVisible();
+  await expect(rows(page)).toHaveCount(3);
+});
 
 test("a vendor adds a custom item and sees it in inventory", async ({
   page,

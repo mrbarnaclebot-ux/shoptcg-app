@@ -1,6 +1,7 @@
 import { cn } from "cn";
-import { ChevronDown, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import Link from "next/link";
+import { SortMenu } from "@/components/sort-menu";
 import type { PublicFilter, Sort } from "@/lib/storefront";
 import { filterHref, SORT_LABEL } from "./params";
 
@@ -107,33 +108,15 @@ export function Controls({ slug, f }: { slug: string; f: PublicFilter }) {
   );
 }
 
-/** "Sort: Price high to low" as a native disclosure of links: no JS needed. */
-export function SortMenu({ slug, f }: { slug: string; f: PublicFilter }) {
+export function StoreSort({ slug, f }: { slug: string; f: PublicFilter }) {
   const current = f.sort ?? "price-desc";
   return (
-    <details className="group relative">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden">
-        Sort:{" "}
-        <span className="font-semibold text-text">{SORT_LABEL[current]}</span>
-        <ChevronDown
-          aria-hidden
-          className="size-4 transition-transform group-open:rotate-180"
-        />
-      </summary>
-      <ul className="paper absolute right-0 z-10 mt-1 w-52 py-1 shadow-[0_12px_24px_oklch(0_0_0/0.5)]">
-        {(Object.keys(SORT_LABEL) as Sort[]).map((s) => (
-          <li key={s}>
-            <Link
-              href={filterHref(slug, { ...f, sort: s })}
-              scroll={false}
-              aria-current={s === current ? "true" : undefined}
-              className="flex min-h-11 items-center px-4 aria-[current=true]:font-semibold hover:bg-surface"
-            >
-              {SORT_LABEL[s]}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </details>
+    <SortMenu
+      options={(Object.keys(SORT_LABEL) as Sort[]).map((s) => ({
+        label: SORT_LABEL[s],
+        href: filterHref(slug, { ...f, sort: s }),
+        on: s === current,
+      }))}
+    />
   );
 }

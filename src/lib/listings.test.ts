@@ -9,6 +9,8 @@ import * as schema from "@/db/schema";
 import { upsertHits } from "@/lib/catalog";
 import { createEvent, endEvent } from "@/lib/claim-events";
 import { syncBasket } from "@/lib/floor";
+import { toCsv } from "@/lib/csv";
+import { CSV_COLUMNS, readCsv } from "@/lib/csv-import";
 import { customListingSchema } from "@/lib/listing-input";
 import {
   addCatalogListing,
@@ -17,8 +19,11 @@ import {
   listStock,
   ListingError,
   MAX_ACTIVE_LISTINGS,
-  removeListing,
-  restoreListing,
+  removeListings,
+  restoreListings,
+  setActive,
+  stockCsvRows,
+  countStock,
   stepQty,
   updateListing,
 } from "@/lib/listings";
@@ -147,7 +152,7 @@ describe("listings", () => {
     );
     // Removed and hidden items don't count.
     const [one] = await listStock(db, full);
-    await removeListing(db, full, one.id, false);
+    await removeListings(db, full, [one.id], false);
     expect(await addCustomListing(db, full, custom())).toBeTruthy();
   });
 
@@ -259,9 +264,9 @@ describe("remove and restore", () => {
   it("takes the quantity to 0 and restore puts it back, both in the ledger", async () => {
     const s = await newStore();
     const l = await item(s, "Ledger card", 3);
-    expect(await removeListing(db, s, l.id, false)).toEqual({
+    expect(await removeListings(db, s, [l.id], false)).toEqual({
       ok: true,
-      name: "Ledger card",
+      names: ["Ledger card"],
     });
     expect((await listStock(db, s)).map((r) => r.id)).not.toContain(l.id);
     expect(await listStock(db, s, { kind: "hidden" })).toHaveLength(0);
@@ -270,10 +275,10 @@ describe("remove and restore", () => {
     // Removed stock can't be stepped, edited or removed again.
     expect(await stepQty(db, s, l.id, 1)).toBeNull();
     expect(await updateListing(db, s, { id: l.id, qty: 5 })).toBe(false);
-    expect(await removeListing(db, s, l.id, false)).toEqual({ gone: true });
+    expect(await removeListings(db, s, [l.id], false)).toEqual({ gone: true });
 
-    expect(await restoreListing(db, s, l.id)).toBe(true);
-    expect(await restoreListing(db, s, l.id)).toBe(false);
+    expect(await restoreListings(db, s, [l.id])).toBe(1);
+    expect(await restoreListings(db, s, [l.id])).toBe(0);
     expect((await listStock(db, s, { id: l.id }))[0]).toMatchObject({
       qty: 3,
       removedAt: null,
@@ -286,8 +291,8 @@ describe("remove and restore", () => {
 
     // Sold out, then removed: a restore brings back none, not the older 3.
     await updateListing(db, s, { id: l.id, qty: 0 });
-    await removeListing(db, s, l.id, false);
-    await restoreListing(db, s, l.id);
+    await removeListings(db, s, [l.id], false);
+    await restoreListings(db, s, [l.id]);
     expect((await listStock(db, s, { id: l.id }))[0].qty).toBe(0);
   });
 
@@ -295,8 +300,8 @@ describe("remove and restore", () => {
     const s = await newStore();
     const l = await item(s, "Hidden card");
     await updateListing(db, s, { id: l.id, active: false });
-    await removeListing(db, s, l.id, false);
-    await restoreListing(db, s, l.id);
+    await removeListings(db, s, [l.id], false);
+    await restoreListings(db, s, [l.id]);
     const hidden = await listStock(db, s, { kind: "hidden" });
     expect(hidden.map((r) => r.id)).toEqual([l.id]);
   });
@@ -313,10 +318,10 @@ describe("remove and restore", () => {
       { id: kept.id, qty: 1 },
     ]);
     // Asked first: two requests and a cart hold it, and nothing changed yet.
-    expect(await removeListing(db, s, gone.id, false)).toEqual({ held: 3 });
+    expect(await removeListings(db, s, [gone.id], false)).toEqual({ held: 3 });
     expect(await listStock(db, s, { kind: "removed" })).toHaveLength(0);
 
-    expect(await removeListing(db, s, gone.id, true)).toMatchObject({
+    expect(await removeListings(db, s, [gone.id], true)).toMatchObject({
       ok: true,
     });
     const sid = async (id: string) =>
@@ -363,13 +368,13 @@ describe("remove and restore", () => {
       items: [{ listingId: l.id, price: null, maxPerBuyer: 1 }],
     });
     if (!("ok" in ev)) throw new Error(ev.error);
-    expect(await removeListing(db, s, l.id, true)).toEqual({
+    expect(await removeListings(db, s, [l.id], true)).toEqual({
       event: "Friday drop",
     });
     // Hiding is still allowed.
     expect(await updateListing(db, s, { id: l.id, active: false })).toBe(true);
     await endEvent(db, s, ev.id);
-    expect(await removeListing(db, s, l.id, false)).toMatchObject({
+    expect(await removeListings(db, s, [l.id], false)).toMatchObject({
       ok: true,
     });
   });
@@ -462,6 +467,211 @@ describe("adding a card you already have", () => {
     expect(stock.find((r) => r.id === have.id)!.qty).toBe(3);
     expect(stock.find((r) => r.catalogItemId === mew.id)!.qty).toBe(4);
     expect(stock.filter((r) => r.catalogItemId === null)).toHaveLength(2);
+  });
+});
+
+describe("finding stock", () => {
+  const names = async (storeId: string, f: Parameters<typeof listStock>[2]) =>
+    (await listStock(db, storeId, f)).map((r) => r.name);
+
+  it("matches every word, in any order, across name, set and number", async () => {
+    const s = await newStore();
+    const [zard] = await upsertHits(db, [hit({ providerId: "find-1" })]);
+    await addCatalogListing(db, s, {
+      catalogItemId: zard.id,
+      grader: null,
+      grade: null,
+      condition: "NM",
+      qty: 1,
+      overridePrice: null,
+      cost: null,
+    });
+    await addCustomListing(
+      db,
+      s,
+      custom({ name: "Pikachu Gold Star", setName: "Promo", number: "SM-P 1" }),
+    );
+    const zardOnly = ["Charizard ex"];
+    expect(await names(s, { q: "151 charizard" })).toEqual(zardOnly);
+    expect(await names(s, { q: "ex 199" })).toEqual(zardOnly);
+    expect(await names(s, { q: "CHAR   151" })).toEqual(zardOnly);
+    expect(await names(s, { q: "star sm-p" })).toEqual(["Pikachu Gold Star"]);
+    expect(await names(s, { q: "promo gold" })).toEqual(["Pikachu Gold Star"]);
+    expect(await names(s, { q: "charizard promo" })).toEqual([]);
+    // LIKE's wildcards are plain characters.
+    expect(await names(s, { q: "%" })).toEqual([]);
+  });
+
+  it("sorts by name, quantity and the price buyers see, across pages", async () => {
+    const s = await newStore();
+    // Round to whole dollars, 10% over market: the order must follow that price.
+    await db
+      .update(schema.store)
+      .set({ priceRulePct: 10, rounding: "1" })
+      .where(eq(schema.store.id, s));
+    const [c] = await upsertHits(db, [hit({ providerId: "sort-1" })]);
+    await db.insert(schema.pricePoint).values({
+      catalogItemId: c.id,
+      date: "2026-11-01",
+      marketUsd: "9.40", // 10.34, so $10
+      source: "fake",
+    });
+    await addCatalogListing(db, s, {
+      catalogItemId: c.id,
+      grader: null,
+      grade: null,
+      condition: "NM",
+      qty: 5,
+      overridePrice: null,
+      cost: null,
+    });
+    await item(s, "Beedrill", 1); // fixed $10.00
+    await addCustomListing(db, s, custom({ name: "Abra", qty: 9 })); // no price
+    await addCustomListing(
+      db,
+      s,
+      custom({ name: "Dratini", qty: 2, overridePrice: "10.50" }),
+    );
+    expect(await names(s, { sort: "name" })).toEqual([
+      "Abra",
+      "Beedrill",
+      "Charizard ex",
+      "Dratini",
+    ]);
+    expect(await names(s, { sort: "qty" })).toEqual([
+      "Abra",
+      "Charizard ex",
+      "Dratini",
+      "Beedrill",
+    ]);
+    // Ties ($10 each) fall back to newest first; unpriced is last both ways.
+    expect(await names(s, { sort: "price-desc" })).toEqual([
+      "Dratini",
+      "Beedrill",
+      "Charizard ex",
+      "Abra",
+    ]);
+    expect(await names(s, { sort: "price-asc" })).toEqual([
+      "Beedrill",
+      "Charizard ex",
+      "Dratini",
+      "Abra",
+    ]);
+    expect(await countStock(db, s, {})).toBe(4);
+    expect(await countStock(db, s, { q: "dratini" })).toBe(1);
+    expect(await listStock(db, s, { page: 2 })).toEqual([]);
+  });
+});
+
+describe("bulk", () => {
+  it("hides and shows several at once, never removed ones", async () => {
+    const s = await newStore();
+    const [x, y, z] = [
+      await item(s, "Bulk x"),
+      await item(s, "Bulk y"),
+      await item(s, "Bulk z"),
+    ];
+    await removeListings(db, s, [z.id], false);
+    expect(await setActive(db, s, [x.id, y.id, z.id], false)).toBe(2);
+    expect(await listStock(db, s, { kind: "hidden" })).toHaveLength(2);
+    expect(await setActive(db, s, [x.id, y.id], true)).toBe(2);
+    expect(await listStock(db, s)).toHaveLength(2);
+    // Another store's ids change nothing.
+    expect(await setActive(db, a, [x.id], false)).toBe(0);
+  });
+
+  it("removes several, asking once for every buyer holding any, then restores them", async () => {
+    const s = await openStore();
+    const [x, y, z] = [
+      await item(s, "Bulk Abra"),
+      await item(s, "Bulk Kadabra"),
+      await item(s, "Bulk Alakazam"),
+    ];
+    const r = await send(s, [x.id, y.id, z.id]);
+    // One request holds two of them: that is one buyer.
+    expect(await removeListings(db, s, [x.id, y.id], false)).toEqual({
+      held: 1,
+    });
+    expect(await removeListings(db, s, [x.id, y.id], true)).toMatchObject({
+      ok: true,
+      names: expect.arrayContaining(["Bulk Abra", "Bulk Kadabra"]),
+    });
+    const [left] = await db
+      .select({
+        removedItems: schema.request.removedItems,
+        status: schema.request.status,
+      })
+      .from(schema.request)
+      .where(eq(schema.request.id, r));
+    expect(left.status).toBe("pending");
+    expect([...left.removedItems].sort()).toEqual([
+      "Bulk Abra",
+      "Bulk Kadabra",
+    ]);
+    expect(await listStock(db, s, { kind: "removed" })).toHaveLength(2);
+    expect(await restoreListings(db, s, [x.id, y.id, z.id])).toBe(2);
+    expect((await listStock(db, s)).map((l) => l.qty)).toEqual([2, 2, 2]);
+  });
+});
+
+describe("export", () => {
+  it("writes rows Import CSV reads back as the same items", async () => {
+    const s = await newStore();
+    await addCustomListing(
+      db,
+      s,
+      custom({
+        name: "Pikachu, Gold Star",
+        setName: "Promo",
+        number: "SM-P 1",
+        qty: 3,
+        overridePrice: "25.00",
+        cost: "12.50",
+      }),
+    );
+    await addCustomListing(
+      db,
+      s,
+      custom({
+        name: "Booster box",
+        kind: "sealed",
+        language: "en",
+        condition: null,
+      }),
+    );
+    const gone = await item(s, "Gone card");
+    await removeListings(db, s, [gone.id], false);
+    const rows = await stockCsvRows(db, s);
+    expect(rows[0]).toEqual([...CSV_COLUMNS, "cost"]);
+    const back = readCsv(toCsv(rows).slice(1));
+    expect(back).toEqual([
+      {
+        line: 2,
+        ok: true,
+        input: expect.objectContaining({
+          name: "Pikachu, Gold Star",
+          setName: "Promo",
+          number: "SM-P 1",
+          language: "zh",
+          kind: "raw",
+          condition: "NM",
+          qty: 3,
+          overridePrice: "25.00",
+          cost: "12.50",
+        }),
+      },
+      {
+        line: 3,
+        ok: true,
+        input: expect.objectContaining({
+          name: "Booster box",
+          kind: "sealed",
+          condition: null,
+          qty: 1,
+          overridePrice: null,
+        }),
+      },
+    ]);
   });
 });
 
