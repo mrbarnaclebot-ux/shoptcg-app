@@ -165,6 +165,13 @@ export async function storeSummary(db: Db, storeId: string) {
 export const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * What the proxy found missing, for the 404 page to say: "store", or
+ * "item <slug>" and the like inside a store that exists.
+ */
+export const MISSING_HEADER = "x-tcgmart-missing";
+export type Missing = "store" | "item" | "claim" | "request";
+
 /** One active listing of this store, or null (bad id, hidden, other store). */
 export async function getPublicItem(db: Db, s: PublicStore, id: string) {
   if (!UUID.test(id)) return null;

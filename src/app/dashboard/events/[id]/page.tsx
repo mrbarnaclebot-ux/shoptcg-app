@@ -14,7 +14,7 @@ import { requireStore, sellerTimeZone } from "@/lib/session";
 import { UUID } from "@/lib/storefront";
 import { CopyLink } from "../../copy-link";
 import { eventTime, STATUS_LABEL } from "../format";
-import { BuyerActions, EndEvent, EventLive } from "./controls";
+import { BuyerActions, EndEvent } from "./controls";
 
 export const metadata: Metadata = { title: "Claim event - tcgmart" };
 
@@ -58,8 +58,8 @@ async function Event({
   const units = e.items.reduce((n, i) => n + i.qty, 0);
   return (
     <>
-      <EventLive />
-      {/* Re-read when it starts or its time runs out. */}
+      {/* Re-read when it starts or its time runs out. Claims, releases and
+          sales re-read it through the dashboard layout's stream. */}
       <RefreshAt
         inMs={e.status === "scheduled" ? e.msToStart : open ? e.msToEnd : null}
       />

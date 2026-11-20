@@ -3,7 +3,7 @@ import { and, count, eq, isNull } from "drizzle-orm";
 import { Check, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { getDb } from "@/db";
-import { listing } from "@/db/schema";
+import { listing, pushSubscription, request, visit } from "@/db/schema";
 import type { getStoreByOwner } from "@/lib/stores";
 import { dismissTipsAction } from "./actions";
 
@@ -15,16 +15,44 @@ type Store = NonNullable<Awaited<ReturnType<typeof getStoreByOwner>>>;
  * the long version for later.
  */
 export async function GettingStarted({ store }: { store: Store }) {
-  const [{ n }] = await getDb()
-    .select({ n: count() })
-    .from(listing)
-    .where(
-      and(
-        eq(listing.storeId, store.id),
-        eq(listing.active, true),
-        isNull(listing.removedAt),
+  const db = getDb();
+  const [[{ n }], push, visits, sent] = await Promise.all([
+    db
+      .select({ n: count() })
+      .from(listing)
+      .where(
+        and(
+          eq(listing.storeId, store.id),
+          eq(listing.active, true),
+          isNull(listing.removedAt),
+        ),
       ),
-    );
+    // Sound on lives in one browser; a locked-phone alert is stored.
+    db
+      .select({ id: pushSubscription.endpoint })
+      .from(pushSubscription)
+      .where(eq(pushSubscription.userId, store.ownerUserId))
+      .limit(1),
+    // Nothing records a print or a share; buyers arriving is what it's for.
+    // Visits go after 30 days, so a buyer's request counts too.
+    db
+      .select({ id: visit.id })
+      .from(visit)
+      .where(eq(visit.storeId, store.id))
+      .limit(1),
+    db
+      .select({ id: request.id })
+      .from(request)
+      .where(
+        and(
+          eq(request.storeId, store.id),
+          eq(request.isTest, false),
+          eq(request.walkUp, false),
+        ),
+      )
+      .limit(1),
+  ]);
+  const found = visits.length > 0 || sent.length > 0;
   const online = store.sellingMode === "online";
   const steps = [
     {
@@ -55,7 +83,7 @@ export async function GettingStarted({ store }: { store: Store }) {
       title: "Turn on alerts",
       body: "A chime and a locked-phone alert the moment a cart comes in.",
       href: "/dashboard/settings/alerts",
-      done: false,
+      done: push.length > 0,
     },
     {
       title: online ? "Share your link" : "Print your table sign",
@@ -63,7 +91,7 @@ export async function GettingStarted({ store }: { store: Store }) {
         ? "Post your store link on socials, in groups and in DMs."
         : "A QR sign for the table. Buyers scan it and shop from their phone.",
       href: online ? "/dashboard/settings/store" : "/dashboard/sign",
-      done: false,
+      done: found,
     },
     {
       title: "Open your store",

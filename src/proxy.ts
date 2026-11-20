@@ -7,31 +7,53 @@ import { canonicalRedirect } from "@/lib/canonical-host";
 import { eventExists } from "@/lib/claim-events";
 import { buyerRequest } from "@/lib/request-reads";
 import { RESERVED_SLUGS, slugSchema } from "@/lib/slug";
-import { getPublicStore, publicItemExists, UUID } from "@/lib/storefront";
+import {
+  getPublicStore,
+  MISSING_HEADER,
+  type Missing,
+  publicItemExists,
+  UUID,
+} from "@/lib/storefront";
 import { movedSlug } from "@/lib/stores";
 
 // A page streams its first byte before notFound() can run, which locks in a
-// 200 in production, so a real 404 has to be decided here.
-// A store's old link answers with its current slug instead.
+// 200 in production, so a real 404 has to be decided here: what is missing,
+// or null. A store's old link answers with its current slug instead.
 async function missing(
   req: NextRequest,
   slug: string,
   page?: string,
   id = "",
-): Promise<boolean | string> {
-  if (!slugSchema.safeParse(slug).success) return true;
+): Promise<Missing | { moved: string } | null> {
+  if (!slugSchema.safeParse(slug).success) return "store";
   const db = getDb();
   const store = await getPublicStore(db, slug);
-  if (!store) return (await movedSlug(db, slug)) ?? true;
+  if (!store) {
+    const moved = await movedSlug(db, slug);
+    return moved ? { moved } : "store";
+  }
   // Link prefetches land here too, so this stays a single-row lookup.
-  if (page === "item") return !(await publicItemExists(db, store.id, id));
+  if (page === "item")
+    return (await publicItemExists(db, store.id, id)) ? null : "item";
   if (page === "claim")
-    return !UUID.test(id) || !(await eventExists(db, store.id, id));
-  if (page !== "request") return false;
+    return UUID.test(id) && (await eventExists(db, store.id, id))
+      ? null
+      : "claim";
+  if (page !== "request") return null;
   // The waiting screen exists only for the phone that sent the request.
   const sid = req.cookies.get(BUYER_COOKIE)?.value;
-  if (!sid || !UUID.test(id)) return true;
-  return (await buyerRequest(db, id, sid))?.slug !== slug;
+  if (!sid || !UUID.test(id)) return "request";
+  return (await buyerRequest(db, id, sid))?.slug === slug ? null : "request";
+}
+
+/** A real 404. The page says what was missing and, in a store, links back. */
+function notFound(req: NextRequest, what?: string) {
+  const headers = new Headers(req.headers);
+  if (what) headers.set(MISSING_HEADER, what);
+  else headers.delete(MISSING_HEADER);
+  return NextResponse.rewrite(new URL("/_not-found", req.url), {
+    request: { headers },
+  });
 }
 
 // The paths that need a store or session check. Everything else only gets the
@@ -52,7 +74,7 @@ export async function proxy(req: NextRequest) {
   } catch {
     if (req.nextUrl.pathname.startsWith("/join/"))
       return NextResponse.redirect(new URL("/join", req.url));
-    return NextResponse.rewrite(new URL("/_not-found", req.url));
+    return notFound(req);
   }
   if (req.nextUrl.pathname === "/login") return signedInToDashboard(req);
   if (!CHECKED.test(req.nextUrl.pathname)) return;
@@ -73,12 +95,12 @@ export async function proxy(req: NextRequest) {
       308,
     );
   const gone = await missing(req, slug, page, id);
-  if (typeof gone === "string") {
+  if (typeof gone === "object" && gone) {
     const to = req.nextUrl.clone();
-    to.pathname = `/${gone}${req.nextUrl.pathname.slice(slug.length + 1)}`;
+    to.pathname = `/${gone.moved}${req.nextUrl.pathname.slice(slug.length + 1)}`;
     return NextResponse.redirect(to, 308);
   }
-  if (gone) return NextResponse.rewrite(new URL("/_not-found", req.url));
+  if (gone) return notFound(req, gone === "store" ? gone : `${gone} ${slug}`);
 }
 
 /**

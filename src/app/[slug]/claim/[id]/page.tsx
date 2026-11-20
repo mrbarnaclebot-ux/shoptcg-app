@@ -71,7 +71,7 @@ export default async function ClaimPage({
           endsAt: e.endsAt.toISOString(),
         }}
       />
-      <footer className="mt-10 border-t border-border pt-4 pb-32 text-xs text-muted-foreground">
+      <footer className="mt-10 border-t border-border pt-4 pb-[calc(8rem+env(safe-area-inset-bottom))] text-xs text-muted-foreground">
         A claim holds the item for you. The seller messages you on WhatsApp to
         arrange payment.{" "}
         <Link href="/terms" className="underline underline-offset-2">

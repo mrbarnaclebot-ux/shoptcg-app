@@ -97,6 +97,28 @@ test("a buyer browses, filters and opens an item", async ({
   const hidden = await buyer.request.get(`/${slug}/item/${ids.hidden}`);
   expect(hidden.status()).toBe(404);
   expect((await buyer.request.get(`/${slug}/item/nope`)).status()).toBe(404);
+  // A missing item in a real store says so and leads back to that store.
+  expect((await buyer.goto(`/${slug}/item/${ids.hidden}`))!.status()).toBe(404);
+  await expect(
+    buyer.getByRole("heading", { name: "We can't find that item." }),
+  ).toBeVisible();
+  await buyer.getByRole("link", { name: /^Back to / }).click();
+  await expect(buyer).toHaveURL(new RegExp(`/${slug}$`));
+});
+
+test("a page that doesn't exist says so, with the way home", async ({
+  page,
+}) => {
+  expect((await page.goto("/terms/no-such-page"))!.status()).toBe(404);
+  await expect(
+    page.getByRole("heading", { name: "We can't find that page." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "tcgmart.app", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Go to tcgmart.app" }),
+  ).toHaveAttribute("href", "/");
 });
 
 test("a closed store can be browsed but not requested from", async ({

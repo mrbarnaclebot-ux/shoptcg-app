@@ -40,6 +40,11 @@ type PricingValues = {
   fxRate: string;
 } & ConditionPcts;
 
+const SIDES = [
+  ["under", "Under market"],
+  ["over", "Over market"],
+] as const;
+
 const ROUNDING = [
   ["0", "Exact cents"],
   ["0.5", "Nearest $0.50"],
@@ -393,19 +398,43 @@ function Toggle(props: {
 type FieldsProps = { values: PricingValues; errors: Record<string, string> };
 
 function PricingFields({ values, errors: e }: FieldsProps) {
-  const [pct, setPct] = useState(String(values.priceRulePct));
+  // A phone's number pad has no minus key, so the sign is a choice and the
+  // field only takes the size. The saved rule is still one signed number.
+  const [side, setSide] = useState<"under" | "over">(
+    values.priceRulePct > 0 ? "over" : "under",
+  );
+  const [pct, setPct] = useState(String(Math.abs(values.priceRulePct)));
   const [rounding, setRounding] = useState(values.rounding);
-  const example = vendorPrice(48.1, Number(pct) || 0, Number(rounding), null);
+  const size = Math.abs(Number(pct.trim()));
+  // Not a number goes through as typed, so the server says what's wrong.
+  const signed =
+    !pct.trim() || Number.isNaN(size)
+      ? pct
+      : String(side === "under" ? -size : size);
+  const example = vendorPrice(
+    48.1,
+    Number(signed) || 0,
+    Number(rounding),
+    null,
+  );
   return (
     <fieldset className="flex flex-col gap-4">
       <SectionMark n={1} level="legend" className="mb-4" icon={Percent}>
         Price rule
       </SectionMark>
+      <Segmented
+        label="Sell"
+        name="priceRuleSide"
+        value={side}
+        options={SIDES}
+        onChange={setSide}
+      />
       <div className="flex flex-col gap-2">
-        <Label htmlFor="priceRulePct">Price rule (% of market)</Label>
+        <Label htmlFor="priceRuleSize">
+          {side === "under" ? "Percent under market" : "Percent over market"}
+        </Label>
         <Input
-          id="priceRulePct"
-          name="priceRulePct"
+          id="priceRuleSize"
           inputMode="numeric"
           value={pct}
           onChange={(ev) => setPct(ev.target.value)}
@@ -413,8 +442,9 @@ function PricingFields({ values, errors: e }: FieldsProps) {
           aria-describedby="rule-hint rule-error"
           className="max-w-32"
         />
+        <input type="hidden" name="priceRulePct" value={signed} />
         <p id="rule-hint" className="text-sm text-muted-foreground">
-          Use -10 to sell 10% under market, 0 to match it.
+          0 matches market.
         </p>
         <Err id="rule-error" msg={e.priceRulePct} />
       </div>

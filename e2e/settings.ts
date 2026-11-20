@@ -18,8 +18,16 @@ const save = async (page: Page) => {
 export async function saveSettings(page: Page, set: Settings) {
   if (set.rule !== undefined || set.rounding || set.currency) {
     await page.goto("/dashboard/settings/pricing");
-    if (set.rule !== undefined)
-      await page.getByLabel("Price rule (% of market)").fill(set.rule);
+    // "-10" is 10% under market: the sign is a choice, the field the size.
+    if (set.rule !== undefined) {
+      const under = set.rule.startsWith("-");
+      await page
+        .getByText(under ? "Under market" : "Over market", { exact: true })
+        .click();
+      await page
+        .getByLabel(under ? "Percent under market" : "Percent over market")
+        .fill(set.rule.replace(/^-/, ""));
+    }
     if (set.rounding) await page.getByText(set.rounding).click();
     if (set.currency) {
       await page.getByLabel("Code").fill(set.currency[0]);

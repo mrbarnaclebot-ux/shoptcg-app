@@ -41,6 +41,10 @@ test("happy path: the seller sees the ticket within 3 seconds", async ({
   });
   await expect(page.getByText("Maya Robinson")).toBeVisible();
   await expect(page.locator(".toasts").getByText("New request")).toBeVisible();
+  // One listener for the whole dashboard: the queue doesn't chime again.
+  await expect(
+    page.locator(".toasts li").filter({ hasText: "New request" }),
+  ).toHaveCount(1);
   await expect(page).toHaveTitle("(1) Requests");
   // The email stays on the server: not in the seller's page or its payload.
   expect(await page.content()).not.toContain("maya@example.test");
@@ -48,6 +52,34 @@ test("happy path: the seller sees the ticket within 3 seconds", async ({
   // Sending empties the list.
   await buyer.goto(`/${slug}`);
   await expect(buyer.getByRole("link", { name: "Review cart" })).toHaveCount(0);
+});
+
+test("a request alerts on any dashboard page, and the Requests tab counts it", async ({
+  page,
+  browser,
+}) => {
+  const slug = await openVendor(page);
+  await page.goto("/dashboard/inventory");
+  const tab = page
+    .getByRole("navigation", { name: "Dashboard" })
+    .getByRole("link", { name: /^Requests/ });
+  await expect(tab).toHaveAccessibleName("Requests");
+  const buyer = await newBuyer(browser, slug);
+  await sendList(buyer, slug, ["Mew ex"]);
+
+  const toast = page.locator(".toasts li").filter({ hasText: "New request" });
+  await expect(toast).toBeVisible();
+  await expect(tab).toHaveAccessibleName("Requests (1 waiting)");
+  await toast.getByRole("button", { name: "Review" }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+
+  // The sale screen sits under Requests; its address alone is the queue.
+  await page.getByRole("link", { name: "Review sale" }).click();
+  await expect(page.getByRole("heading", { name: /^Sale for/ })).toBeVisible();
+  await expect(tab).toHaveAttribute("aria-current", "page");
+  await page.goto("/dashboard/requests");
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole("link", { name: "Review sale" })).toBeVisible();
 });
 
 test("the last copy: others see it on hold, a stale list can send without it", async ({
@@ -210,6 +242,16 @@ test("strangers: another phone gets a 404, another vendor can't decline", async 
 
   const stranger = await newBuyer(browser, slug);
   expect((await stranger.goto(url))!.status()).toBe(404);
+  // Their store's 404 says where the request lives and leads back.
+  await expect(
+    stranger.getByRole("heading", { name: "We can't find that request." }),
+  ).toBeVisible();
+  await expect(
+    stranger.getByText("Open it on the phone you sent it from."),
+  ).toBeVisible();
+  await expect(
+    stranger.getByRole("link", { name: /^Back to / }),
+  ).toHaveAttribute("href", `/${slug}`);
   const stream = await stranger.request.get(`/api/live/request/${id}`);
   expect(stream.status()).toBe(404);
 

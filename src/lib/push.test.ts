@@ -1,7 +1,55 @@
+import { sql } from "drizzle-orm";
 import { expect, test, vi } from "vitest";
-import { pushSubscription } from "@/db/schema";
-import { MAX_PUSH_DEVICES, pushToUser, savePush, vapid } from "@/lib/push";
+import { pushSubscription, request } from "@/db/schema";
+import {
+  MAX_PUSH_DEVICES,
+  pushNewRequest,
+  pushToUser,
+  savePush,
+  type Sender,
+  vapid,
+} from "@/lib/push";
 import { addStore, migratedDb } from "@/lib/test-fixtures";
+
+test("a new-request push opens the sale screen and says the request's own hold", async () => {
+  const db = await migratedDb();
+  const storeId = await addStore(db, "hold");
+  await db.insert(pushSubscription).values({
+    endpoint: "https://push.test/hold",
+    userId: "hold",
+    p256dh: "k",
+    auth: "a",
+  });
+  const sent = async (hold: string) => {
+    const [r] = await db
+      .insert(request)
+      .values({
+        storeId,
+        code: "ZZZZ",
+        termsVersion: "t",
+        sessionId: hold,
+        status: "declined",
+        expiresAt: sql`now() + ${sql.raw(`interval '${hold}'`)}`,
+      })
+      .returning({ id: request.id });
+    const send = vi.fn<Sender>(async () => {});
+    await pushNewRequest(
+      db,
+      storeId,
+      { ...r, name: "Maya Robinson", items: 2, total: 12 },
+      send,
+    );
+    const msg = JSON.parse(send.mock.calls[0][1] as string);
+    expect(msg.url).toBe(`/dashboard/requests/${r.id}`);
+    return msg.body as string;
+  };
+  expect(await sent("15 minutes")).toBe(
+    "2 items, $12.00. Hold ends in 15 min.",
+  );
+  expect(await sent("24 hours")).toBe(
+    "2 items, $12.00. Hold ends in 24 hours.",
+  );
+});
 
 test("push skips without VAPID keys and deletes subscriptions the browser dropped", async () => {
   expect(vapid({})).toBeNull();

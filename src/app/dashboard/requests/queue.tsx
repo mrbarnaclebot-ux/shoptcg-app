@@ -44,7 +44,6 @@ export async function RequestQueue({
       <SectionMark n={1} id="requests-h" icon={Inbox}>
         Requests
       </SectionMark>
-      <InstallNudge />
       <AlertsRow publicKey={vapid()?.publicKey ?? null} />
       {queue ? (
         <>
@@ -102,6 +101,8 @@ export async function RequestQueue({
           </Link>
         </div>
       )}
+      {/* Below the tickets, so a request is never pushed down (UI-SPEC 10). */}
+      <InstallNudge />
     </section>
   );
 }
@@ -119,9 +120,11 @@ function Empty({ mode }: { mode: SellingMode }) {
         <Link href="/dashboard/inventory" className={lineButton}>
           Go to inventory
         </Link>
-        <Link href="/dashboard/sign" className={lineButton}>
-          Print table sign
-        </Link>
+        {modeCopy(mode).showTable && (
+          <Link href="/dashboard/sign" className={lineButton}>
+            Print table sign
+          </Link>
+        )}
         <SendTestRequest />
       </div>
     </div>
