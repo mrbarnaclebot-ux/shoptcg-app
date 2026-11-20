@@ -53,6 +53,8 @@ type Cell = string | number | null | undefined;
 
 /** One cell, safe to open in Excel: formulas neutralised, then RFC 4180 quoted. */
 export function csvCell(value: Cell) {
+  // A real number can't be a formula, so -1 stays a number in a spreadsheet.
+  if (typeof value === "number") return String(value);
   const text = String(value ?? "");
   const safe = (/^[\t\r]/.test(text) ? `'${text}` : text).replace(
     FORMULA,

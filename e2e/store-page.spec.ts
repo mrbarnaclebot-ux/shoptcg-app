@@ -193,8 +193,11 @@ test("the table sign prints one A5 page with a QR that scans to the store", asyn
     });
   expect(decoded).toBe(`${new URL(page.url()).origin}/${slug}?src=sign`);
 
-  await page.getByLabel("Table number").fill("B14");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  // Edited under How you sell only; the sign page shows it.
+  await page.getByRole("link", { name: "Edit table number and NFC" }).click();
+  await expect(page).toHaveURL(/\/dashboard\/settings\/table$/);
+  await saveSettings(page, { table: "B14" });
+  await page.goto("/dashboard/sign");
   await expect(page.locator(".ts-table")).toHaveText("TableB14");
 
   const pdf = await page.pdf({

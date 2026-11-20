@@ -149,11 +149,9 @@ test("the promo list is opted-in buyers only, and unsubscribing leaves it", asyn
   test.setTimeout(90_000);
   const slug = await openVendor(page);
   await page.goto("/dashboard/customers");
+  // Nothing to search or export yet: just how the list fills.
   await expect(page.getByText("No customers yet.")).toBeVisible();
-  await expect(page.getByText("No one has opted in yet.")).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Export promo list" }),
-  ).toBeDisabled();
+  await expect(page.getByRole("search")).toHaveCount(0);
 
   const yes = buyerEmail();
   const gone = buyerEmail();
