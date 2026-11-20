@@ -11,7 +11,7 @@ import {
   passwordSignIn,
   signIn,
 } from "./auth";
-import { confirm, openVendor, pay, reviewSale } from "./buyer";
+import { confirmAndView, openVendor, pay, reviewSale } from "./buyer";
 import { hasDb, userExists } from "./db";
 
 const fresh = () =>
@@ -229,7 +229,7 @@ test("a vendor with sales deletes their account and everything under it", async 
   // A real sale, so the delete has to get through receipts and the ledger.
   await reviewSale(page, browser, slug, ["Mew ex"]);
   await pay(page, "Cash");
-  await confirm(page).click();
+  await confirmAndView(page);
   await expect(page.getByTestId("receipt-no")).toBeVisible();
 
   await page.goto("/dashboard/settings");

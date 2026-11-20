@@ -5,7 +5,13 @@ import { z } from "zod";
 import { PAYMENT_METHODS } from "@/db/schema";
 import { getDb } from "@/db";
 import { mailForcedToFail } from "@/lib/mail-forced";
-import { MAX_LINES } from "@/lib/requests";
+import type { StockHit } from "@/app/dashboard/stock-search";
+import {
+  addToRequest,
+  extendHold,
+  findFreeStock,
+  MAX_LINES,
+} from "@/lib/requests";
 import { deliverReceipt } from "@/lib/receipts";
 import { PRICE_RE } from "@/lib/money";
 import { confirmSale, type ConfirmResult } from "@/lib/sales";
@@ -59,4 +65,26 @@ export async function confirmSaleAction(
     after(() => deliverReceipt(db, saleId, { forceFail }));
   }
   return result;
+}
+
+/** In-stock listings with some free, for the sale screen's Add item. */
+export async function findFreeStockAction(q: string): Promise<StockHit[]> {
+  const { store } = await requireStore();
+  const words = String(q).trim().slice(0, 80);
+  return words ? findFreeStock(getDb(), store.id, words) : [];
+}
+
+/** Holds one more of a listing on this sale; false when none is free or the request closed. */
+export async function addToSaleAction(requestId: string, listingId: string) {
+  const { store } = await requireStore();
+  const ids = z.tuple([z.uuid(), z.uuid()]).safeParse([requestId, listingId]);
+  if (!ids.success) return false;
+  return addToRequest(getDb(), store.id, requestId, listingId);
+}
+
+/** "+15 min" on a buyer's hold; false when it can't move (not pending, or at the cap). */
+export async function extendHoldAction(requestId: string) {
+  const { store } = await requireStore();
+  if (!z.uuid().safeParse(requestId).success) return false;
+  return Boolean(await extendHold(getDb(), store.id, requestId));
 }

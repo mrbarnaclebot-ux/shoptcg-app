@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { confirm, openVendor, pay, reviewSale, setStore } from "./buyer";
+import { confirmAndView, openVendor, pay, reviewSale, setStore } from "./buyer";
 
 const figure = (in_: Page | Locator, label: string) =>
   in_.locator("dl > div", { hasText: label }).locator("dd");
@@ -19,7 +19,7 @@ test("a vendor buys cards at the table and checks the cash box at close", async 
   // $265.50 in cash.
   await reviewSale(page, browser, slug, ["Charizard ex"]);
   await pay(page, "Cash");
-  await confirm(page).click();
+  await confirmAndView(page);
   await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
 
   // Two Mews from stock at $5 and a new item at $3, paid in cash.

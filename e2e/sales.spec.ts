@@ -5,6 +5,7 @@ import {
   add,
   buyerEmail,
   confirm,
+  confirmAndView,
   fillForm,
   newBuyer,
   openVendor,
@@ -40,7 +41,7 @@ test("a full table sale: edit, discount, confirm, receipt, stock, buyer", async 
   await page.getByLabel("Percent off").fill("10");
   await pay(page, "Cash");
   await expect(page.getByText("-$24.81")).toBeVisible();
-  await confirm(page).click();
+  await confirmAndView(page);
 
   await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
   // The receipt says it all, so the toast doesn't sit on top of it.
@@ -131,7 +132,7 @@ test.describe("a seller in Tokyo", () => {
     const slug = await openVendor(page);
     await reviewSale(page, browser, slug, ["Gengar"]);
     await pay(page, "Cash");
-    await confirm(page).click();
+    await confirmAndView(page);
     await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
     await expect(page.getByText(/GMT\+9/)).toBeVisible();
   });
@@ -148,7 +149,7 @@ test("a double tap makes one sale, and the stamp survives reduced motion", async
   await page.goto("/dashboard");
   await page.getByRole("link", { name: "Review sale" }).click();
   await pay(page, "Card");
-  await confirm(page).dblclick();
+  await confirmAndView(page, "dblclick");
   await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
   await page.goto("/dashboard/sales");
   await expect(page.locator("main li")).toHaveCount(1);
@@ -167,7 +168,7 @@ test("the payment method is required, and Other needs a note", async ({
   await expect(confirm(page)).toBeDisabled();
   await page.getByLabel("What did they pay with?").fill("Trade + cash");
   await expect(confirm(page)).toBeEnabled();
-  await confirm(page).click();
+  await confirmAndView(page);
   await expect(page.getByText("Paid by Trade + cash")).toBeVisible();
 });
 
@@ -201,7 +202,7 @@ test("a lapsed hold can still sell, until stock is gone", async ({
   await page.goto(`/dashboard/requests/${firstUrl}`);
   await expect(page.getByText("The hold ended, but nothing")).toBeVisible();
   await pay(page, "Cash");
-  await confirm(page).click();
+  await confirmAndView(page);
   await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
   // The buyer on the lapsed screen still hears about it.
   await expect(first.getByText("Sold. Enjoy your cards!")).toBeVisible();
@@ -235,7 +236,7 @@ test("a failed receipt email keeps the sale and can be resent", async ({
   ]);
   const buyer = await reviewSale(page, browser, slug, ["Gengar"], { email });
   await pay(page, "Cash");
-  await confirm(page).click();
+  await confirmAndView(page);
   await expect(page.getByText("Email didn't send.")).toBeVisible();
   await expect(buyer.getByText("We couldn't email it.")).toBeVisible();
   await expect(page.getByTestId("receipt-no")).toHaveText("R-0001");
@@ -288,7 +289,7 @@ test("another vendor can't see a sale or review a request", async ({
   await reviewSale(page, browser, slug, ["Gengar"]);
   const reviewUrl = new URL(page.url()).pathname;
   await pay(page, "Cash");
-  await confirm(page).click();
+  await confirmAndView(page);
   await expect(page.getByTestId("receipt-no")).toBeVisible();
   const saleUrl = new URL(page.url()).pathname;
 

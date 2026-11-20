@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { CatalogItem } from "@/db/schema";
+import { CONDITION_NAME } from "@/lib/condition";
 import { parseCsv } from "@/lib/csv";
 import { SearchError } from "@/lib/pricing/errors";
 import {
@@ -22,12 +23,53 @@ export const CSV_COLUMNS = [
   "grade",
   "qty",
   "price",
+  "cost",
 ] as const;
 export const MAX_ROWS = 1000;
 export const MAX_CSV_CHARS = 1_000_000;
 
-// Vendors write JP and CN; the catalog stores ISO codes.
-const LANGUAGE_ALIASES: Record<string, string> = { jp: "ja", cn: "zh" };
+// Vendors write JP and CN, and other apps write the name; the catalog stores ISO codes.
+const LANGUAGE_ALIASES: Record<string, string> = {
+  jp: "ja",
+  cn: "zh",
+  english: "en",
+  japanese: "ja",
+  chinese: "zh",
+};
+
+// Headers TCGplayer and Collectr exports use, lower-cased. Their market and
+// low prices ("TCG Market Price", "Price Each") are left out on purpose: a
+// blank price follows our market, and copying theirs would fix it.
+const HEADER_ALIASES: Record<string, (typeof CSV_COLUMNS)[number]> = {
+  "product name": "name",
+  "set name": "set",
+  "card number": "number",
+  quantity: "qty",
+  "total quantity": "qty",
+  "add to quantity": "qty",
+  "my price": "price",
+};
+
+/** "Near Mint", or TCGplayer's "Lightly Played Foil", as NM or LP; anything else as typed. */
+function conditionCode(v: string) {
+  const text = v.trim().toLowerCase();
+  const hit = Object.entries(CONDITION_NAME).find(([, name]) =>
+    text.startsWith(name.toLowerCase()),
+  );
+  return hit ? hit[0] : v;
+}
+
+/** Each header as one of our columns; our own name wins, then the first alias. */
+function columnsOf(head: string[]) {
+  const cols = head.map((c) => c.trim().toLowerCase());
+  const taken = new Set(cols);
+  return cols.map((c) => {
+    const ours = HEADER_ALIASES[c];
+    if (!ours || taken.has(ours)) return c;
+    taken.add(ours);
+    return ours;
+  });
+}
 
 export type ParsedRow =
   | { line: number; ok: true; input: CustomListingInput }
@@ -43,7 +85,7 @@ function toInput(cells: Record<string, string>) {
     kind,
     language: LANGUAGE_ALIASES[lang] ?? lang,
     // A raw row with no condition is the common case: assume Near Mint.
-    condition: kind === "raw" ? cells.condition || "NM" : null,
+    condition: kind === "raw" ? conditionCode(cells.condition || "NM") : null,
     grader: cells.grader?.toUpperCase(),
     grade: cells.grade,
     qty: cells.qty?.trim() || 1,
@@ -58,10 +100,10 @@ export function readCsv(text: string): ParsedRow[] {
     throw new Error("That file is too big. Keep it under 1 MB.");
   const [head, ...body] = parseCsv(text);
   if (!head) throw new Error("The file is empty.");
-  const cols = head.cells.map((c) => c.trim().toLowerCase());
+  const cols = columnsOf(head.cells);
   if (!cols.includes("name"))
     throw new Error(
-      `The first row must be the column names, including "name".`,
+      `The first row must be the column names, including "name" (or "Product Name").`,
     );
   if (body.length > MAX_ROWS)
     throw new Error(

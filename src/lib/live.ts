@@ -17,6 +17,10 @@ export type LiveType =
   | "claim"
   // The vendor removed an item that was on this request; the rest stays held.
   | "removed"
+  // The vendor gave the buyer more time on the hold.
+  | "extended"
+  // The vendor added an item, or one more of one, at the table.
+  | "added"
   | "floor";
 export type LiveEvent = { s: string; r: string; t: LiveType };
 

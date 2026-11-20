@@ -317,17 +317,49 @@ export const toast = {
     announce("Recording sale");
     return put({ tone: "wait", title: "Recording", duration: null });
   },
+  /** Turns the loading toast into the result, or shows it alone (`id` unset) for a sale sent later. */
   saleRecorded: (
-    id: string,
-    receiptNo: string,
-    total: string,
-    emailed: boolean,
+    id: string | undefined,
+    sale: {
+      receiptNo: string;
+      total: string;
+      emailed: boolean;
+      change?: string;
+    },
+    view: () => void,
   ) => {
-    const title = `Sale ${receiptNo} recorded`;
-    const body = emailed ? `${total}. The receipt is on its way.` : `${total}.`;
+    const title = `Sale ${sale.receiptNo} recorded`;
+    const body = [
+      `${sale.total}.`,
+      sale.change && `Change ${sale.change}.`,
+      sale.emailed && "The receipt is on its way.",
+    ]
+      .filter(Boolean)
+      .join(" ");
     announce(`${title}. ${body}`);
-    put({ tone: "ok", title, body, duration: 6000 }, id);
-    recorded = id;
+    // The receipt is always on Sales too; the button is a shortcut.
+    recorded = put(
+      {
+        tone: "ok",
+        title,
+        body,
+        duration: 8000,
+        button: { title: "View receipt", onClick: view },
+      },
+      id,
+    );
+  },
+  /** A sale kept on the phone that the server then refused; it stays until the vendor acts. */
+  saleRefused: (buyer: string, why: string, open: () => void) => {
+    const title = `Sale for ${buyer} not recorded`;
+    announce(`${title}. ${why}`, true);
+    return put({
+      tone: "bad",
+      title,
+      body: why,
+      duration: null,
+      button: { title: "Open request", onClick: open },
+    });
   },
   /** The receipt loaded and says it all; the toast only held the line on slow WiFi. */
   receiptOpened: () => {
