@@ -5,11 +5,18 @@ import { Suspense } from "react";
 import { lineButton, TicketButton } from "@/components/ticket-button";
 import { shortDate, usd } from "@/lib/format";
 import { getDb } from "@/db";
-import { countListings, listStock } from "@/lib/listings";
+import { ExportButton } from "@/components/export-button";
+import {
+  countListings,
+  countStock,
+  listStock,
+  PAGE_ROWS,
+} from "@/lib/listings";
 import { tableSale } from "@/lib/requests";
 import { requireStore } from "@/lib/session";
 import { awaitingPrice, vendorPrice } from "@/lib/vendor-price";
-import { filterSchema, Filters } from "./filters";
+import { Bulk } from "./bulk";
+import { filterSchema, Filters, href, type Filter } from "./filters";
 import { StockRow } from "./stock-row";
 
 export const metadata: Metadata = { title: "Inventory - tcgmart" };
@@ -31,10 +38,11 @@ async function Inventory({
 }: Pick<PageProps<"/dashboard/inventory">, "searchParams">) {
   const { store } = await requireStore();
   const filter = filterSchema.parse(await searchParams);
-  const [rows, selling, all] = await Promise.all([
+  const [rows, selling, all, total] = await Promise.all([
     listStock(getDb(), store.id, filter),
     tableSale(getDb(), store.id),
     countListings(getDb(), store.id),
+    countStock(getDb(), store.id, filter),
   ]);
   const today = new Date().toISOString().slice(0, 10);
   const filtered = Boolean(filter.q || filter.kind || filter.language);
@@ -45,7 +53,7 @@ async function Inventory({
   );
   return (
     <>
-      <Header count={filtered ? null : rows.length} synced={synced} />
+      <Header count={filtered ? null : total} synced={synced} />
       {/* Also with only hidden or removed stock, so those tabs stay reachable. */}
       {all || filtered ? <Filters filter={filter} /> : null}
       {selling && (
@@ -61,18 +69,30 @@ async function Inventory({
         </Link>
       )}
       {rows.length ? (
-        <ul className="-mx-4 bg-surface md:mx-0">
-          {rows.map((r) => (
-            <StockRow
-              key={r.id}
-              row={r}
-              price={vendorPrice(r.market, ...rule, r.overridePrice)}
-              awaiting={awaitingPrice(r)}
-              today={today}
-            />
-          ))}
-        </ul>
-      ) : filtered ? (
+        <>
+          <Bulk
+            rows={rows.map((r) => ({ id: r.id, name: r.name }))}
+            view={
+              filter.kind === "removed" || filter.kind === "hidden"
+                ? filter.kind
+                : "active"
+            }
+          >
+            <ul aria-label="Your stock" className="-mx-4 bg-surface md:mx-0">
+              {rows.map((r) => (
+                <StockRow
+                  key={r.id}
+                  row={r}
+                  price={vendorPrice(r.market, ...rule, r.overridePrice)}
+                  awaiting={awaitingPrice(r)}
+                  today={today}
+                />
+              ))}
+            </ul>
+          </Bulk>
+          <Pages filter={filter} total={total} />
+        </>
+      ) : filtered || filter.page ? (
         <NoMatches />
       ) : (
         <EmptyShelf />
@@ -90,7 +110,7 @@ function Header(props: { count: number | null; synced: string | null }) {
           Inventory
           {count !== null && (
             <small className="num font-sans text-base font-semibold text-muted-foreground">
-              {count} {count === 1 ? "item" : "items"}
+              {count.toLocaleString("en-US")} {count === 1 ? "item" : "items"}
             </small>
           )}
         </h1>
@@ -100,10 +120,17 @@ function Header(props: { count: number | null; synced: string | null }) {
             : "Market prices update nightly."}
         </p>
       </div>
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <Link href="/dashboard/buy" className={`${lineButton} px-3.5`}>
           Buy
         </Link>
+        <ExportButton
+          href="/dashboard/inventory/export"
+          unit="item"
+          className="px-3.5"
+        >
+          Export
+        </ExportButton>
         <Link
           href="/dashboard/inventory/import"
           className={`${lineButton} px-3.5`}
@@ -114,6 +141,31 @@ function Header(props: { count: number | null; synced: string | null }) {
         <TicketButton href="/dashboard/inventory/add">Add</TicketButton>
       </div>
     </div>
+  );
+}
+
+/** Previous and Next past PAGE_ROWS, kept in the URL. */
+function Pages({ filter, total }: { filter: Filter; total: number }) {
+  const page = filter.page ?? 1;
+  if (total <= PAGE_ROWS && page === 1) return null;
+  const n = (v: number) => v.toLocaleString("en-US");
+  const from = (page - 1) * PAGE_ROWS + 1;
+  return (
+    <nav aria-label="Pages" className="flex flex-wrap items-center gap-3">
+      <p className="num mr-auto text-muted-foreground">
+        {n(from)} to {n(Math.min(total, page * PAGE_ROWS))} of {n(total)}
+      </p>
+      {page > 1 && (
+        <Link href={href(filter, { page: page - 1 })} className={lineButton}>
+          Previous
+        </Link>
+      )}
+      {page * PAGE_ROWS < total && (
+        <Link href={href(filter, { page: page + 1 })} className={lineButton}>
+          Next
+        </Link>
+      )}
+    </nav>
   );
 }
 

@@ -257,6 +257,11 @@ export default function HelpPage() {
                 under <strong>Removed</strong>, where Restore brings it back
                 with its quantity.
               </li>
+              <li>
+                Tick items to hide, show, remove or restore several at once.{" "}
+                <strong>Export</strong> downloads your stock as a CSV you can
+                import again.
+              </li>
             </ul>
           </Section>
 

@@ -17,6 +17,7 @@ import type { StockRow as Row } from "@/lib/listings";
 import { toast } from "@/lib/toast";
 import { underMarket } from "@/lib/vendor-price";
 import { sellAction, stepQtyAction, updateListingAction } from "./actions";
+import { Pick } from "./bulk";
 import { EditPanel, restore } from "./edit-panel";
 
 // Synced nightly, so two days without a new point means the sync is missing it.
@@ -50,35 +51,41 @@ export function StockRow(props: {
   );
   return (
     <li className="border-b border-border last:border-b-0">
-      <div className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 px-4 py-3 lg:grid-cols-[44px_minmax(0,1fr)_3rem_11rem_11rem_4rem] lg:items-center lg:gap-x-5">
-        {off ? <TapeHatch label={off}>{thumb}</TapeHatch> : thumb}
-        <Name row={row} price={price} />
-        <span className="font-display hidden text-[0.95rem] font-extrabold tracking-[0.06em] text-muted-foreground lg:block">
-          {LANGUAGE_LABEL[row.language]}
-        </span>
-        <div className="col-start-2 row-start-2 flex items-center gap-3 lg:col-start-4 lg:row-start-1">
-          {removed ? (
-            <Restore row={row} />
-          ) : (
-            <>
-              <Qty row={row} />
-              {row.active && row.qty > 0 && price !== null && !row.inEvent && (
-                <Sell row={row} />
-              )}
-            </>
+      <div className="flex items-start pl-1 lg:items-center">
+        <div className="mt-2 lg:mt-0">
+          <Pick id={row.id} name={row.name} />
+        </div>
+        <div className="grid min-w-0 flex-1 grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 py-3 pr-4 pl-2 lg:grid-cols-[44px_minmax(0,1fr)_3rem_11rem_11rem_4rem] lg:items-center lg:gap-x-5">
+          {off ? <TapeHatch label={off}>{thumb}</TapeHatch> : thumb}
+          <Name row={row} price={price} />
+          <span className="font-display hidden text-[0.95rem] font-extrabold tracking-[0.06em] text-muted-foreground lg:block">
+            {LANGUAGE_LABEL[row.language]}
+          </span>
+          <div className="col-start-2 row-start-2 flex items-center gap-3 lg:col-start-4 lg:row-start-1">
+            {removed ? (
+              <Restore row={row} />
+            ) : (
+              <>
+                <Qty row={row} />
+                {row.active &&
+                  row.qty > 0 &&
+                  price !== null &&
+                  !row.inEvent && <Sell row={row} />}
+              </>
+            )}
+          </div>
+          <PriceTag {...props} />
+          {!removed && (
+            <button
+              type="button"
+              aria-expanded={editing}
+              onClick={() => setEditing(!editing)}
+              className="col-start-3 row-start-2 inline-flex min-h-11 items-center justify-self-end px-2 font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px] lg:col-start-6 lg:row-start-1"
+            >
+              {editing ? "Close" : "Edit"}
+            </button>
           )}
         </div>
-        <PriceTag {...props} />
-        {!removed && (
-          <button
-            type="button"
-            aria-expanded={editing}
-            onClick={() => setEditing(!editing)}
-            className="col-start-3 row-start-2 inline-flex min-h-11 items-center justify-self-end px-2 font-semibold underline decoration-brand decoration-[1.5px] underline-offset-[5px] lg:col-start-6 lg:row-start-1"
-          >
-            {editing ? "Close" : "Edit"}
-          </button>
-        )}
       </div>
       {editing && !removed && (
         <EditPanel row={row} onDone={() => setEditing(false)} />
@@ -164,7 +171,7 @@ function Restore({ row }: { row: Row }) {
       aria-label={`Restore ${row.name}`}
       onClick={() =>
         start(async () => {
-          await restore(row.id, row.name);
+          await restore([row.id], row.name);
         })
       }
       className="inline-flex min-h-11 items-center px-3 font-semibold shadow-[inset_0_0_0_1.5px_var(--border-strong)] disabled:opacity-50"

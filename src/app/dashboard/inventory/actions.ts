@@ -25,8 +25,10 @@ import {
   countListings,
   importListings,
   ListingError,
-  removeListing,
-  restoreListing,
+  PAGE_ROWS,
+  removeListings,
+  restoreListings,
+  setActive,
   stepQty,
   setListingPhoto,
   updateListing,
@@ -95,17 +97,20 @@ export async function updateListingAction(patch: unknown): Promise<Result> {
   return {};
 }
 
-/** Without `force`, stops at { held } when buyers have it, so the panel can ask first. */
+// One row's id, or the rows a vendor ticked: never more than one page shows.
+const idsSchema = z.array(z.uuid()).min(1).max(PAGE_ROWS);
+
+/** Without `force`, stops at { held } when buyers have one, so the vendor can be asked first. */
 export async function removeAction(
-  id: string,
+  ids: string[],
   force: boolean,
 ): Promise<RemoveResult | { error: string }> {
   const { store } = await requireStore();
   try {
-    const res = await removeListing(
+    const res = await removeListings(
       getDb(),
       store.id,
-      z.uuid().parse(id),
+      idsSchema.parse(ids),
       force === true,
     );
     if ("ok" in res) refresh();
@@ -116,14 +121,31 @@ export async function removeAction(
   }
 }
 
-export async function restoreAction(id: string): Promise<Result> {
+export async function restoreAction(ids: string[]): Promise<Result> {
   const { store } = await requireStore();
   try {
-    const ok = await restoreListing(getDb(), store.id, z.uuid().parse(id));
-    if (!ok) return { error: "That item is not in your removed stock." };
+    const n = await restoreListings(getDb(), store.id, idsSchema.parse(ids));
+    if (!n) return { error: "That item is not in your removed stock." };
   } catch (err) {
     if (err instanceof ListingError) return { error: err.message };
     console.error("[inventory] restore failed", err);
+    return { error: SAVE_FAILED };
+  }
+  refresh();
+  return {};
+}
+
+/** Hides (false) or shows the ticked rows. */
+export async function showAction(
+  ids: string[],
+  active: boolean,
+): Promise<Result> {
+  const { store } = await requireStore();
+  try {
+    await setActive(getDb(), store.id, idsSchema.parse(ids), active === true);
+  } catch (err) {
+    if (err instanceof ListingError) return { error: err.message };
+    console.error("[inventory] show failed", err);
     return { error: SAVE_FAILED };
   }
   refresh();

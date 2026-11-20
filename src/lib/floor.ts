@@ -1,4 +1,4 @@
-import { and, eq, gt, lt, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, lt, notInArray, sql } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import { basket, visit, type BasketLine } from "@/db/schema";
 import { basketTag } from "@/lib/basket-tag";
@@ -163,11 +163,12 @@ export async function floor(db: Db, s: PublicStore, timeZone: string) {
   return { onNow: counts?.onNow ?? 0, today: counts?.today ?? 0, baskets };
 }
 
-const hasLine = (listingId: string) =>
-  sql`${basket.lines} @> ${JSON.stringify([{ id: listingId }])}::jsonb`;
+const lineId = sql`l->>'id'`;
+const hasLine = (ids: string[]) =>
+  sql`exists (select 1 from jsonb_array_elements(${basket.lines}) l where ${inArray(lineId, ids)})`;
 
-/** Open lists, the ones the vendor sees, that have this listing on them. */
-export async function cartsWith(db: Db, storeId: string, listingId: string) {
+/** Open lists, the ones the vendor sees, with any of these listings on them. */
+export async function cartsWith(db: Db, storeId: string, ids: string[]) {
   const [{ n }] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(basket)
@@ -175,21 +176,17 @@ export async function cartsWith(db: Db, storeId: string, listingId: string) {
       and(
         eq(basket.storeId, storeId),
         gt(basket.seenAt, sql`now() - ${BASKET_KEPT}`),
-        hasLine(listingId),
+        hasLine(ids),
       ),
     );
   return n;
 }
 
-/** Takes a removed listing off every list; true when one had it. */
-export async function dropFromCarts(
-  db: Db,
-  storeId: string,
-  listingId: string,
-) {
-  const mine = and(eq(basket.storeId, storeId), hasLine(listingId));
+/** Takes removed listings off every list; true when one had them. */
+export async function dropFromCarts(db: Db, storeId: string, ids: string[]) {
+  const mine = and(eq(basket.storeId, storeId), hasLine(ids));
   const left = sql`(select coalesce(jsonb_agg(l), '[]'::jsonb)
-    from jsonb_array_elements(${basket.lines}) l where l->>'id' <> ${listingId})`;
+    from jsonb_array_elements(${basket.lines}) l where ${notInArray(lineId, ids)})`;
   const changed = await db
     .update(basket)
     .set({ lines: left })

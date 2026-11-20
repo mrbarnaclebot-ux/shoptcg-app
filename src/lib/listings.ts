@@ -3,13 +3,12 @@ import {
   count,
   desc,
   eq,
-  ilike,
   inArray,
   isNotNull,
   isNull,
-  or,
   sql,
   type Column,
+  type SQL,
 } from "drizzle-orm";
 import type { Db } from "@/db/open";
 import {
@@ -23,7 +22,8 @@ import {
   stockMove,
   store,
 } from "@/db/schema";
-import { gradedItem } from "@/lib/catalog";
+import { gradedItem, wordConds } from "@/lib/catalog";
+import { CSV_COLUMNS } from "@/lib/csv-import";
 import { cartsWith, dropFromCarts } from "@/lib/floor";
 import { stockReason } from "@/lib/ledger";
 import { notifyLive } from "@/lib/live";
@@ -49,7 +49,13 @@ export type StockFilter = {
   ids?: string[];
   /** Leave out listings in a claim event that hasn't ended: they sell there only. */
   forSale?: true;
+  /** Newest first unless set. */
+  sort?: StockSort;
+  /** 1-based, PAGE_ROWS a page. */
+  page?: number;
 };
+
+export type StockSort = "new" | "name" | "price-desc" | "price-asc" | "qty";
 
 /** In a claim event that hasn't ended (same test as eventOpen in claim-events.ts). */
 export const inOpenEvent = sql<boolean>`exists (
@@ -57,8 +63,9 @@ export const inOpenEvent = sql<boolean>`exists (
   where ${claimEventItem.listingId} = ${listing.id}
     and ${claimEvent.endedAt} is null and ${claimEvent.endsAt} > now())`;
 
-// ponytail: no pagination; vendors hold 50 to 500 items. Page past this cap if one grows.
-const MAX_ROWS = 1000;
+// The inventory pages through with `page`; other callers read the first page.
+// ponytail: ledger valuation and the buy picker stop at this many rows; page them too if a store passes it.
+export const PAGE_ROWS = 1000;
 
 function latestPrices(db: Db, storeId: string) {
   return db
@@ -98,13 +105,38 @@ function filterConds(storeId: string, f: StockFilter) {
   if (f.id) conds.push(eq(listing.id, f.id));
   if (f.ids) conds.push(inArray(listing.id, f.ids));
   if (f.forSale) conds.push(sql`not ${inOpenEvent}`);
-  const q = f.q?.trim();
-  if (q) {
-    const like = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
-    const number = sql`coalesce(${listing.number}, ${catalogItem.number})`;
-    conds.push(or(ilike(name, like), ilike(number, like))!);
+  if (f.q) {
+    // Every word, any order, anywhere in the name, set or number.
+    const number = pick(listing.number, catalogItem.number);
+    const set = pick(listing.setName, catalogItem.setName);
+    conds.push(...wordConds(f.q, [name, set, number], number));
   }
   return { name, where: and(...conds) };
+}
+
+/**
+ * vendorPrice in SQL, so a sort by price holds across pages: the fixed price,
+ * else the market moved by the store rule, rounded to the step in whole
+ * cents, never under one step.
+ */
+function priceSql(market: SQL) {
+  const step = sql`greatest(round(${store.rounding} * 100), 1)`;
+  const cents = sql`round(round(${market} * 100) * (100 + ${store.priceRulePct}) / 100.0)`;
+  // greatest() skips nulls, so no market has to be said outright.
+  return sql`coalesce(${listing.overridePrice}, case when ${market} is not null
+    then greatest(round(${cents} / ${step}) * ${step}, ${step}) / 100.0 end)`;
+}
+
+function orderBy(sort: StockSort | undefined, name: SQL, market: SQL) {
+  const newest = [desc(listing.createdAt), desc(listing.id)];
+  if (sort === "name") return [sql`lower(${name})`, ...newest];
+  if (sort === "qty") return [desc(listing.qty), ...newest];
+  // Unpriced items go last either way, as on the store page.
+  if (sort === "price-desc")
+    return [sql`${priceSql(market)} desc nulls last`, ...newest];
+  if (sort === "price-asc")
+    return [sql`${priceSql(market)} asc nulls last`, ...newest];
+  return newest;
 }
 
 /** This listing's share of the NM market in percent (src/lib/condition.ts): 100 for NM, sealed and slabs. */
@@ -153,15 +185,17 @@ function columns(latest: ReturnType<typeof latestPrices>) {
 export async function listStock(db: Db, storeId: string, f: StockFilter = {}) {
   const latest = latestPrices(db, storeId);
   const { name, where } = filterConds(storeId, f);
+  const cols = columns(latest);
   const rows = await db
-    .select({ ...columns(latest), name })
+    .select({ ...cols, name })
     .from(listing)
     .innerJoin(store, eq(store.id, listing.storeId))
     .leftJoin(catalogItem, eq(catalogItem.id, listing.catalogItemId))
     .leftJoin(latest, eq(latest.catalogItemId, listing.catalogItemId))
     .where(where)
-    .orderBy(desc(listing.createdAt), desc(listing.id))
-    .limit(MAX_ROWS);
+    .orderBy(...orderBy(f.sort, name, cols.market))
+    .limit(PAGE_ROWS)
+    .offset(((f.page ?? 1) - 1) * PAGE_ROWS);
   const num = (v: string | null) => (v === null ? null : Number(v));
   return rows.map((r) => ({
     ...r,
@@ -173,6 +207,44 @@ export async function listStock(db: Db, storeId: string, f: StockFilter = {}) {
 }
 
 export type StockRow = Awaited<ReturnType<typeof listStock>>[number];
+
+/**
+ * Every listing not removed, oldest first, as CSV rows the import reads back:
+ * CSV_COLUMNS plus cost, with price only when fixed (else it follows the market).
+ */
+export async function stockCsvRows(db: Db, storeId: string) {
+  const rows = await db
+    .select({
+      name: pick<string>(listing.name, catalogItem.name),
+      set: pick<string | null>(listing.setName, catalogItem.setName),
+      number: pick<string | null>(listing.number, catalogItem.number),
+      language: listing.language,
+      kind: listing.kind,
+      condition: listing.condition,
+      grader: pick<string | null>(listing.grader, catalogItem.grader),
+      grade: pick<string | null>(listing.grade, catalogItem.grade),
+      qty: listing.qty,
+      price: listing.overridePrice,
+      cost: listing.cost,
+    })
+    .from(listing)
+    .leftJoin(catalogItem, eq(catalogItem.id, listing.catalogItemId))
+    .where(and(eq(listing.storeId, storeId), isNull(listing.removedAt)))
+    .orderBy(listing.createdAt, listing.id);
+  const head = [...CSV_COLUMNS, "cost"] as const;
+  return [[...head], ...rows.map((r) => head.map((c) => r[c]))];
+}
+
+/** Every row listStock pages through for this filter. */
+export async function countStock(db: Db, storeId: string, f: StockFilter) {
+  const { where } = filterConds(storeId, f);
+  const [{ n }] = await db
+    .select({ n: count() })
+    .from(listing)
+    .leftJoin(catalogItem, eq(catalogItem.id, listing.catalogItemId))
+    .where(where);
+  return n;
+}
 
 export class ListingError extends Error {}
 
@@ -533,51 +605,56 @@ export async function stepQty(
 }
 
 export type RemoveResult =
-  | { ok: true; name: string }
-  /** Buyers hold it on this many requests and carts; nothing changed yet. */
+  | { ok: true; names: string[] }
+  /** Buyers hold them on this many requests and carts; nothing changed yet. */
   | { held: number }
-  /** In a claim event that hasn't ended: its claims would vanish. */
+  /** One is in a claim event that hasn't ended: its claims would vanish. */
   | { event: string }
-  /** Not this store's, or already removed. */
+  /** None is this store's, or all are removed already. */
   | { gone: true };
 
 /**
- * Takes a listing out of the inventory, the store and every unsent cart, with
- * its quantity to 0 as a "removed" stock move; restoreListing undoes it. Each
- * buyer holding it loses that line and is told, and a request left with
+ * Takes listings out of the inventory, the store and every unsent cart, with
+ * their quantity to 0 as a "removed" stock move; restoreListings undoes it.
+ * Each buyer holding one loses that line and is told, and a request left with
  * nothing is declined. Without `force` it stops at { held } so the vendor can
- * be asked first.
+ * be asked first. One in a live or scheduled claim event stops the lot.
  */
-export async function removeListing(
+export async function removeListings(
   db: Db,
   storeId: string,
-  id: string,
+  ids: string[],
   force: boolean,
 ): Promise<RemoveResult> {
   return db.transaction(async (t) => {
     const tx = t as Db;
     // Store first, like a send or a sale, so none lands halfway through.
-    if (!(await lockStore(tx, storeId))) return { gone: true };
-    const [row] = await tx
-      .select({ name: pick<string>(listing.name, catalogItem.name) })
+    if (!ids.length || !(await lockStore(tx, storeId))) return { gone: true };
+    const rows = await tx
+      .select({
+        id: listing.id,
+        name: pick<string>(listing.name, catalogItem.name),
+      })
       .from(listing)
       .leftJoin(catalogItem, eq(catalogItem.id, listing.catalogItemId))
       .where(
         and(
-          eq(listing.id, id),
+          inArray(listing.id, ids),
           eq(listing.storeId, storeId),
           isNull(listing.removedAt),
         ),
       )
+      .orderBy(listing.id)
       .for("update", { of: listing });
-    if (!row) return { gone: true };
+    if (!rows.length) return { gone: true };
+    const found = rows.map((r) => r.id);
     const [event] = await tx
       .select({ title: claimEvent.title })
       .from(claimEventItem)
       .innerJoin(claimEvent, eq(claimEvent.id, claimEventItem.eventId))
       .where(
         and(
-          eq(claimEventItem.listingId, id),
+          inArray(claimEventItem.listingId, found),
           isNull(claimEvent.endedAt),
           sql`${claimEvent.endsAt} > now()`,
         ),
@@ -585,102 +662,149 @@ export async function removeListing(
       .limit(1);
     if (event) return { event: event.title };
     const holding = await tx
-      .select({ id: request.id })
+      .select({ id: request.id, listingId: requestLine.listingId })
       .from(request)
       .innerJoin(requestLine, eq(requestLine.requestId, request.id))
       .where(
         and(
           eq(request.storeId, storeId),
-          eq(requestLine.listingId, id),
+          inArray(requestLine.listingId, found),
           sql`${effectiveStatus} = 'pending'`,
         ),
       );
-    const carts = await cartsWith(tx, storeId, id);
-    if (!force && holding.length + carts)
-      return { held: holding.length + carts };
+    const name = new Map(rows.map((r) => [r.id, r.name]));
+    const gone = new Map<string, string[]>();
+    for (const h of holding)
+      gone.set(h.id, [...(gone.get(h.id) ?? []), name.get(h.listingId)!]);
+    const held = gone.size + (await cartsWith(tx, storeId, found));
+    if (!force && held) return { held };
 
     await stockReason(tx, "removed");
     await tx
       .update(listing)
       .set({ removedAt: sql`now()`, qty: 0, updatedAt: sql`now()` })
-      .where(eq(listing.id, id));
-    const ids = holding.map((h) => h.id);
-    if (ids.length) {
+      .where(inArray(listing.id, found));
+    const asked = [...gone.keys()];
+    if (asked.length) {
       await tx
         .delete(requestLine)
         .where(
           and(
-            eq(requestLine.listingId, id),
-            inArray(requestLine.requestId, ids),
+            inArray(requestLine.listingId, found),
+            inArray(requestLine.requestId, asked),
           ),
         );
-      await tx
-        .update(request)
-        .set({
-          removedItems: sql`array_append(${request.removedItems}, ${row.name})`,
-        })
-        .where(inArray(request.id, ids));
+      for (const [id, names] of gone)
+        await tx
+          .update(request)
+          .set({
+            removedItems: sql`${request.removedItems} || array[${sql.join(
+              names.map((n) => sql`${n}`),
+              sql`, `,
+            )}]::text[]`,
+          })
+          .where(eq(request.id, id));
       // Nothing left to sell: closed the way a seller's decline closes it.
       const closed = await tx
         .update(request)
         .set({ status: "declined", decidedAt: sql`now()` })
         .where(
           and(
-            inArray(request.id, ids),
+            inArray(request.id, asked),
             sql`not exists (select 1 from ${requestLine} where ${requestLine.requestId} = ${request.id})`,
           ),
         )
         .returning({ id: request.id });
       const done = new Set(closed.map((c) => c.id));
-      for (const r of ids)
+      for (const r of asked)
         await notifyLive(tx, {
           s: storeId,
           r,
           t: done.has(r) ? "declined" : "removed",
         });
     }
-    if (await dropFromCarts(tx, storeId, id))
+    if (await dropFromCarts(tx, storeId, found))
       await notifyLive(tx, { s: storeId, r: "", t: "floor" });
-    return { ok: true, name: row.name };
+    return { ok: true, names: rows.map((r) => r.name) };
   });
 }
 
 /**
- * Brings a removed listing back with the quantity it had, as a "restored"
- * move. False when it is not this store's or not removed.
+ * Brings removed listings back with the quantity each had, as "restored"
+ * moves. Returns how many came back: 0 when none is this store's and removed.
  */
-export async function restoreListing(db: Db, storeId: string, id: string) {
+export async function restoreListings(db: Db, storeId: string, ids: string[]) {
   return db.transaction(async (t) => {
     const tx = t as Db;
-    if (!(await lockStore(tx, storeId))) return false;
-    const [row] = await tx
+    if (!ids.length || !(await lockStore(tx, storeId))) return 0;
+    const rows = await tx
       .select({ active: listing.active })
       .from(listing)
       .where(
         and(
-          eq(listing.id, id),
+          inArray(listing.id, ids),
           eq(listing.storeId, storeId),
           isNotNull(listing.removedAt),
         ),
       )
+      .orderBy(listing.id)
       .for("update");
-    if (!row) return false;
-    if (row.active) await assertRoom(tx, storeId, 1);
+    if (!rows.length) return 0;
+    await assertRoom(tx, storeId, rows.filter((r) => r.active).length);
     await stockReason(tx, "restored");
     // This removal's own move: an older one may predate a sale since.
     const had = sql`(select -${stockMove.delta} from ${stockMove}
       where ${stockMove.listingId} = ${listing.id} and ${stockMove.reason} = 'removed'
         and ${stockMove.at} >= ${listing.removedAt}
       order by ${stockMove.at} desc limit 1)`;
-    await tx
+    const back = await tx
       .update(listing)
       .set({
         qty: sql`least(9999, ${listing.qty} + coalesce(${had}, 0))`,
         removedAt: null,
         updatedAt: sql`now()`,
       })
-      .where(eq(listing.id, id));
-    return true;
+      .where(
+        and(
+          inArray(listing.id, ids),
+          eq(listing.storeId, storeId),
+          isNotNull(listing.removedAt),
+        ),
+      )
+      .returning({ id: listing.id });
+    return back.length;
+  });
+}
+
+/**
+ * Hides or shows these listings (not removed ones). Showing checks the room
+ * on the store first. Returns how many changed.
+ */
+export async function setActive(
+  db: Db,
+  storeId: string,
+  ids: string[],
+  active: boolean,
+) {
+  return db.transaction(async (t) => {
+    const tx = t as Db;
+    if (!ids.length || !(await lockStore(tx, storeId))) return 0;
+    const mine = and(
+      inArray(listing.id, ids),
+      eq(listing.storeId, storeId),
+      isNull(listing.removedAt),
+      eq(listing.active, !active),
+    );
+    if (active) {
+      const [{ n }] = await tx.select({ n: count() }).from(listing).where(mine);
+      await assertRoom(tx, storeId, n);
+    }
+    const rows = await tx
+      .update(listing)
+      .set({ active, updatedAt: sql`now()` })
+      .where(mine)
+      .returning({ id: listing.id });
+    return rows.length;
   });
 }
 

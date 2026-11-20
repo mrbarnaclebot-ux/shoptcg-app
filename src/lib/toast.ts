@@ -195,16 +195,24 @@ export const toast = {
       `${name} is off your public table. Show it again from Edit.`,
       5000,
     ),
-  itemRemoved: (name: string, undo: () => void) =>
+  /** `what` is an item's name, or "3 items" for n of them. */
+  itemRemoved: (what: string, n: number, undo: () => void) =>
     show(
       "info",
       "Removed",
-      `${name} is off your stock and store. Restore it from Removed.`,
+      n === 1
+        ? `${what} is off your stock and store. Restore it from Removed.`
+        : `${what} are off your stock and store. Restore them from Removed.`,
       8000,
       { title: "Undo", onClick: undo },
     ),
-  itemRestored: (name: string) =>
-    show("ok", "Restored", `${name} is back in your stock.`, 4000),
+  itemRestored: (what: string, n: number) =>
+    show(
+      "ok",
+      "Restored",
+      `${what} ${n === 1 ? "is" : "are"} back in your stock.`,
+      4000,
+    ),
   qtyZero: (name: string, onHide: () => void) => {
     const body = `${name} is at 0 and shows as sold out.`;
     announce(`Sold out. ${body}`);

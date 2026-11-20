@@ -18,37 +18,28 @@ import {
 
 const FAILED = "Couldn't save that. Try again.";
 
-/** Restores a removed item: the removal toast's Undo and the Removed view's button. */
-export async function restore(id: string, name: string) {
-  const res = await restoreAction(id).catch(() => ({ error: FAILED }));
+/**
+ * Restores removed items: the removal toast's Undo, the Removed view's button
+ * and the bulk bar. `what` names them: an item's name or "3 items".
+ */
+export async function restore(ids: string[], what: string) {
+  const res = await restoreAction(ids).catch(() => ({ error: FAILED }));
   if (res.error) toast.notSaved(res.error);
-  else toast.itemRestored(name);
+  else toast.itemRestored(what, ids.length);
   return !res.error;
 }
 
-export function EditPanel({
-  row,
-  onDone,
-}: {
-  row: StockRow;
-  onDone: () => void;
-}) {
-  const [error, setError] = useState<string>();
-  // Buyers holding it, once the server has said so: the panel asks first.
+/**
+ * Removes at once with an Undo toast, unless buyers hold one: then `held`
+ * says how many, and the caller asks before remove(true).
+ */
+export function useRemove(ids: string[], what: string, done: () => void) {
   const [held, setHeld] = useState(0);
+  const [error, setError] = useState<string>();
   const [pending, start] = useTransition();
-  const custom = row.catalogItemId === null;
-  const save = (patch: Record<string, unknown>, done: () => void) =>
-    start(async () => {
-      const res = await updateListingAction({ id: row.id, ...patch });
-      setError(res.error);
-      if (res.error) return void toast.notSaved(res.error);
-      done();
-      onDone();
-    });
   const remove = (force: boolean) =>
     start(async () => {
-      const res = await removeAction(row.id, force).catch(() => ({
+      const res = await removeAction(ids, force).catch(() => ({
         error: FAILED,
       }));
       if ("held" in res) return setHeld(res.held);
@@ -63,14 +54,77 @@ export function EditPanel({
               : null;
       setError(why ?? undefined);
       if (why) return void toast.notSaved(why);
-      toast.itemRemoved(row.name, () => void restore(row.id, row.name));
+      toast.itemRemoved(what, ids.length, () => void restore(ids, what));
+      done();
+    });
+  return { held, keep: () => setHeld(0), remove, pending, error };
+}
+
+/** The question before removing what buyers hold. */
+export function HeldAsk(props: {
+  held: number;
+  many: boolean;
+  pending: boolean;
+  onKeep: () => void;
+  onRemove: () => void;
+}) {
+  const { held, many } = props;
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="font-semibold">
+        {held} {held === 1 ? "buyer has" : "buyers have"}{" "}
+        {many ? "these" : "this"} on hold. Removing takes {many ? "them" : "it"}{" "}
+        off their {held === 1 ? "request" : "requests"} and tells them.
+      </p>
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          autoFocus
+          onClick={props.onKeep}
+          className={lineButton}
+        >
+          Keep
+        </button>
+        <button
+          type="button"
+          disabled={props.pending}
+          onClick={props.onRemove}
+          className={`${lineButton} text-danger`}
+        >
+          Remove
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function EditPanel({
+  row,
+  onDone,
+}: {
+  row: StockRow;
+  onDone: () => void;
+}) {
+  const [saveError, setError] = useState<string>();
+  const [saving, start] = useTransition();
+  const gone = useRemove([row.id], row.name, onDone);
+  const { held } = gone;
+  const pending = saving || gone.pending;
+  const error = saveError ?? gone.error;
+  const custom = row.catalogItemId === null;
+  const save = (patch: Record<string, unknown>, done: () => void) =>
+    start(async () => {
+      const res = await updateListingAction({ id: row.id, ...patch });
+      setError(res.error);
+      if (res.error) return void toast.notSaved(res.error);
+      done();
       onDone();
     });
   return (
     // A paper slip under the row: you are holding this item while you edit it.
     <Ticket
       as="div"
-      className="mx-4 mb-4 [--stub:2rem] lg:ml-[76px] lg:max-w-lg"
+      className="mx-4 mb-4 [--stub:2rem] lg:ml-[116px] lg:max-w-lg"
     >
       <form
         data-panel
@@ -131,37 +185,19 @@ export function EditPanel({
             variant="secondary"
             className="text-danger"
             disabled={pending || held > 0}
-            onClick={() => remove(false)}
+            onClick={() => gone.remove(false)}
           >
             Remove from inventory
           </TicketButton>
         </div>
         {held > 0 && (
-          <div className="flex flex-col gap-3">
-            <p className="font-semibold">
-              {held} {held === 1 ? "buyer has" : "buyers have"} this on hold.
-              Removing takes it off their {held === 1 ? "request" : "requests"}{" "}
-              and tells them.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                autoFocus
-                onClick={() => setHeld(0)}
-                className={lineButton}
-              >
-                Keep
-              </button>
-              <button
-                type="button"
-                disabled={pending}
-                onClick={() => remove(true)}
-                className={`${lineButton} text-danger`}
-              >
-                Remove
-              </button>
-            </div>
-          </div>
+          <HeldAsk
+            held={held}
+            many={false}
+            pending={pending}
+            onKeep={gone.keep}
+            onRemove={() => gone.remove(true)}
+          />
         )}
       </form>
       {custom && <Photo row={row} />}

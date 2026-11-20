@@ -1,7 +1,9 @@
 import { Search } from "lucide-react";
 import { z } from "zod";
 import { ContinuousTabs } from "@/components/continuous-tabs";
+import { SortMenu } from "@/components/sort-menu";
 import { Input } from "@/components/ui/input";
+import type { StockSort } from "@/lib/listings";
 
 // Unknown values fall back to "no filter" instead of erroring on a hand-edited URL.
 export const filterSchema = z.object({
@@ -11,8 +13,13 @@ export const filterSchema = z.object({
     .optional()
     .catch(undefined),
   language: z.enum(["en", "ja", "zh"]).optional().catch(undefined),
+  sort: z
+    .enum(["new", "name", "price-desc", "price-asc", "qty"])
+    .optional()
+    .catch(undefined),
+  page: z.coerce.number().int().min(1).max(1000).optional().catch(undefined),
 });
-type Filter = z.infer<typeof filterSchema>;
+export type Filter = z.infer<typeof filterSchema>;
 
 const KINDS = [
   [undefined, "All"],
@@ -29,12 +36,20 @@ const LANGS = [
   ["ja", "JP"],
   ["zh", "CN"],
 ] as const;
+const SORTS: [StockSort | undefined, string][] = [
+  [undefined, "Newest"],
+  ["name", "Name"],
+  ["price-desc", "Price high to low"],
+  ["price-asc", "Price low to high"],
+  ["qty", "Quantity"],
+];
 
-function href(filter: Filter, patch: Partial<Filter>) {
-  const next = { ...filter, ...patch };
-  const qs = new URLSearchParams(
-    Object.entries(next).filter((e): e is [string, string] => Boolean(e[1])),
-  );
+/** The inventory URL for this filter; any change but the page starts at page 1. */
+export function href(filter: Filter, patch: Partial<Filter>) {
+  const next = { ...filter, page: undefined, ...patch };
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(next))
+    if (v && !(k === "page" && v === 1)) qs.set(k, String(v));
   return qs.size ? `/dashboard/inventory?${qs}` : "/dashboard/inventory";
 }
 
@@ -42,25 +57,37 @@ function href(filter: Filter, patch: Partial<Filter>) {
 export function Filters({ filter }: { filter: Filter }) {
   return (
     <div className="flex flex-col gap-3">
-      <form role="search" className="relative">
-        <Search
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground"
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <form role="search" className="relative min-w-64 flex-1">
+          <Search
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            name="q"
+            type="search"
+            defaultValue={filter.q}
+            placeholder="Search your stock"
+            aria-label="Search your stock"
+            className="pl-11"
+          />
+          {(["kind", "language", "sort"] as const).map(
+            (k) =>
+              filter[k] && (
+                <input key={k} type="hidden" name={k} value={filter[k]} />
+              ),
+          )}
+        </form>
+        <SortMenu
+          options={SORTS.map(([sort, label]) => ({
+            label,
+            href: href(filter, { sort }),
+            on: filter.sort === sort,
+          }))}
         />
-        <Input
-          name="q"
-          type="search"
-          defaultValue={filter.q}
-          placeholder="Search your stock"
-          aria-label="Search your stock"
-          className="pl-11"
-        />
-        {filter.kind && <input type="hidden" name="kind" value={filter.kind} />}
-        {filter.language && (
-          <input type="hidden" name="language" value={filter.language} />
-        )}
-      </form>
-      <div className="-mx-4 flex gap-8 overflow-x-auto px-4 py-0.5 md:mx-0 md:flex-wrap md:px-0">
+      </div>
+      {/* On phones the row scrolls; the fade says there is more to the right. */}
+      <div className="-mx-4 flex gap-8 overflow-x-auto py-0.5 pr-8 pl-4 [mask-image:linear-gradient(to_right,#000_calc(100%_-_2rem),transparent)] md:mx-0 md:flex-wrap md:px-0 md:[mask-image:none]">
         <ContinuousTabs
           id="kind"
           label="Type"
