@@ -138,6 +138,9 @@ export function Art(props: {
 
 const DIM = "opacity-60 grayscale-[0.8]";
 
+/** Tiles that animate in: about the first screen on any width. */
+const ARRIVE = 12;
+
 export function Tile(props: {
   it: PublicItem;
   slug: string;
@@ -173,8 +176,17 @@ export function Tile(props: {
   return (
     <article
       data-tile
-      style={{ "--i": props.index } as CSSProperties}
-      className="tile-in relative flex flex-col [contain-intrinsic-size:auto_420px] [content-visibility:auto]"
+      // Only the first screen arrives in steps; a thousand running animations
+      // slow the next page tap on a cheap phone.
+      style={
+        props.index < ARRIVE
+          ? ({ "--i": props.index } as CSSProperties)
+          : undefined
+      }
+      className={cn(
+        props.index < ARRIVE && "tile-in",
+        "relative flex flex-col [contain-intrinsic-size:auto_420px] [content-visibility:auto]",
+      )}
     >
       <Link
         href={`/${props.slug}/item/${it.id}`}
