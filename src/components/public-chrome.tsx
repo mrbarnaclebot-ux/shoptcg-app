@@ -1,5 +1,6 @@
 import { cn } from "cn";
 import Link from "next/link";
+import { SellerLink } from "./seller-link";
 import { Wordmark } from "./wordmark";
 
 const quiet =
@@ -20,14 +21,7 @@ export function PublicHeader(props: {
     >
       <Wordmark />
       {props.signIn !== false && (
-        // Signed in, this opens the dashboard; signed out, the proxy sends it
-        // to /login. Pages that carry it stay static for every visitor.
-        <Link
-          href="/dashboard"
-          className="inline-flex min-h-11 items-center text-md font-medium underline decoration-[oklch(1_0_0/0.35)] decoration-[1.5px] underline-offset-[6px] hover:decoration-brand"
-        >
-          Seller sign in
-        </Link>
+        <SellerLink className="inline-flex min-h-11 items-center text-md font-medium underline decoration-[oklch(1_0_0/0.35)] decoration-[1.5px] underline-offset-[6px] transition-[text-decoration-color] duration-200 hover:decoration-brand" />
       )}
     </header>
   );

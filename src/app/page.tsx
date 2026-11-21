@@ -43,7 +43,7 @@ function Hero() {
       <PublicHeader className="absolute inset-x-0 top-0 z-10" />
       <div
         aria-hidden
-        className="absolute top-[22%] right-[6%] z-10 hidden rotate-[-2.5deg] drop-shadow-[0_22px_40px_oklch(0_0_0/0.55)] xl:block"
+        className="ticket-drop absolute top-[22%] right-[6%] z-10 hidden rotate-[-2.5deg] drop-shadow-[0_22px_40px_oklch(0_0_0/0.55)] xl:block"
       >
         <RequestTicket />
       </div>

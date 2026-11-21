@@ -26,7 +26,7 @@ function Photo(props: {
   className: string;
 }) {
   return (
-    <figure>
+    <figure className="reveal">
       <div className="grain">
         {/* getImageProps keeps the landing free of the client image component. */}
         {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text -- alt is in the props */}
@@ -62,7 +62,7 @@ export function HowItWorks() {
         </div>
         <h2
           id="how-h"
-          className="font-display text-[4.25rem] leading-[0.82] font-black tracking-[-0.01em] md:col-span-6 md:col-start-7 md:mt-2 md:mb-12 md:text-[7rem]"
+          className="reveal font-display text-[4.25rem] leading-[0.82] font-black tracking-[-0.01em] md:col-span-6 md:col-start-7 md:mt-2 md:mb-12 md:text-[7rem]"
         >
           Three things,
           <br />
@@ -72,7 +72,7 @@ export function HowItWorks() {
           {STEPS.map((s, i) => (
             <li
               key={s.title}
-              className="grid grid-cols-[56px_1fr] items-start border-t-[1.5px] border-text pt-4 md:grid-cols-[88px_1fr]"
+              className="reveal grid grid-cols-[56px_1fr] items-start border-t-[1.5px] border-text pt-4 md:grid-cols-[88px_1fr]"
             >
               <span className="font-display num text-[3.5rem] leading-[0.78] font-black text-brand-text md:text-[4.75rem]">
                 {i + 1}
@@ -106,7 +106,7 @@ export function HowItWorks() {
             caption="Cash on the cloth, slab across the table, receipt already on its way."
             className="h-[260px] object-[50%_60%] md:h-[440px]"
           />
-          <p className="font-display text-[2.125rem] leading-[1.02] font-extrabold md:text-[2.875rem]">
+          <p className="reveal font-display text-[2.125rem] leading-[1.02] font-extrabold md:text-[2.875rem]">
             Nightly price sync. Raw, graded{" "}
             <span className="text-brand-text">and</span> sealed. EN, JP{" "}
             <span className="text-brand-text">and</span> CN. Online{" "}

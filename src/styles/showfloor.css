@@ -269,3 +269,46 @@
     }
   }
 }
+
+/*
+  Public-page motion. Reveal rides the scroll itself (animation-timeline:
+  view()), so it needs no script and can't leave anything hidden: a browser
+  without it, or anyone asking for less motion, just sees the page. Kept off
+  the dashboard and the store grid, where people scan and act fast.
+*/
+@layer components {
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .reveal {
+        animation: reveal linear both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 70%;
+      }
+    }
+    /* The hero's request lands on the photo the way it lands on a phone. */
+    .ticket-drop {
+      animation: ticket-drop 700ms var(--ease-out-expo) 350ms both;
+    }
+  }
+  @keyframes reveal {
+    from {
+      opacity: 0;
+      transform: translateY(28px);
+    }
+  }
+  @keyframes ticket-drop {
+    from {
+      opacity: 0;
+      transform: translateY(-36px) scale(1.06);
+    }
+  }
+  /* The stub's arrow leans toward where the ticket takes you. */
+  .btn-ticket-stub svg {
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+  @media (hover: hover) {
+    .btn-ticket:hover:not(:disabled) .btn-ticket-stub svg {
+      transform: translateX(3px);
+    }
+  }
+}
