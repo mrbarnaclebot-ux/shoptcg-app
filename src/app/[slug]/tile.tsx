@@ -1,6 +1,8 @@
 import { cn } from "cn";
 import Image from "next/image";
 import Link from "next/link";
+import { ViewTransition, type CSSProperties } from "react";
+import { FadeImage } from "@/components/fade-image";
 import { Stamp } from "@/components/stamp";
 import { TapeHatch } from "@/components/tape-hatch";
 import { formatAlt, usdTag } from "@/lib/fx";
@@ -68,17 +70,25 @@ export function Art(props: {
   dim?: boolean;
   /** Laid over the art, so it never makes the tile taller. */
   children?: React.ReactNode;
+  /**
+   * Shared name for the tile-to-item-page morph: the same art box on both
+   * pages, so the browser grows one into the other. Unique per page.
+   */
+  morph?: string;
 }) {
   const { it } = props;
-  return (
+  // The first row is the page's largest paint, so it never waits on a fade.
+  const Img = props.eager ? Image : FadeImage;
+  const box = (
     <span
+      data-art
       className={cn(
         "relative block aspect-[63/88] overflow-hidden bg-surface",
         props.className,
       )}
     >
       {it.imageUrl ? (
-        <Image
+        <Img
           src={it.imageUrl}
           alt=""
           fill
@@ -118,9 +128,18 @@ export function Art(props: {
       {props.children}
     </span>
   );
+  if (!props.morph) return box;
+  return (
+    <ViewTransition name={props.morph} share="morph" default="none">
+      {box}
+    </ViewTransition>
+  );
 }
 
 const DIM = "opacity-60 grayscale-[0.8]";
+
+/** Tiles that animate in: about the first screen on any width. */
+const ARRIVE = 12;
 
 export function Tile(props: {
   it: PublicItem;
@@ -130,6 +149,8 @@ export function Tile(props: {
   /** "Ask at the table" or "Ask the seller", for an unpriced item. */
   askPrice: string;
   eager: boolean;
+  /** Place in the grid, for the staggered arrival in showfloor.css. */
+  index: number;
 }) {
   const { it } = props;
   const soldOut = !it.qty;
@@ -141,6 +162,7 @@ export function Tile(props: {
       // The grid: 2 columns, then 3 from md, then auto-fill near 220px from lg.
       sizes="(min-width:1024px) 220px, (min-width:768px) 30vw, 45vw"
       dim={soldOut}
+      morph={`art-${it.id}`}
     >
       {it.underPct !== null && !soldOut && (
         <Stamp className="absolute bottom-2 left-2 bg-bg">
@@ -154,7 +176,17 @@ export function Tile(props: {
   return (
     <article
       data-tile
-      className="relative flex flex-col [contain-intrinsic-size:auto_420px] [content-visibility:auto]"
+      // Only the first screen arrives in steps; a thousand running animations
+      // slow the next page tap on a cheap phone.
+      style={
+        props.index < ARRIVE
+          ? ({ "--i": props.index } as CSSProperties)
+          : undefined
+      }
+      className={cn(
+        props.index < ARRIVE && "tile-in",
+        "relative flex flex-col [contain-intrinsic-size:auto_420px] [content-visibility:auto]",
+      )}
     >
       <Link
         href={`/${props.slug}/item/${it.id}`}
@@ -249,7 +281,7 @@ function PriceBlock({
 export function TileSkeleton() {
   return (
     <div aria-hidden className="flex flex-col">
-      <span className="block aspect-[63/88] animate-pulse bg-surface" />
+      <span className="skeleton block aspect-[63/88]" />
       <span className="mt-3 block h-4 w-3/4 bg-surface" />
       <span className="mt-2 block h-3 w-1/2 bg-surface" />
       <span className="mt-3 block h-8 w-16 bg-surface" />

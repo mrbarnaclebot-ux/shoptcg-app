@@ -85,6 +85,7 @@ export default async function ItemPage({
       eager
       sizes="(min-width:1024px) 420px, 80vw"
       dim={!item.qty}
+      morph={`art-${item.id}`}
     />
   );
   return (
@@ -115,9 +116,7 @@ export default async function ItemPage({
             <RangeLinks base={`/${slug}/item/${id}`} days={days} />
           </div>
           {item.catalogItemId ? (
-            <Suspense
-              fallback={<div className="h-56 animate-pulse bg-surface" />}
-            >
+            <Suspense fallback={<div className="skeleton h-56" />}>
               <Chart
                 id={item.catalogItemId}
                 days={days}

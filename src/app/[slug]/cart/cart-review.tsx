@@ -91,7 +91,7 @@ function CartSkeleton({ rows }: { rows: number }) {
             key={i}
             className="grid grid-cols-[40px_1fr_auto] gap-3 border-b border-border py-3 first:pt-0"
           >
-            <span className="aspect-[63/88] w-10 animate-pulse bg-surface" />
+            <span className="skeleton aspect-[63/88] w-10" />
             <span className="flex flex-col gap-2">
               <span className="h-4 w-3/4 bg-surface" />
               <span className="h-3 w-1/2 bg-surface" />

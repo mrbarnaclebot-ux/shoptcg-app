@@ -120,9 +120,15 @@ export function AddButton(props: {
             : `Add ${props.name} to your cart`
         }
         title={on ? "In your cart. Tap to remove." : undefined}
-        className={`grid size-11 shrink-0 place-items-center ${on ? "bg-brand text-on-brand" : "bg-surface text-text shadow-[inset_0_0_0_1px_var(--border-strong)]"}`}
+        className={`add-btn grid size-11 shrink-0 place-items-center ${on ? "bg-brand text-on-brand" : "bg-surface text-text shadow-[inset_0_0_0_1px_var(--border-strong)]"}`}
       >
-        <Icon aria-hidden className="size-5" strokeWidth={2.3} />
+        {/* Keyed so the new icon mounts and plays its swap. */}
+        <Icon
+          key={String(on)}
+          aria-hidden
+          className="add-icon size-5"
+          strokeWidth={2.3}
+        />
       </button>
       <span role="status" className="sr-only">
         {said}
@@ -327,13 +333,17 @@ export function ListBar({ slug }: { slug: string }) {
     0,
   );
   return (
-    <div className="fixed inset-x-3 bottom-4 z-20 mx-auto max-w-[560px] drop-shadow-[0_12px_24px_oklch(0_0_0/0.6)]">
+    <div className="cart-bar-in fixed inset-x-3 bottom-4 z-20 mx-auto max-w-[560px] drop-shadow-[0_12px_24px_oklch(0_0_0/0.6)]">
       <div className="paper grid grid-cols-[1fr_auto]">
         <p className="px-4 py-2.5" role="status">
           <span className="block text-xs text-muted-foreground">
             Your cart{tag && `, ${tag}. The seller can see it.`}
           </span>
-          <span className="font-display num text-[1.625rem] leading-none font-extrabold">
+          {/* Keyed on the count: each add or remove remounts it and it bumps. */}
+          <span
+            key={n}
+            className="cart-bump font-display num inline-block text-[1.625rem] leading-none font-extrabold"
+          >
             {n} {n === 1 ? "item" : "items"}, {usdTag(total)}
           </span>
         </p>
