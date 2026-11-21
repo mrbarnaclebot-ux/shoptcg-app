@@ -116,9 +116,7 @@ export default async function ItemPage({
             <RangeLinks base={`/${slug}/item/${id}`} days={days} />
           </div>
           {item.catalogItemId ? (
-            <Suspense
-              fallback={<div className="skeleton h-56" />}
-            >
+            <Suspense fallback={<div className="skeleton h-56" />}>
               <Chart
                 id={item.catalogItemId}
                 days={days}

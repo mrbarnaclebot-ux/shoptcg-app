@@ -334,10 +334,14 @@
   }
   @keyframes lamp-sweep {
     from {
-      background-position: 150% 0, 0 0;
+      background-position:
+        150% 0,
+        0 0;
     }
     to {
-      background-position: -50% 0, 0 0;
+      background-position:
+        -50% 0,
+        0 0;
     }
   }
 
