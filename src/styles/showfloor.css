@@ -312,3 +312,118 @@
     }
   }
 }
+
+/*
+  Store page motion: how stock arrives and how the cart answers a tap.
+  Everything here also stops for prefers-reduced-motion (tokens.css cuts
+  every animation and transition to 1ms).
+*/
+@layer components {
+  /* A loading box: a lamp sweeping across the empty case well. */
+  .skeleton {
+    background:
+      linear-gradient(
+          100deg,
+          #0000 30%,
+          color-mix(in oklch, var(--brand) 9%, transparent) 50%,
+          #0000 70%
+        )
+        0 0 / 250% 100% no-repeat,
+      var(--surface);
+    animation: lamp-sweep 1.6s ease-in-out infinite;
+  }
+  @keyframes lamp-sweep {
+    from {
+      background-position: 150% 0, 0 0;
+    }
+    to {
+      background-position: -50% 0, 0 0;
+    }
+  }
+
+  /* Card art that was still loading: fades in, and the box sweeps until then. */
+  img[data-fade] {
+    transition:
+      opacity 260ms var(--ease-out),
+      filter 260ms var(--ease-out);
+  }
+  img[data-fade="wait"] {
+    opacity: 0;
+    filter: blur(6px);
+  }
+  [data-art]:has(> img[data-fade="wait"]) {
+    background:
+      linear-gradient(
+          100deg,
+          #0000 30%,
+          color-mix(in oklch, var(--brand) 9%, transparent) 50%,
+          #0000 70%
+        )
+        0 0 / 250% 100% no-repeat,
+      var(--surface);
+    animation: lamp-sweep 1.6s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* Tiles rise in one after another; past the first screen they come together. */
+    .tile-in {
+      animation: tile-in 420ms var(--ease-out-expo) both;
+      animation-delay: calc(min(var(--i, 0), 8) * 35ms);
+    }
+    /* The cart answers: a press, the + turning into a tick, the bar's count bumping. */
+    .add-icon {
+      animation: icon-swap 280ms var(--ease-out-expo);
+    }
+    .cart-bump {
+      animation: bump 320ms var(--ease-out-expo);
+    }
+    .cart-bar-in {
+      animation: bar-in 380ms var(--ease-out-expo);
+    }
+  }
+  .add-btn {
+    transition:
+      transform var(--dur-fast) var(--ease-out),
+      background-color var(--dur-base);
+  }
+  .add-btn:active {
+    transform: scale(0.9);
+  }
+  @keyframes tile-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+  @keyframes icon-swap {
+    from {
+      opacity: 0;
+      transform: rotate(-90deg) scale(0.5);
+    }
+  }
+  @keyframes bump {
+    40% {
+      transform: scale(1.08);
+    }
+  }
+  @keyframes bar-in {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+  }
+
+  /* Tile art growing into the item page's art (React <ViewTransition>). */
+  ::view-transition-group(.morph) {
+    animation-duration: 380ms;
+    animation-timing-function: var(--ease-out-expo);
+  }
+  ::view-transition-image-pair(.morph) {
+    animation-name: via-blur;
+  }
+  @keyframes via-blur {
+    30% {
+      filter: blur(3px);
+    }
+  }
+}

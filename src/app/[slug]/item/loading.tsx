@@ -1,3 +1,5 @@
+import { LoadingArt } from "./loading-art";
+
 /**
  * The item page's shape while it reads, in the store grid's loading art box,
  * so a tap on venue wifi shows the page at once instead of nothing. It sits
@@ -16,7 +18,7 @@ export default function Loading() {
         aria-hidden
         className="mx-auto mt-3 w-4/5 max-w-[420px] lg:w-full lg:self-start"
       >
-        <span className="block aspect-[63/88] animate-pulse bg-surface" />
+        <LoadingArt />
       </div>
       <div aria-hidden className="mt-6 flex flex-col gap-4 lg:mt-3">
         <span className="h-10 w-3/4 bg-surface md:h-12" />

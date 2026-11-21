@@ -163,6 +163,7 @@ async function Grid({ store, f }: { store: PublicStore; f: PublicFilter }) {
             askPrice={modeCopy(store.sellingMode).askPrice}
             // One row on desktop, two on phones: the art above the fold.
             eager={i < 4}
+            index={i}
           />
         ))}
       </div>
