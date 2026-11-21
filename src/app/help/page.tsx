@@ -121,7 +121,7 @@ function Section(props: {
   return (
     <section
       aria-labelledby={props.id}
-      className={`flex flex-col gap-4 ${props.wide ? "lg:col-span-2" : ""}`}
+      className={`reveal flex flex-col gap-4 ${props.wide ? "lg:col-span-2" : ""}`}
     >
       <h2 id={props.id} className="flex items-center gap-2.5">
         <Icon aria-hidden className="size-5 shrink-0 stroke-[1.75]" />

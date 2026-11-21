@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 import { newVendor } from "./auth";
 
 // A signed-in vendor never meets the sign-in form again by accident: the
-// logo stays in the app, the landing link and /login both open the dashboard.
+// logo stays in the app, the landing link (labelled Dashboard) and /login
+// both open the dashboard.
 test("signed in, the logo, the landing link and /login lead to the dashboard", async ({
   page,
 }) => {
@@ -13,8 +14,9 @@ test("signed in, the logo, the landing link and /login lead to the dashboard", a
   await page.getByRole("link", { name: "tcgmart.app" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 
+  // Signed in, the landing's header link says Dashboard, not sign in.
   await page.goto("/");
-  await page.getByRole("link", { name: "Seller sign in" }).click();
+  await page.getByRole("link", { name: "Dashboard", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(dashboard).toBeVisible();
 
